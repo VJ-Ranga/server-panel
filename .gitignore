@@ -1,0 +1,18 @@
+# Local secrets/config
+panel_config.json
+
+# Runtime/cache artifacts
+cache/
+__pycache__/
+*.py[cod]
+
+# Local editor/assistant settings
+.claude/
+.vscode/
+
+# Local plugin library contents
+wp-plugin-library/*.zip
+
+# OS files
+.DS_Store
+Thumbs.db

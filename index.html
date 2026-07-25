@@ -1,0 +1,2458 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Server Panel</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+:root {
+  --sidebar-w: 230px;
+  --sidebar-bg: #0f1117;
+  --topbar-h: 56px;
+  --accent: #4f8ef7;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#12141c;color:#cdd6f4;min-height:100vh;}
+
+/* ── login ── */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#0f1117 0%,#1a1d2e 100%);}
+.login-card{background:#1e2030;border:1px solid #2d3158;border-radius:16px;padding:40px 36px;width:340px;box-shadow:0 24px 64px rgba(0,0,0,.5);}
+.login-logo{font-size:2rem;margin-bottom:4px;}
+.login-card h2{font-size:1.35rem;margin-bottom:2px;}
+.login-card p{color:#6c7086;font-size:.85rem;margin-bottom:24px;}
+
+/* ── sidebar ── */
+#sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sidebar-w);background:var(--sidebar-bg);border-right:1px solid #1e2030;display:flex;flex-direction:column;z-index:100;}
+.sidebar-logo{padding:18px 20px 12px;font-weight:700;font-size:1.1rem;color:#cdd6f4;border-bottom:1px solid #1e2030;display:flex;align-items:center;gap:10px;}
+.sidebar-logo .bi{color:var(--accent);font-size:1.25rem;}
+.nav-section{padding:12px 12px 4px;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:#585b70;}
+.sidebar-nav a{display:flex;align-items:center;gap:10px;padding:9px 16px;color:#a6adc8;text-decoration:none;border-radius:8px;margin:2px 8px;font-size:.875rem;transition:background .15s,color .15s;}
+.sidebar-nav a:hover{background:#1e2030;color:#cdd6f4;}
+.sidebar-nav a.active{background:#1e2030;color:var(--accent);font-weight:600;}
+.sidebar-nav a .bi{font-size:1rem;width:18px;text-align:center;}
+.sidebar-footer{margin-top:auto;padding:12px;border-top:1px solid #1e2030;}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+.dot-green{background:#a6e3a1;}
+.dot-red{background:#f38ba8;}
+.dot-yellow{background:#f9e2af;}
+.dot-gray{background:#585b70;}
+.svc-badge{display:flex;align-items:center;gap:6px;padding:5px 8px;background:#12141c;border-radius:6px;margin-bottom:4px;font-size:.78rem;color:#a6adc8;}
+
+/* ── main ── */
+#main{margin-left:var(--sidebar-w);min-height:100vh;}
+#topbar{height:var(--topbar-h);background:#0f1117;border-bottom:1px solid #1e2030;display:flex;align-items:center;padding:0 24px;gap:12px;position:sticky;top:0;z-index:90;}
+#topbar h4{margin:0;font-size:1rem;font-weight:600;}
+.content{padding:28px 28px;}
+
+/* ── cards ── */
+.stat-card{background:#1e2030;border:1px solid #2d3158;border-radius:12px;padding:20px 22px;}
+.stat-card .label{font-size:.75rem;color:#6c7086;text-transform:uppercase;letter-spacing:.06em;}
+.stat-card .value{font-size:1.8rem;font-weight:700;margin:4px 0 0;}
+.stat-card .sub{font-size:.8rem;color:#585b70;margin-top:2px;}
+.service-card{background:#1e2030;border:1px solid #2d3158;border-radius:12px;padding:22px;}
+.service-card .svc-name{font-size:1rem;font-weight:600;display:flex;align-items:center;gap:8px;}
+.service-card .svc-status{font-size:.78rem;padding:3px 10px;border-radius:20px;font-weight:500;}
+.status-active{background:#1d3a2e;color:#a6e3a1;}
+.status-inactive{background:#3a1d1d;color:#f38ba8;}
+.status-unknown{background:#2a2a2a;color:#a6adc8;}
+.action-btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;}
+.action-btns .btn{font-size:.78rem;padding:5px 12px;}
+
+/* ── page sections ── */
+.page{display:none;}
+.page.active{display:block;}
+
+/* ── tabs ── */
+.custom-tabs{display:flex;gap:4px;border-bottom:1px solid #2d3158;margin-bottom:20px;}
+.custom-tabs button{background:none;border:none;color:#585b70;padding:10px 16px;font-size:.875rem;cursor:pointer;border-bottom:2px solid transparent;transition:color .15s;}
+.custom-tabs button:hover{color:#cdd6f4;}
+.custom-tabs button.active{color:var(--accent);border-bottom-color:var(--accent);}
+.tab-pane{display:none;}
+.tab-pane.active{display:block;}
+
+/* ── textarea / editor ── */
+.code-editor{font-family:'Courier New',monospace;font-size:.82rem;background:#12141c;border:1px solid #2d3158;color:#cdd6f4;border-radius:8px;resize:vertical;width:100%;padding:14px;}
+.code-editor:focus{outline:none;border-color:var(--accent);}
+
+/* ── table ── */
+.panel-table{width:100%;border-collapse:collapse;}
+.panel-table th{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#585b70;padding:10px 12px;text-align:left;border-bottom:1px solid #2d3158;}
+.panel-table td{padding:10px 12px;font-size:.875rem;border-bottom:1px solid #1a1d2e;}
+.panel-table tr:hover td{background:#191b29;}
+.panel-table .badge-enabled{background:#1d3a2e;color:#a6e3a1;padding:2px 10px;border-radius:20px;font-size:.72rem;}
+.panel-table .badge-disabled{background:#2a1d1d;color:#f38ba8;padding:2px 10px;border-radius:20px;font-size:.72rem;}
+
+/* ── log viewer ── */
+.log-box{font-family:monospace;font-size:.78rem;background:#0a0c12;border:1px solid #2d3158;border-radius:8px;padding:14px;height:380px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;color:#a6e3a1;}
+
+/* ── toast ── */
+#toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.toast-item{background:#1e2030;border:1px solid #2d3158;border-radius:10px;padding:12px 18px;font-size:.85rem;box-shadow:0 8px 24px rgba(0,0,0,.4);animation:slideIn .25s ease;max-width:320px;}
+.toast-item.success{border-left:3px solid #a6e3a1;}
+.toast-item.error{border-left:3px solid #f38ba8;}
+.toast-item.info{border-left:3px solid var(--accent);}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:translateX(0);}}
+
+/* ── misc ── */
+.section-title{font-size:1rem;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.input-dark{background:#12141c;border:1px solid #2d3158;color:#cdd6f4;border-radius:6px;padding:7px 12px;font-size:.875rem;width:100%;}
+.input-dark:focus{outline:none;border-color:var(--accent);}
+.spinner-sm{width:14px;height:14px;border:2px solid #2d3158;border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.empty-state{text-align:center;padding:40px;color:#585b70;}
+.empty-state .bi{font-size:2.5rem;display:block;margin-bottom:8px;}
+.wp-card{background:#1e2030;border:1px solid #2d3158;border-radius:12px;padding:18px 20px;}
+.wp-card .wp-title{font-size:.95rem;font-weight:600;margin-bottom:6px;}
+.wp-meta{font-size:.78rem;color:#6c7086;display:grid;grid-template-columns:1fr 1fr;gap:4px;}
+.wp-meta span b{color:#a6adc8;}
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ════════════════════════════════════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">⚙️</div>
+    <h2>Server Panel</h2>
+    <p>Local management for Nginx · MySQL · WordPress</p>
+    <div class="mb-3">
+      <input id="login-pw" type="password" class="input-dark" placeholder="Password" style="width:100%;padding:10px 14px;" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn btn-primary w-100" onclick="doLogin()">Sign In</button>
+    <div id="login-err" class="mt-2 text-danger" style="font-size:.83rem;display:none;"></div>
+  </div>
+</div>
+
+<!-- ══ PANEL ═════════════════════════════════════════════════════════════════ -->
+<div id="panel" style="display:none;">
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div class="sidebar-logo">
+      <i class="bi bi-server"></i>
+      Server Panel
+    </div>
+    <nav class="sidebar-nav mt-1">
+      <div class="nav-section">Overview</div>
+      <a href="#dashboard" class="active" onclick="showPage('dashboard',this); return false;"><i class="bi bi-grid-1x2"></i> Dashboard</a>
+      <div class="nav-section">Services</div>
+      <a href="#nginx" onclick="showPage('nginx',this); return false;"><i class="bi bi-arrow-left-right"></i> Nginx</a>
+      <a href="#mysql" onclick="showPage('mysql',this); return false;"><i class="bi bi-database"></i> MySQL</a>
+      <a href="#wordpress" onclick="showPage('wordpress',this); return false;"><i class="bi bi-wordpress"></i> WordPress</a>
+      <a href="#laravel" onclick="showPage('laravel',this); return false;"><i class="bi bi-code-square"></i> Laravel</a>
+      <a href="#phpmyadmin" onclick="showPage('phpmyadmin',this); return false;"><i class="bi bi-database-gear"></i> phpMyAdmin</a>
+      <a href="#performance" onclick="showPage('performance',this); return false;"><i class="bi bi-speedometer2"></i> Performance</a>
+      <div class="nav-section">System</div>
+      <a href="#settings" onclick="showPage('settings',this); return false;"><i class="bi bi-gear"></i> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="svc-badge"><span id="sb-nginx" class="status-dot dot-gray"></span> Nginx</div>
+      <div class="svc-badge"><span id="sb-mysql" class="status-dot dot-gray"></span> MySQL</div>
+      <div class="svc-badge"><span id="sb-phpfpm" class="status-dot dot-gray"></span> PHP-FPM</div>
+      <button class="btn btn-sm w-100 mt-2" style="background:#1a1d2e;color:#a6adc8;border:1px solid #2d3158;" onclick="doLogout()"><i class="bi bi-box-arrow-left"></i> Logout</button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div id="main">
+    <div id="topbar">
+      <h4 id="page-title">Dashboard</h4>
+      <div class="ms-auto d-flex align-items-center gap-3" style="font-size:.8rem;color:#585b70;">
+        <span id="sys-uptime"></span>
+        <span id="sys-host"></span>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ── DASHBOARD ──────────────────────────────────────────────────── -->
+      <div id="page-dashboard" class="page active">
+        <div class="row g-3 mb-4">
+          <div class="col-md-3">
+            <div class="stat-card">
+              <div class="label">CPU Usage</div>
+              <div class="value" id="stat-cpu">—</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="stat-card">
+              <div class="label">Memory</div>
+              <div class="value" id="stat-mem">—</div>
+              <div class="sub" id="stat-mem-sub"></div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="stat-card">
+              <div class="label">Disk /</div>
+              <div class="value" id="stat-disk">—</div>
+              <div class="sub" id="stat-disk-sub"></div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="stat-card">
+              <div class="label">Uptime</div>
+              <div class="value" style="font-size:1.1rem;padding-top:8px;" id="stat-uptime">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-3">
+          <!-- Nginx service card -->
+          <div class="col-md-6">
+            <div class="service-card">
+              <div class="d-flex align-items-center justify-content-between mb-1">
+                <div class="svc-name"><i class="bi bi-arrow-left-right text-primary"></i> Nginx</div>
+                <span id="d-nginx-badge" class="svc-status status-unknown">—</span>
+              </div>
+              <div style="font-size:.8rem;color:#585b70;margin-bottom:14px;">Web server &amp; reverse proxy</div>
+              <div class="action-btns" id="d-nginx-btns">
+                <button class="btn btn-success btn-sm" data-svc-action="start" onclick="svcAction('nginx','start')"><i class="bi bi-play-fill"></i> Start</button>
+                <button class="btn btn-danger btn-sm" data-svc-action="stop" onclick="svcAction('nginx','stop')"><i class="bi bi-stop-fill"></i> Stop</button>
+                <button class="btn btn-warning btn-sm" data-svc-action="restart" onclick="svcAction('nginx','restart')"><i class="bi bi-arrow-clockwise"></i> Restart</button>
+                <button class="btn btn-outline-secondary btn-sm" data-svc-action="reload" onclick="svcAction('nginx','reload')"><i class="bi bi-arrow-repeat"></i> Reload</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- MySQL service card -->
+          <div class="col-md-6">
+            <div class="service-card">
+              <div class="d-flex align-items-center justify-content-between mb-1">
+                <div class="svc-name"><i class="bi bi-database text-info"></i> MySQL</div>
+                <span id="d-mysql-badge" class="svc-status status-unknown">—</span>
+              </div>
+              <div style="font-size:.8rem;color:#585b70;margin-bottom:14px;">Database server</div>
+              <div class="action-btns" id="d-mysql-btns">
+                <button class="btn btn-success btn-sm" data-svc-action="start" onclick="svcAction('mysql','start')"><i class="bi bi-play-fill"></i> Start</button>
+                <button class="btn btn-danger btn-sm" data-svc-action="stop" onclick="svcAction('mysql','stop')"><i class="bi bi-stop-fill"></i> Stop</button>
+                <button class="btn btn-warning btn-sm" data-svc-action="restart" onclick="svcAction('mysql','restart')"><i class="bi bi-arrow-clockwise"></i> Restart</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- phpMyAdmin card -->
+          <div class="col-md-6">
+            <div class="service-card">
+              <div class="d-flex align-items-center justify-content-between mb-1">
+                <div class="svc-name"><i class="bi bi-database-gear" style="color:#f0ad4e;"></i> phpMyAdmin</div>
+                <span id="d-pma-badge" class="svc-status status-unknown">—</span>
+              </div>
+              <div style="font-size:.8rem;color:#585b70;margin-bottom:10px;">Web-based MySQL admin · <span id="d-pma-ver" style="color:#6c7086;"></span></div>
+              <div class="action-btns">
+                <a id="d-pma-link" href="#" target="_blank" class="btn btn-sm btn-outline-warning" style="display:none;"><i class="bi bi-box-arrow-up-right"></i> Open phpMyAdmin</a>
+                <button class="btn btn-sm btn-outline-secondary" onclick="showPage('phpmyadmin', document.querySelector('.sidebar-nav a[href=&quot;#phpmyadmin&quot;]'))"><i class="bi bi-gear"></i> Manage</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- PHP-FPM card -->
+          <div class="col-md-6">
+            <div class="service-card">
+              <div class="d-flex align-items-center justify-content-between mb-1">
+                <div class="svc-name"><i class="bi bi-cpu text-success"></i> PHP-FPM</div>
+                <span id="d-phpfpm-badge" class="svc-status status-unknown">—</span>
+              </div>
+              <div style="font-size:.8rem;color:#585b70;margin-bottom:14px;">FastCGI process manager · PHP <span id="d-php-ver">—</span></div>
+              <div class="action-btns" id="d-phpfpm-btns"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── NGINX ───────────────────────────────────────────────────────── -->
+      <div id="page-nginx" class="page">
+        <div class="custom-tabs">
+          <button class="active" onclick="switchTab('nginx','sites',this)">Sites</button>
+          <button onclick="switchTab('nginx','config',this)">nginx.conf</button>
+          <button onclick="switchTab('nginx','logs',this)">Logs</button>
+        </div>
+
+        <!-- Sites tab -->
+        <div id="nginx-tab-sites" class="tab-pane active">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="section-title mb-0"><i class="bi bi-list-ul"></i> Virtual Hosts</div>
+            <button class="btn btn-sm btn-outline-primary" onclick="loadNginxSites()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+          </div>
+          <div id="nginx-sites-table">
+            <div class="empty-state"><div class="spinner-sm mx-auto"></div></div>
+          </div>
+
+          <!-- Site config editor -->
+          <div id="site-editor" style="display:none;margin-top:24px;">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="section-title mb-0"><i class="bi bi-pencil"></i> Editing: <span id="site-editor-name" style="color:var(--accent);"></span></div>
+              <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('site-editor').style.display='none'">Close</button>
+            </div>
+            <textarea id="site-editor-content" class="code-editor" rows="22"></textarea>
+            <div class="mt-2 d-flex gap-2">
+              <button class="btn btn-primary btn-sm" onclick="saveSiteConfig()"><i class="bi bi-floppy"></i> Save</button>
+              <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('site-editor').style.display='none'">Cancel</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- nginx.conf tab -->
+        <div id="nginx-tab-config" class="tab-pane">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="section-title mb-0"><i class="bi bi-file-text"></i> /etc/nginx/nginx.conf</div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-outline-secondary" onclick="validateNginx()"><i class="bi bi-check-circle"></i> Test Config</button>
+              <button class="btn btn-sm btn-primary" onclick="saveNginxConfig()"><i class="bi bi-floppy"></i> Save</button>
+            </div>
+          </div>
+          <div id="nginx-config-status" class="mb-2" style="font-size:.82rem;display:none;"></div>
+          <textarea id="nginx-config-editor" class="code-editor" rows="30" placeholder="Loading..."></textarea>
+        </div>
+
+        <!-- Logs tab -->
+        <div id="nginx-tab-logs" class="tab-pane">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <div class="section-title mb-0"><i class="bi bi-journal-text"></i> Logs</div>
+            <button class="btn btn-sm btn-outline-secondary" onclick="loadLogs('error')" id="btn-error-log">Error Log</button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="loadLogs('access')">Access Log</button>
+            <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="loadLogs(currentLog)"><i class="bi bi-arrow-clockwise"></i></button>
+          </div>
+          <div id="log-box" class="log-box">Select a log above…</div>
+        </div>
+      </div>
+
+      <!-- ── MYSQL ───────────────────────────────────────────────────────── -->
+      <div id="page-mysql" class="page">
+        <div class="custom-tabs">
+          <button class="active" onclick="switchTab('mysql','databases',this)">Databases</button>
+          <button onclick="switchTab('mysql','query',this)">Query Runner</button>
+        </div>
+
+        <!-- Databases tab -->
+        <div id="mysql-tab-databases" class="tab-pane active">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="section-title mb-0"><i class="bi bi-database"></i> Databases</div>
+            <div class="d-flex gap-2">
+              <input id="new-db-name" class="input-dark" style="width:180px;" placeholder="new_database_name" onkeydown="if(event.key==='Enter')createDB()">
+              <button class="btn btn-sm btn-primary" onclick="createDB()"><i class="bi bi-plus-lg"></i> Create</button>
+              <button class="btn btn-sm btn-outline-secondary" onclick="loadDatabases()"><i class="bi bi-arrow-clockwise"></i></button>
+            </div>
+          </div>
+          <div id="mysql-db-table"><div class="empty-state"><div class="spinner-sm mx-auto"></div></div></div>
+        </div>
+
+        <!-- Query runner tab -->
+        <div id="mysql-tab-query" class="tab-pane">
+          <div class="section-title"><i class="bi bi-terminal"></i> SQL Query Runner</div>
+          <div class="d-flex gap-2 mb-2">
+            <select id="query-db" class="input-dark" style="width:200px;">
+              <option value="_none_">(no database)</option>
+            </select>
+            <button class="btn btn-primary btn-sm ms-auto" onclick="runQuery()"><i class="bi bi-play-fill"></i> Run</button>
+          </div>
+          <textarea id="query-input" class="code-editor" rows="8" placeholder="SELECT * FROM wp_users LIMIT 10;"></textarea>
+          <div class="mt-3">
+            <div class="section-title" style="font-size:.85rem;"><i class="bi bi-table"></i> Result</div>
+            <div id="query-result" class="log-box" style="height:200px;color:#cdd6f4;">Output will appear here…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── WORDPRESS ───────────────────────────────────────────────────── -->
+      <div id="page-wordpress" class="page">
+        <div class="custom-tabs">
+          <button class="active" onclick="switchTab('wordpress','sites',this)">Installed Sites</button>
+          <button onclick="switchTab('wordpress','install',this); loadNextPort()">Install New Site</button>
+        </div>
+
+        <!-- Sites tab -->
+        <div id="wordpress-tab-sites" class="tab-pane active">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="section-title mb-0"><i class="bi bi-wordpress"></i> WordPress Sites</div>
+            <button class="btn btn-sm btn-outline-secondary" onclick="loadWPSites()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+          </div>
+          <div id="wp-sites-container">
+            <div class="empty-state"><div class="spinner-sm mx-auto"></div></div>
+          </div>
+        </div>
+
+        <!-- Install tab -->
+        <div id="wordpress-tab-install" class="tab-pane">
+          <div class="row g-4">
+            <div class="col-lg-6">
+              <div class="service-card">
+                <div class="section-title"><i class="bi bi-download"></i> New WordPress Site</div>
+
+                <div class="mb-3">
+                  <label class="form-label-sm">Site Name <span style="color:#f38ba8;">*</span></label>
+                  <input id="wp-site-name" class="input-dark" placeholder="mysite" oninput="wpAutoFill()">
+                  <div style="font-size:.73rem;color:#585b70;margin-top:3px;">Used as folder name and nginx site name</div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label-sm">Install Path <span style="color:#f38ba8;">*</span></label>
+                  <input id="wp-install-path" class="input-dark" placeholder="/var/www/mysite">
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label-sm">Port <span style="color:#f38ba8;">*</span></label>
+                  <div class="d-flex gap-2">
+                    <input id="wp-port" class="input-dark" placeholder="8090" value="8090" type="number" style="flex:1;">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="loadNextPort()" title="Auto-detect next free port"><i class="bi bi-arrow-repeat"></i></button>
+                  </div>
+                  <div style="font-size:.73rem;color:#585b70;margin-top:3px;">Access site at http://localhost:<span id="wp-port-preview">8090</span></div>
+                </div>
+
+                <hr style="border-color:#2d3158;margin:16px 0;">
+                <div style="font-size:.8rem;color:#6c7086;margin-bottom:12px;"><i class="bi bi-database"></i> Database Settings</div>
+
+                <div class="mb-3">
+                  <label class="form-label-sm">Database Name <span style="color:#f38ba8;">*</span></label>
+                  <input id="wp-db-name" class="input-dark" placeholder="mysite_db">
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label-sm">Database User <span style="color:#f38ba8;">*</span></label>
+                  <input id="wp-db-user" class="input-dark" placeholder="mysite_user">
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label-sm">Database Password <span style="color:#f38ba8;">*</span></label>
+                  <div class="d-flex gap-2">
+                    <input id="wp-db-pass" class="input-dark" placeholder="auto-generated if blank" style="flex:1;">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="genWpPass()"><i class="bi bi-arrow-repeat"></i></button>
+                  </div>
+                </div>
+
+                <hr style="border-color:#2d3158;margin:16px 0;">
+                <div style="font-size:.8rem;color:#6c7086;margin-bottom:12px;"><i class="bi bi-person-circle"></i> WordPress Admin Account</div>
+
+                <div class="mb-3">
+                  <label class="form-label-sm">Site Title</label>
+                  <input id="wp-site-title" class="input-dark" placeholder="My WordPress Site">
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label-sm">Admin Username</label>
+                  <div class="d-flex gap-2">
+                    <input id="wp-admin-user" class="input-dark" placeholder="auto-generated if blank" style="flex:1;">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="genWpAdminUser()" title="Generate username"><i class="bi bi-arrow-repeat"></i></button>
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label-sm">Admin Password</label>
+                  <div class="d-flex gap-2">
+                    <input id="wp-admin-pass" class="input-dark" placeholder="auto-generated if blank" style="flex:1;">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="genWpAdminPass()"><i class="bi bi-arrow-repeat"></i></button>
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label-sm">Admin Email</label>
+                  <input id="wp-admin-email" class="input-dark" placeholder="admin@example.com" value="admin@localhost.local">
+                </div>
+
+                <hr style="border-color:#2d3158;margin:16px 0;">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <div style="font-size:.8rem;color:#6c7086;"><i class="bi bi-plug"></i> Auto Install Plugins</div>
+                  <button class="btn btn-sm btn-outline-secondary" onclick="loadWpPluginLibrary()" title="Rescan wp-plugin-library"><i class="bi bi-arrow-clockwise"></i></button>
+                </div>
+                <div id="wp-plugin-list" class="p-2 rounded" style="background:#12141c;border:1px solid #2d3158;font-size:.8rem;color:#6c7086;">
+                  Scanning plugin library…
+                </div>
+                <div style="font-size:.72rem;color:#585b70;margin-top:4px;">Put plugin zip files in <code>wp-plugin-library/</code>.</div>
+
+                <button class="btn btn-primary w-100 mt-2" onclick="startWpInstall()" id="wp-install-btn">
+                  <i class="bi bi-download"></i> Install WordPress
+                </button>
+              </div>
+            </div>
+
+            <div class="col-lg-6">
+              <div class="service-card" style="height:100%;">
+                <div class="section-title"><i class="bi bi-terminal"></i> Installation Log</div>
+                <div id="wp-install-log" class="log-box" style="height:340px;color:#cdd6f4;">
+                  Fill in the form and click Install…
+                </div>
+                <div id="wp-install-result" style="display:none;" class="mt-3 p-3 rounded" style="background:#1d3a2e;border-radius:8px;">
+                  <div style="color:#a6e3a1;font-weight:600;margin-bottom:10px;"><i class="bi bi-check-circle-fill"></i> Installation complete!</div>
+                  <div style="font-size:.84rem;">
+                    <div class="d-flex gap-2 mb-2">
+                      <a id="wp-result-url" href="#" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-globe"></i> Visit Site</a>
+                      <button id="wp-result-admin" class="btn btn-sm btn-primary" onclick="autoLoginInstallResult()"><i class="bi bi-speedometer2"></i> WP Admin Auto Login</button>
+                    </div>
+                    <div class="p-2 mb-2 rounded" style="background:#12141c;border:1px solid #2d3158;">
+                      <div style="font-size:.72rem;color:#585b70;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">WordPress Admin</div>
+                      <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <b style="color:#a6adc8;">Username:</b> <code id="wp-result-wpu" style="color:#a6e3a1;"></code>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="copyText('wp-result-wpu')"><i class="bi bi-clipboard"></i></button>
+                      </div>
+                      <div class="mt-1 d-flex align-items-center gap-2 flex-wrap">
+                        <b style="color:#a6adc8;">Password:</b> <code id="wp-result-wpp" style="color:#f9e2af;word-break:break-all;"></code>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="copyText('wp-result-wpp')"><i class="bi bi-clipboard"></i></button>
+                      </div>
+                    </div>
+                    <div class="p-2 rounded" style="background:#12141c;border:1px solid #2d3158;">
+                      <div style="font-size:.72rem;color:#585b70;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">Database</div>
+                      <div><b style="color:#a6adc8;">Name:</b> <code id="wp-result-db"></code></div>
+                      <div class="mt-1"><b style="color:#a6adc8;">User:</b> <code id="wp-result-dbu"></code></div>
+                      <div class="mt-1"><b style="color:#a6adc8;">Pass:</b> <code id="wp-result-dbp" style="word-break:break-all;"></code></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sudoers note -->
+          <div class="mt-3 service-card" style="font-size:.82rem;color:#6c7086;">
+            <b style="color:#a6adc8;"><i class="bi bi-shield-check"></i> Requires sudo</b> — run once if not done:
+            <code style="color:#cba6f7;margin-left:6px;">sudo bash ~/Documents/server-panel/setup-sudo.sh vjranga</code>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── LARAVEL ──────────────────────────────────────────────────────── -->
+      <div id="page-laravel" class="page">
+        <div class="custom-tabs">
+          <button class="active" onclick="switchTab('laravel','apps',this)">Installed Apps</button>
+          <button onclick="switchTab('laravel','install',this); loadLaravelNextPort()">Create New App</button>
+        </div>
+
+        <div id="laravel-tab-apps" class="tab-pane active">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="section-title mb-0"><i class="bi bi-code-square"></i> Laravel Apps</div>
+            <button class="btn btn-sm btn-outline-secondary" onclick="loadLaravelApps()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+          </div>
+          <div id="laravel-apps-container"><div class="empty-state"><div class="spinner-sm mx-auto"></div></div></div>
+        </div>
+
+        <div id="laravel-tab-install" class="tab-pane">
+          <div class="row g-4">
+            <div class="col-lg-6">
+              <div class="service-card">
+                <div class="section-title"><i class="bi bi-download"></i> New Laravel App</div>
+                <div class="mb-3">
+                  <label class="form-label-sm">App Name <span style="color:#f38ba8;">*</span></label>
+                  <input id="lv-site-name" class="input-dark" placeholder="myapp" oninput="laravelAutoFill()">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label-sm">Install Path <span style="color:#f38ba8;">*</span></label>
+                  <input id="lv-install-path" class="input-dark" placeholder="/var/www/myapp">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label-sm">Laravel Version</label>
+                  <select id="lv-version" class="input-dark">
+                    <option value="latest">Latest stable</option>
+                    <option value="12">Laravel 12</option>
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label-sm">Port <span style="color:#f38ba8;">*</span></label>
+                  <div class="d-flex gap-2">
+                    <input id="lv-port" class="input-dark" placeholder="8100" value="8100" type="number" style="flex:1;">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="loadLaravelNextPort()"><i class="bi bi-arrow-repeat"></i></button>
+                  </div>
+                  <div style="font-size:.73rem;color:#585b70;margin-top:3px;">Access at http://localhost:<span id="lv-port-preview">8100</span></div>
+                </div>
+                <hr style="border-color:#2d3158;margin:16px 0;">
+                <div style="font-size:.8rem;color:#6c7086;margin-bottom:12px;"><i class="bi bi-database"></i> Database Settings</div>
+                <div class="mb-3"><label class="form-label-sm">Database Name <span style="color:#f38ba8;">*</span></label><input id="lv-db-name" class="input-dark" placeholder="myapp_db"></div>
+                <div class="mb-3"><label class="form-label-sm">Database User <span style="color:#f38ba8;">*</span></label><input id="lv-db-user" class="input-dark" placeholder="myapp_user"></div>
+                <div class="mb-3">
+                  <label class="form-label-sm">Database Password</label>
+                  <div class="d-flex gap-2"><input id="lv-db-pass" class="input-dark" placeholder="auto-generated if blank" style="flex:1;"><button class="btn btn-sm btn-outline-secondary" onclick="genLaravelDbPass()"><i class="bi bi-arrow-repeat"></i></button></div>
+                </div>
+                <button class="btn btn-primary w-100 mt-2" onclick="startLaravelInstall()" id="lv-install-btn"><i class="bi bi-download"></i> Create Laravel App</button>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="service-card" style="height:100%;">
+                <div class="section-title"><i class="bi bi-terminal"></i> Installation Log</div>
+                <div id="lv-install-log" class="log-box" style="height:340px;color:#cdd6f4;">Fill in the form and click Create…</div>
+                <div id="lv-install-result" style="display:none;" class="mt-3 p-3 rounded">
+                  <div style="color:#a6e3a1;font-weight:600;margin-bottom:10px;"><i class="bi bi-check-circle-fill"></i> Laravel app created!</div>
+                  <a id="lv-result-url" href="#" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-globe"></i> Open App</a>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="mt-3 service-card" style="font-size:.82rem;color:#6c7086;">
+            <b style="color:#a6adc8;"><i class="bi bi-shield-check"></i> Requires sudo + Composer</b> — if Laravel install fails, install Composer and rerun:
+            <code style="color:#cba6f7;margin-left:6px;">sudo bash ~/Documents/server-panel/setup-sudo.sh vjranga</code>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PHPMYADMIN ─────────────────────────────────────────────────── -->
+      <div id="page-phpmyadmin" class="page">
+        <div class="custom-tabs">
+          <button class="active" onclick="switchTab('phpmyadmin','overview',this)">Overview</button>
+          <button onclick="switchTab('phpmyadmin','nginx',this)">Nginx Setup</button>
+          <button onclick="switchTab('phpmyadmin','phpconfig',this)">PHP Config</button>
+        </div>
+
+        <!-- Overview tab -->
+        <div id="phpmyadmin-tab-overview" class="tab-pane active">
+          <div id="pma-status-panel">
+            <div class="empty-state"><div class="spinner-sm mx-auto"></div></div>
+          </div>
+        </div>
+
+        <!-- Nginx Setup tab -->
+        <div id="phpmyadmin-tab-nginx" class="tab-pane">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="section-title mb-0"><i class="bi bi-arrow-left-right"></i> Nginx Site for phpMyAdmin</div>
+            <div class="d-flex gap-2 align-items-center">
+              <label style="font-size:.8rem;color:#6c7086;">Port</label>
+              <input id="pma-port-input" class="input-dark" style="width:80px;" value="8081">
+              <button class="btn btn-sm btn-outline-secondary" onclick="generatePmaConfig()"><i class="bi bi-magic"></i> Generate</button>
+            </div>
+          </div>
+          <div id="pma-nginx-status" class="mb-2" style="font-size:.82rem;display:none;"></div>
+          <textarea id="pma-nginx-editor" class="code-editor" rows="26" placeholder="Loading…"></textarea>
+          <div class="mt-2 d-flex gap-2 flex-wrap">
+            <button class="btn btn-primary btn-sm" onclick="savePmaConfig()"><i class="bi bi-floppy"></i> Save Site Config</button>
+            <button class="btn btn-success btn-sm" onclick="pmaAction('enable')"><i class="bi bi-check-circle"></i> Enable &amp; Reload</button>
+            <button class="btn btn-outline-danger btn-sm" onclick="pmaAction('disable')"><i class="bi bi-x-circle"></i> Disable</button>
+          </div>
+          <div class="mt-3 service-card" style="font-size:.82rem;color:#6c7086;">
+            <b style="color:#a6adc8;">Also add to sudoers</b> if not done yet:<br>
+            <code style="color:#cba6f7;">sudo bash ~/Documents/server-panel/setup-sudo.sh vjranga</code>
+          </div>
+        </div>
+
+        <!-- PHP Config tab -->
+        <div id="phpmyadmin-tab-phpconfig" class="tab-pane">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="section-title mb-0"><i class="bi bi-file-code"></i> config.inc.php</div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-outline-secondary" onclick="genBlowfish()"><i class="bi bi-key"></i> New Secret</button>
+              <button class="btn btn-sm btn-primary" onclick="savePmaPhpConfig()"><i class="bi bi-floppy"></i> Save</button>
+            </div>
+          </div>
+          <div id="pma-blowfish-bar" style="display:none;" class="mb-2 p-2" style="background:#1e2030;border-radius:6px;">
+            <span style="font-size:.8rem;color:#6c7086;">New blowfish secret — copy into <code>\$cfg['blowfish_secret']</code>:</span><br>
+            <code id="pma-blowfish-val" style="color:#a6e3a1;font-size:.85rem;word-break:break-all;"></code>
+          </div>
+          <div id="pma-phpconfig-msg" class="mb-2" style="font-size:.82rem;display:none;"></div>
+          <textarea id="pma-phpconfig-editor" class="code-editor" rows="28" placeholder="Install phpMyAdmin first to view config.inc.php"></textarea>
+          <div class="mt-2">
+            <button class="btn btn-primary btn-sm" onclick="savePmaPhpConfig()"><i class="bi bi-floppy"></i> Save Config</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PERFORMANCE ────────────────────────────────────────────────── -->
+      <div id="page-performance" class="page">
+        <div class="custom-tabs">
+          <button class="active" onclick="switchTab('performance','nginx',this)"><i class="bi bi-arrow-left-right"></i> Nginx</button>
+          <button onclick="switchTab('performance','php',this)"><i class="bi bi-filetype-php"></i> PHP</button>
+          <button onclick="switchTab('performance','fpm',this)"><i class="bi bi-cpu"></i> PHP-FPM</button>
+          <button onclick="switchTab('performance','mysql',this)"><i class="bi bi-database"></i> MySQL</button>
+        </div>
+
+        <!-- Nginx tab -->
+        <div id="performance-tab-nginx" class="tab-pane active">
+          <div class="row g-3">
+            <div class="col-lg-7">
+              <div class="service-card">
+                <div class="section-title"><i class="bi bi-arrow-left-right"></i> Nginx Performance</div>
+                <div id="perf-nginx-form"></div>
+                <div id="perf-nginx-out" class="log-box mt-3" style="height:80px;display:none;"></div>
+                <div class="mt-3">
+                  <button class="btn btn-primary btn-sm" onclick="savePerf('nginx')"><i class="bi bi-floppy"></i> Save & Reload Nginx</button>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-5">
+              <div class="service-card" style="font-size:.82rem;color:#6c7086;">
+                <div style="color:#a6adc8;font-weight:600;margin-bottom:8px;"><i class="bi bi-info-circle"></i> Tips</div>
+                <b>worker_processes:</b> Set to <code>auto</code> to match CPU cores<br><br>
+                <b>worker_connections:</b> Max simultaneous connections per worker. 1024–4096 for busy servers<br><br>
+                <b>keepalive_timeout:</b> How long to keep idle connections open. 15–65 sec is typical<br><br>
+                <b>client_max_body_size:</b> Max file upload size (e.g. <code>100M</code>, <code>1G</code>)<br><br>
+                <b>gzip:</b> Compresses responses — reduces bandwidth ~70%<br><br>
+                <b>server_tokens:</b> Set <code>off</code> to hide nginx version from headers
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PHP tab -->
+        <div id="performance-tab-php" class="tab-pane">
+          <div class="row g-3">
+            <div class="col-lg-7">
+              <div class="service-card">
+                <div class="section-title"><i class="bi bi-filetype-php"></i> PHP Settings <span id="perf-php-path" style="font-size:.72rem;color:#585b70;font-weight:400;"></span></div>
+                <div id="perf-php-form"></div>
+                <div id="perf-php-out" class="log-box mt-3" style="height:80px;display:none;"></div>
+                <div class="mt-3">
+                  <button class="btn btn-primary btn-sm" onclick="savePerf('php')"><i class="bi bi-floppy"></i> Save & Restart PHP-FPM</button>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-5">
+              <div class="service-card" style="font-size:.82rem;color:#6c7086;">
+                <div style="color:#a6adc8;font-weight:600;margin-bottom:8px;"><i class="bi bi-info-circle"></i> Tips</div>
+                <b>memory_limit:</b> Max RAM per PHP script. WordPress needs at least <code>128M</code>, heavy sites <code>256M</code>+<br><br>
+                <b>max_execution_time:</b> Max seconds a script can run. Increase for slow imports/exports<br><br>
+                <b>upload_max_filesize:</b> Must be ≤ post_max_size and Nginx client_max_body_size<br><br>
+                <b>post_max_size:</b> Max total POST data size — set slightly larger than upload limit<br><br>
+                Use <code>M</code> for megabytes, <code>G</code> for gigabytes (e.g. <code>512M</code>, <code>2G</code>)
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PHP-FPM tab -->
+        <div id="performance-tab-fpm" class="tab-pane">
+          <div class="row g-3">
+            <div class="col-lg-7">
+              <div class="service-card">
+                <div class="section-title"><i class="bi bi-cpu"></i> PHP-FPM Pool <span id="perf-fpm-path" style="font-size:.72rem;color:#585b70;font-weight:400;"></span></div>
+                <div id="perf-fpm-form"></div>
+                <div id="perf-fpm-out" class="log-box mt-3" style="height:80px;display:none;"></div>
+                <div class="mt-3">
+                  <button class="btn btn-primary btn-sm" onclick="savePerf('fpm')"><i class="bi bi-floppy"></i> Save & Restart PHP-FPM</button>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-5">
+              <div class="service-card" style="font-size:.82rem;color:#6c7086;">
+                <div style="color:#a6adc8;font-weight:600;margin-bottom:8px;"><i class="bi bi-info-circle"></i> Tips</div>
+                <b>pm = dynamic:</b> Spawns workers on demand (best for most sites)<br><br>
+                <b>max_children:</b> Max PHP workers. Each uses ~30–50MB RAM. Don't exceed available RAM<br><br>
+                <b>start_servers:</b> Workers spawned at startup<br><br>
+                <b>min/max_spare:</b> Idle workers kept alive. Higher = faster response, more RAM<br><br>
+                <b>max_requests:</b> Restart worker after N requests — prevents memory leaks. 500–1000 is good<br><br>
+                <b>request_terminate_timeout:</b> Kill worker if request takes longer (0 = disabled)
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MySQL tab -->
+        <div id="performance-tab-mysql" class="tab-pane">
+          <div class="row g-3">
+            <div class="col-lg-7">
+              <div class="service-card">
+                <div class="section-title"><i class="bi bi-database"></i> MySQL Settings <span id="perf-mysql-path" style="font-size:.72rem;color:#585b70;font-weight:400;"></span></div>
+                <div id="perf-mysql-form"></div>
+                <div id="perf-mysql-out" class="log-box mt-3" style="height:80px;display:none;"></div>
+                <div class="mt-3 d-flex gap-2 align-items-center">
+                  <button class="btn btn-primary btn-sm" onclick="savePerf('mysql')"><i class="bi bi-floppy"></i> Save & Restart MySQL</button>
+                  <span style="font-size:.75rem;color:#f9e2af;"><i class="bi bi-exclamation-triangle"></i> MySQL will restart briefly</span>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-5">
+              <div class="service-card" style="font-size:.82rem;color:#6c7086;">
+                <div style="color:#a6adc8;font-weight:600;margin-bottom:8px;"><i class="bi bi-info-circle"></i> Tips</div>
+                <b>max_connections:</b> Max simultaneous DB connections. Default 151 is fine for local<br><br>
+                <b>innodb_buffer_pool_size:</b> Most important MySQL setting — cache for InnoDB data. Set to 50–70% of available RAM for DB servers (e.g. <code>512M</code>, <code>1G</code>)<br><br>
+                <b>slow_query_log:</b> Set to <code>1</code> to log slow queries for debugging<br><br>
+                <b>long_query_time:</b> Queries slower than this (seconds) get logged<br><br>
+                <b>max_allowed_packet:</b> Max size of a single MySQL packet (affects large imports)
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SETTINGS ────────────────────────────────────────────────────── -->
+      <div id="page-settings" class="page">
+        <div class="row g-4">
+          <div class="col-md-5">
+            <div class="service-card">
+              <div class="section-title"><i class="bi bi-lock"></i> Change Password</div>
+              <div class="mb-3">
+                <label style="font-size:.82rem;color:#6c7086;">New Password</label>
+                <input id="new-pw" type="password" class="input-dark mt-1">
+              </div>
+              <div class="mb-3">
+                <label style="font-size:.82rem;color:#6c7086;">Confirm Password</label>
+                <input id="new-pw2" type="password" class="input-dark mt-1">
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="changePassword()">Save Password</button>
+            </div>
+          </div>
+          <div class="col-md-5">
+            <div class="service-card">
+              <div class="section-title"><i class="bi bi-database-gear"></i> MySQL Credentials</div>
+              <div class="mb-3">
+                <label style="font-size:.82rem;color:#6c7086;">MySQL User</label>
+                <input id="mysql-user" class="input-dark mt-1" placeholder="root">
+              </div>
+              <div class="mb-3">
+                <label style="font-size:.82rem;color:#6c7086;">MySQL Password</label>
+                <input id="mysql-pw" type="password" class="input-dark mt-1" placeholder="(blank for socket auth)">
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="saveMySQL()">Save Credentials</button>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="service-card">
+              <div class="section-title"><i class="bi bi-info-circle"></i> Sudo Permissions</div>
+              <p style="font-size:.85rem;color:#6c7086;margin-bottom:12px;">This panel runs system commands with <code>sudo</code>. Add this file to allow passwordless access:</p>
+              <pre class="code-editor" style="height:auto;padding:14px;font-size:.78rem;">sudo tee /etc/sudoers.d/server-panel &lt;&lt;'EOF'
+# Allow server-panel to control services and edit nginx configs
+<span id="sudo-user-placeholder">YOUR_USER</span> ALL=(ALL) NOPASSWD: /usr/bin/systemctl start nginx
+<span class="sudo-line">YOUR_USER</span> ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop nginx
+<span class="sudo-line">YOUR_USER</span> ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart nginx
+<span class="sudo-line">YOUR_USER</span> ALL=(ALL) NOPASSWD: /usr/bin/systemctl reload nginx
+<span class="sudo-line">YOUR_USER</span> ALL=(ALL) NOPASSWD: /usr/bin/systemctl start mysql
+<span class="sudo-line">YOUR_USER</span> ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop mysql
+<span class="sudo-line">YOUR_USER</span> ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart mysql
+<span class="sudo-line">YOUR_USER</span> ALL=(ALL) NOPASSWD: /usr/bin/nginx -t *
+<span class="sudo-line">YOUR_USER</span> ALL=(ALL) NOPASSWD: /bin/cp /tmp/_panel_* /etc/nginx/*
+<span class="sudo-line">YOUR_USER</span> ALL=(ALL) NOPASSWD: /bin/cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
+<span class="sudo-line">YOUR_USER</span> ALL=(ALL) NOPASSWD: /bin/ln -sf /etc/nginx/sites-available/* /etc/nginx/sites-enabled/*
+<span class="sudo-line">YOUR_USER</span> ALL=(ALL) NOPASSWD: /bin/rm -f /etc/nginx/sites-enabled/*
+<span class="sudo-line">YOUR_USER</span> ALL=(ALL) NOPASSWD: /usr/bin/tail * /var/log/nginx/*
+<span class="sudo-line">YOUR_USER</span> ALL=(ALL) NOPASSWD: /usr/bin/mysql
+EOF</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /panel -->
+
+<!-- Delete modal -->
+<div id="delete-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9998;align-items:center;justify-content:center;">
+  <div style="background:#1e2030;border:1px solid #2d3158;border-radius:14px;padding:26px;width:480px;max-width:95vw;">
+
+    <!-- Confirm step -->
+    <div id="del-step-confirm">
+      <div style="font-size:1.05rem;font-weight:700;margin-bottom:10px;color:#f38ba8;"><i class="bi bi-trash"></i> Delete WordPress Site</div>
+      <div id="del-modal-body" style="font-size:.84rem;color:#a6adc8;margin-bottom:14px;line-height:1.7;"></div>
+      <div style="font-size:.8rem;color:#585b70;margin-bottom:5px;">Type <b id="del-confirm-hint" style="color:#f38ba8;"></b> to confirm:</div>
+      <input id="del-confirm-input" class="input-dark" placeholder="type site name here" style="margin-bottom:14px;" oninput="checkDelConfirm()">
+      <div class="d-flex gap-2 justify-content-end">
+        <button class="btn btn-sm btn-outline-secondary" onclick="closeDeleteModal()">Cancel</button>
+        <button id="del-confirm-btn" class="btn btn-sm btn-danger" disabled onclick="confirmDelete()"><i class="bi bi-trash"></i> Delete</button>
+      </div>
+    </div>
+
+    <!-- Progress step -->
+    <div id="del-step-progress" style="display:none;">
+      <div style="font-size:1.05rem;font-weight:700;margin-bottom:10px;color:#f38ba8;"><i class="bi bi-trash"></i> Deleting…</div>
+      <div id="del-progress-log" class="log-box" style="height:200px;color:#cdd6f4;"></div>
+      <div id="del-done-row" style="display:none;" class="d-flex justify-content-end mt-3">
+        <button class="btn btn-sm btn-outline-secondary" onclick="closeDeleteModal()">Close</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<!-- Credentials / phpMyAdmin modal -->
+<div id="cred-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9998;align-items:center;justify-content:center;">
+  <div style="background:#1e2030;border:1px solid #2d3158;border-radius:14px;padding:26px;width:440px;max-width:95vw;">
+    <div style="font-size:1.05rem;font-weight:700;margin-bottom:14px;"><i class="bi bi-database-gear" style="color:#f0ad4e;"></i> phpMyAdmin — <span id="cred-site-name" style="color:var(--accent);"></span></div>
+    <div style="font-size:.82rem;color:#6c7086;margin-bottom:14px;">Use these credentials to log in. Click "Open phpMyAdmin" — it will open with the correct database pre-selected.</div>
+    <div class="mb-3">
+      <div style="font-size:.75rem;color:#585b70;margin-bottom:4px;">DATABASE</div>
+      <div class="d-flex align-items-center gap-2">
+        <code id="cred-db-name" style="color:#a6e3a1;flex:1;word-break:break-all;"></code>
+      </div>
+    </div>
+    <div class="mb-3">
+      <div style="font-size:.75rem;color:#585b70;margin-bottom:4px;">USERNAME</div>
+      <div class="d-flex align-items-center gap-2">
+        <code id="cred-db-user" style="color:#cdd6f4;flex:1;"></code>
+        <button class="btn btn-sm btn-outline-secondary" onclick="copyText('cred-db-user')"><i class="bi bi-clipboard"></i></button>
+      </div>
+    </div>
+    <div class="mb-4">
+      <div style="font-size:.75rem;color:#585b70;margin-bottom:4px;">PASSWORD</div>
+      <div class="d-flex align-items-center gap-2">
+        <code id="cred-db-pass" style="color:#f9e2af;flex:1;word-break:break-all;"></code>
+        <button class="btn btn-sm btn-outline-secondary" onclick="copyText('cred-db-pass')"><i class="bi bi-clipboard"></i></button>
+      </div>
+    </div>
+    <div class="d-flex gap-2 justify-content-end">
+      <button class="btn btn-sm btn-outline-secondary" onclick="closeCredModal()">Close</button>
+      <a id="cred-pma-link" href="#" target="_blank" class="btn btn-sm btn-warning" onclick="closeCredModal()"><i class="bi bi-box-arrow-up-right"></i> Open phpMyAdmin</a>
+    </div>
+  </div>
+</div>
+
+<!-- Change Passwords modal -->
+<div id="chpass-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9998;align-items:center;justify-content:center;">
+  <div style="background:#1e2030;border:1px solid #2d3158;border-radius:14px;padding:26px;width:460px;max-width:95vw;">
+    <div style="font-size:1.05rem;font-weight:700;margin-bottom:4px;"><i class="bi bi-key" style="color:#f9e2af;"></i> Change Passwords — <span id="chpass-site-name" style="color:var(--accent);"></span></div>
+    <div style="font-size:.78rem;color:#585b70;margin-bottom:18px;">DB User: <code id="chpass-db-user" style="color:#a6adc8;"></code></div>
+
+    <!-- DB password section -->
+    <div class="mb-4 p-3" style="background:#12141c;border-radius:8px;border:1px solid #2d3158;">
+      <div style="font-size:.85rem;font-weight:600;margin-bottom:10px;"><i class="bi bi-database text-info"></i> Database User Password</div>
+      <div style="font-size:.75rem;color:#585b70;margin-bottom:8px;">Updates MySQL user password and wp-config.php.</div>
+      <div class="d-flex gap-2 mb-2">
+        <input id="chpass-db-new" type="password" class="input-dark" placeholder="New DB password" style="flex:1;">
+        <button class="btn btn-sm btn-outline-secondary" onclick="genPassInto('chpass-db-new')"><i class="bi bi-arrow-repeat"></i></button>
+      </div>
+      <button class="btn btn-sm btn-primary w-100" onclick="doChangeDbPass()" id="chpass-db-btn"><i class="bi bi-floppy"></i> Update DB Password</button>
+      <div id="chpass-db-msg" style="font-size:.78rem;margin-top:6px;display:none;"></div>
+    </div>
+
+    <!-- WP admin password section -->
+    <div class="mb-3 p-3" style="background:#12141c;border-radius:8px;border:1px solid #2d3158;">
+      <div style="font-size:.85rem;font-weight:600;margin-bottom:10px;"><i class="bi bi-wordpress text-primary"></i> WP Admin Password</div>
+      <div style="font-size:.75rem;color:#585b70;margin-bottom:8px;">Updates the selected WordPress administrator account.</div>
+      <div class="mb-2">
+        <label style="font-size:.75rem;color:#a6adc8;margin-bottom:4px;">Admin Username</label>
+        <select id="chpass-wp-user" class="input-dark"></select>
+      </div>
+      <div class="d-flex gap-2 mb-2">
+        <input id="chpass-wp-new" type="password" class="input-dark" placeholder="New WP admin password" style="flex:1;">
+        <button class="btn btn-sm btn-outline-secondary" onclick="genPassInto('chpass-wp-new')"><i class="bi bi-arrow-repeat"></i></button>
+      </div>
+      <button class="btn btn-sm btn-primary w-100" onclick="doChangeWpPass()" id="chpass-wp-btn"><i class="bi bi-floppy"></i> Update WP Admin Password</button>
+      <div id="chpass-wp-msg" style="font-size:.78rem;margin-top:6px;display:none;"></div>
+    </div>
+
+    <div class="d-flex justify-content-end">
+      <button class="btn btn-sm btn-outline-secondary" onclick="closePassModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ══ State ════════════════════════════════════════════════════════════════════
+let token = localStorage.getItem('panel_token') || '';
+let currentLog = 'error';
+let editingSite = '';
+let statusInterval = null;
+let currentPage = 'dashboard';
+let panelServicesStarted = sessionStorage.getItem('panel_services_started') === '1';
+
+// ══ Auth ═════════════════════════════════════════════════════════════════════
+async function doLogin() {
+  const pw = document.getElementById('login-pw').value;
+  const r = await api('/api/login', 'POST', { password: pw });
+  if (r.success) {
+    token = r.token;
+    localStorage.setItem('panel_token', token);
+    showPanel();
+  } else {
+    const el = document.getElementById('login-err');
+    el.textContent = 'Wrong password.';
+    el.style.display = 'block';
+  }
+}
+
+function doLogout() {
+  stopPanelServicesOnClose();
+  sessionStorage.removeItem('panel_services_started');
+  token = '';
+  localStorage.removeItem('panel_token');
+  if (statusInterval) clearInterval(statusInterval);
+  document.getElementById('panel').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+function showPanel() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('panel').style.display = 'block';
+  initPanel();
+}
+
+async function autoStartPanelServices() {
+  if (panelServicesStarted) return;
+  panelServicesStarted = true;
+  sessionStorage.setItem('panel_services_started', '1');
+  toast('Starting services…', 'info');
+  const r = await api('/api/panel/open', 'POST');
+  if (r.success) {
+    toast('Services started', 'success');
+    refreshStatus();
+  } else {
+    toast('Auto-start failed: ' + (r.error || 'unknown'), 'error');
+  }
+}
+
+function stopPanelServicesOnClose() {
+  if (!token) return;
+  const body = JSON.stringify({ token });
+  if (navigator.sendBeacon) {
+    navigator.sendBeacon('/api/panel/close', new Blob([body], { type: 'application/json' }));
+  } else {
+    fetch('/api/panel/close', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+      keepalive: true,
+    });
+  }
+}
+
+// ══ API helper ═══════════════════════════════════════════════════════════════
+async function api(path, method='GET', body=null) {
+  const opts = { method, headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  try {
+    const r = await fetch(path, opts);
+    if (r.status === 401) { doLogout(); return {}; }
+    return await r.json();
+  } catch(e) {
+    return { success: false, error: e.message };
+  }
+}
+
+async function apiDelete(path, body=null) {
+  const opts = { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  try {
+    const r = await fetch(path, opts);
+    if (r.status === 401) { doLogout(); return {}; }
+    return await r.json();
+  } catch(e) {
+    return { success: false, error: e.message };
+  }
+}
+
+// ══ Toast ═════════════════════════════════════════════════════════════════════
+function toast(msg, type='info') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast-item ${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+// ══ Status dot helpers ═══════════════════════════════════════════════════════
+function dotClass(status) {
+  return status === 'active' ? 'dot-green' : status === 'inactive' ? 'dot-red' : 'dot-yellow';
+}
+function badgeClass(status) {
+  return status === 'active' ? 'status-active' : status === 'inactive' ? 'status-inactive' : 'status-unknown';
+}
+
+// ══ Service control ═══════════════════════════════════════════════════════════
+const busyServices = new Set();
+
+function serviceButtonsHtml(svc, includeReload=false) {
+  const safeSvc = esc(svc);
+  return `
+    <button class="btn btn-success btn-sm" data-svc-action="start" onclick="svcAction('${safeSvc}','start')"><i class="bi bi-play-fill"></i> Start</button>
+    <button class="btn btn-danger btn-sm" data-svc-action="stop" onclick="svcAction('${safeSvc}','stop')"><i class="bi bi-stop-fill"></i> Stop</button>
+    <button class="btn btn-warning btn-sm" data-svc-action="restart" onclick="svcAction('${safeSvc}','restart')"><i class="bi bi-arrow-clockwise"></i> Restart</button>
+    ${includeReload ? `<button class="btn btn-outline-secondary btn-sm" data-svc-action="reload" onclick="svcAction('${safeSvc}','reload')"><i class="bi bi-arrow-repeat"></i> Reload</button>` : ''}`;
+}
+
+function syncServiceButtons(containerId, status, svc) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const active = status === 'active';
+  const inactive = status === 'inactive';
+  const busy = busyServices.has(svc);
+
+  container.querySelectorAll('[data-svc-action]').forEach(btn => {
+    const action = btn.dataset.svcAction;
+    let disabled = busy;
+    if (!disabled && action === 'start') disabled = active;
+    if (!disabled && action === 'stop') disabled = inactive;
+    if (!disabled && (action === 'restart' || action === 'reload')) disabled = !active;
+
+    btn.disabled = disabled;
+    btn.classList.toggle('opacity-50', disabled);
+  });
+}
+
+async function svcAction(svc, action) {
+  busyServices.add(svc);
+  refreshStatus();
+  toast(`${action} ${svc}…`, 'info');
+  const r = await api(`/api/services/${svc}/${action}`, 'POST');
+  if (r.success || r.status) {
+    toast(`${svc} ${action}: ${r.status || 'done'}`, r.success ? 'success' : 'error');
+  } else {
+    toast(`Error: ${r.stderr || r.error || 'unknown'}`, 'error');
+  }
+  busyServices.delete(svc);
+  refreshStatus();
+}
+
+// ══ Status polling ════════════════════════════════════════════════════════════
+async function refreshStatus() {
+  const [r, pma] = await Promise.all([api('/api/status'), api('/api/phpmyadmin/status')]);
+  if (!r) return;
+
+  // Sidebar dots
+  const ns = r.nginx || 'inactive', ms = r.mysql || 'inactive';
+  const fs = pma.php_fpm_status || 'inactive';
+  setDot('sb-nginx', ns); setDot('sb-mysql', ms); setDot('sb-phpfpm', fs);
+
+  // Dashboard service badges
+  setBadge('d-nginx-badge', ns);
+  setBadge('d-mysql-badge', ms);
+  setBadge('d-phpfpm-badge', fs);
+  setText('d-php-ver', pma.php_version || '—');
+  syncServiceButtons('d-nginx-btns', ns, 'nginx');
+  syncServiceButtons('d-mysql-btns', ms, 'mysql');
+
+  // PHP-FPM control buttons (dynamic service name)
+  const fpmSvc = pma.php_fpm_service || 'php8.3-fpm';
+  const btnCont = document.getElementById('d-phpfpm-btns');
+  if (btnCont && (!btnCont.dataset.built || btnCont.dataset.svc !== fpmSvc)) {
+    btnCont.dataset.built = '1';
+    btnCont.dataset.svc = fpmSvc;
+    btnCont.innerHTML = serviceButtonsHtml(fpmSvc);
+  }
+  syncServiceButtons('d-phpfpm-btns', fs, fpmSvc);
+  syncServiceButtons('pma-phpfpm-btns', fs, fpmSvc);
+
+  // phpMyAdmin dashboard card
+  if (pma.installed) {
+    setBadge('d-pma-badge', pma.nginx_site_enabled ? 'active' : 'inactive');
+    document.getElementById('d-pma-badge').textContent = pma.nginx_site_enabled ? 'running' : 'not enabled';
+    setText('d-pma-ver', `PHP ${pma.php_version}`);
+    const link = document.getElementById('d-pma-link');
+    link.href = pma.url || '#';
+    link.style.display = 'inline-flex';
+  } else {
+    setBadge('d-pma-badge', 'inactive');
+    document.getElementById('d-pma-badge').textContent = 'not installed';
+    setText('d-pma-ver', '');
+  }
+
+  const sys = r.system || {};
+  setText('stat-cpu', sys.cpu || '—');
+  setText('stat-mem', sys.mem_used || '—');
+  setText('stat-mem-sub', `of ${sys.mem_total || '—'}  free: ${sys.mem_free || '—'}`);
+  setText('stat-disk', sys.disk_pct || '—');
+  setText('stat-disk-sub', `${sys.disk_used || '—'} of ${sys.disk_total || '—'}`);
+  setText('stat-uptime', sys.uptime || '—');
+  setText('sys-uptime', sys.uptime || '');
+  setText('sys-host', sys.hostname || '');
+}
+
+function setDot(id, status) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'status-dot ' + dotClass(status);
+}
+function setBadge(id, status) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'svc-status ' + badgeClass(status);
+  el.textContent = status;
+}
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+// ══ Navigation ════════════════════════════════════════════════════════════════
+const pageTitles = { dashboard:'Dashboard', nginx:'Nginx', mysql:'MySQL', wordpress:'WordPress', laravel:'Laravel', phpmyadmin:'phpMyAdmin', performance:'Performance', settings:'Settings' };
+function validPage(name) {
+  return name && document.getElementById('page-' + name) ? name : '';
+}
+
+function savedPage() {
+  return validPage(window.location.hash.replace('#', '')) || validPage(localStorage.getItem('panel_page')) || 'dashboard';
+}
+
+function showPage(name, el) {
+  name = validPage(name) || 'dashboard';
+  if (currentPage === name && document.getElementById('page-' + name).classList.contains('active')) {
+    localStorage.setItem('panel_page', name);
+    if (el) {
+      document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+      el.classList.add('active');
+    }
+    if (window.location.hash !== '#' + name) window.location.hash = name;
+    return;
+  }
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  if (el) el.classList.add('active');
+  else document.querySelector(`.sidebar-nav a[href="#${name}"]`)?.classList.add('active');
+  document.getElementById('page-title').textContent = pageTitles[name] || name;
+  currentPage = name;
+  localStorage.setItem('panel_page', name);
+  if (window.location.hash !== '#' + name) window.location.hash = name;
+  onPageLoad(name);
+}
+
+function onPageLoad(name) {
+  if (name === 'nginx')      { loadNginxSites(); loadNginxConfig(); }
+  if (name === 'mysql')      { loadDatabases(); }
+  if (name === 'wordpress')  { loadWPSites(); loadNextPort(); loadWpPluginLibrary(); }
+  if (name === 'laravel')    { loadLaravelApps(); loadLaravelNextPort(); }
+  if (name === 'phpmyadmin')  { loadPmaStatus(); loadPmaNginxConfig(); loadPmaPhpConfig(); }
+  if (name === 'performance') { loadPerformance(); }
+}
+
+// ══ Tab switching ═════════════════════════════════════════════════════════════
+function switchTab(page, tab, el) {
+  document.querySelectorAll(`#page-${page} .tab-pane`).forEach(p => p.classList.remove('active'));
+  document.querySelectorAll(`#page-${page} .custom-tabs button`).forEach(b => b.classList.remove('active'));
+  document.getElementById(`${page}-tab-${tab}`).classList.add('active');
+  if (el) el.classList.add('active');
+}
+
+// ══ Nginx ═════════════════════════════════════════════════════════════════════
+async function loadNginxSites() {
+  const r = await api('/api/nginx/sites');
+  const container = document.getElementById('nginx-sites-table');
+  if (!r.success || !r.sites) {
+    container.innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-triangle"></i>Failed to load sites</div>`;
+    return;
+  }
+  if (!r.sites.length) {
+    container.innerHTML = `<div class="empty-state"><i class="bi bi-folder2-open"></i>No sites found in /etc/nginx/sites-available</div>`;
+    return;
+  }
+  let rows = r.sites.map(s => `
+    <tr>
+      <td><b>${esc(s.name)}</b></td>
+      <td>${esc(s.server_name)}</td>
+      <td><span class="${s.enabled?'badge-enabled':'badge-disabled'}">${s.enabled?'enabled':'disabled'}</span></td>
+      <td>
+        <button class="btn btn-sm btn-outline-secondary" onclick="editSite('${esc(s.name)}')"><i class="bi bi-pencil"></i> Edit</button>
+        ${s.enabled
+          ? `<button class="btn btn-sm btn-outline-danger ms-1" onclick="toggleSite('${esc(s.name)}','disable')"><i class="bi bi-x-circle"></i> Disable</button>`
+          : `<button class="btn btn-sm btn-outline-success ms-1" onclick="toggleSite('${esc(s.name)}','enable')"><i class="bi bi-check-circle"></i> Enable</button>`
+        }
+      </td>
+    </tr>`).join('');
+  container.innerHTML = `
+    <table class="panel-table">
+      <thead><tr><th>Name</th><th>Server Name</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+async function editSite(name) {
+  editingSite = name;
+  const r = await api(`/api/nginx/site/${name}`);
+  if (!r.success) { toast('Failed to load site config: ' + r.error, 'error'); return; }
+  document.getElementById('site-editor-name').textContent = name;
+  document.getElementById('site-editor-content').value = r.content;
+  document.getElementById('site-editor').style.display = 'block';
+  document.getElementById('site-editor').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function saveSiteConfig() {
+  const content = document.getElementById('site-editor-content').value;
+  const r = await api(`/api/nginx/site/${editingSite}`, 'POST', { action: 'save', content });
+  if (r.success) { toast('Site config saved', 'success'); document.getElementById('site-editor').style.display = 'none'; }
+  else toast('Save failed: ' + (r.stderr || r.error), 'error');
+}
+
+async function toggleSite(name, action) {
+  const r = await api(`/api/nginx/site/${name}`, 'POST', { action });
+  if (r.success) { toast(`Site ${name} ${action}d`, 'success'); loadNginxSites(); }
+  else toast(`Failed: ${r.stderr || r.error}`, 'error');
+}
+
+async function loadNginxConfig() {
+  const r = await api('/api/nginx/config');
+  if (r.success) document.getElementById('nginx-config-editor').value = r.content;
+  else document.getElementById('nginx-config-editor').value = '# Error: ' + (r.error || 'permission denied');
+}
+
+async function saveNginxConfig() {
+  const content = document.getElementById('nginx-config-editor').value;
+  const r = await api('/api/nginx/config', 'POST', { content });
+  const st = document.getElementById('nginx-config-status');
+  if (r.success) {
+    st.textContent = 'Saved successfully. Consider reloading nginx.';
+    st.style.color = '#a6e3a1'; st.style.display = 'block';
+    toast('nginx.conf saved', 'success');
+  } else {
+    st.textContent = 'Error: ' + (r.details || r.error || r.stderr);
+    st.style.color = '#f38ba8'; st.style.display = 'block';
+    toast('Config test failed', 'error');
+  }
+}
+
+async function validateNginx() {
+  const r = await api('/api/nginx/validate', 'POST');
+  toast(r.success ? 'Config OK: ' + r.output.split('\n').filter(Boolean).pop() : 'Config INVALID: check output', r.success ? 'success' : 'error');
+}
+
+async function loadLogs(type) {
+  currentLog = type;
+  document.getElementById('log-box').textContent = 'Loading…';
+  const r = await api(`/api/nginx/logs/${type}`);
+  document.getElementById('log-box').textContent = r.logs || '(empty)';
+  const lb = document.getElementById('log-box');
+  lb.scrollTop = lb.scrollHeight;
+}
+
+// ══ MySQL ═════════════════════════════════════════════════════════════════════
+async function loadDatabases() {
+  const container = document.getElementById('mysql-db-table');
+  const r = await api('/api/mysql/databases');
+  if (!r.success) {
+    container.innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-circle"></i>${esc(r.error || 'Could not connect')}<br><small style="color:#585b70">Check MySQL credentials in Settings</small></div>`;
+    return;
+  }
+  const dbs = r.databases || [];
+  // Populate query db selector
+  const sel = document.getElementById('query-db');
+  sel.innerHTML = '<option value="_none_">(no database)</option>';
+  dbs.forEach(db => { const o = document.createElement('option'); o.value = o.textContent = db; sel.appendChild(o); });
+
+  if (!dbs.length) {
+    container.innerHTML = '<div class="empty-state"><i class="bi bi-database-x"></i>No databases found</div>';
+    return;
+  }
+  const systemDbs = new Set(['information_schema','performance_schema','mysql','sys']);
+  const rows = dbs.map(db => {
+    const sys = systemDbs.has(db);
+    return `<tr>
+      <td><i class="bi bi-database" style="color:#4f8ef7;margin-right:6px;"></i><b>${esc(db)}</b></td>
+      <td><span style="font-size:.75rem;color:#585b70;">${sys ? 'system' : 'user'}</span></td>
+      <td>
+        <button class="btn btn-sm btn-outline-secondary" onclick="queryDB('${esc(db)}')"><i class="bi bi-terminal"></i> Query</button>
+        ${!sys ? `<button class="btn btn-sm btn-outline-danger ms-1" onclick="dropDB('${esc(db)}')"><i class="bi bi-trash"></i> Drop</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+  container.innerHTML = `<table class="panel-table"><thead><tr><th>Database</th><th>Type</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+async function createDB() {
+  const name = document.getElementById('new-db-name').value.trim();
+  if (!name) { toast('Enter a database name', 'error'); return; }
+  const r = await api('/api/mysql/databases', 'POST', { name });
+  if (r.success) { toast(`Database "${name}" created`, 'success'); document.getElementById('new-db-name').value = ''; loadDatabases(); }
+  else toast('Error: ' + (r.stderr || r.error), 'error');
+}
+
+async function dropDB(name) {
+  if (!confirm(`Drop database "${name}"? This CANNOT be undone.`)) return;
+  const r = await apiDelete(`/api/mysql/databases/${name}`);
+  if (r.success) { toast(`Database "${name}" dropped`, 'success'); loadDatabases(); }
+  else toast('Error: ' + (r.stderr || r.error), 'error');
+}
+
+function queryDB(db) {
+  document.querySelector('#page-mysql .custom-tabs button:nth-child(2)').click();
+  switchTab('mysql', 'query', document.querySelector('#page-mysql .custom-tabs button:nth-child(2)'));
+  document.getElementById('query-db').value = db;
+}
+
+async function runQuery() {
+  const query = document.getElementById('query-input').value.trim();
+  const db = document.getElementById('query-db').value;
+  const out = document.getElementById('query-result');
+  if (!query) { toast('Enter a query', 'error'); return; }
+  out.textContent = 'Running…';
+  const r = await api('/api/mysql/query', 'POST', { query, database: db });
+  out.textContent = (r.stdout || '') + (r.stderr ? '\n[stderr] ' + r.stderr : '') || (r.error || '(no output)');
+}
+
+// ══ WordPress ═════════════════════════════════════════════════════════════════
+let wpLoginCreds = [];
+
+function wpAdminUserOptions(users, selected='') {
+  const list = Array.isArray(users) ? users.filter(Boolean) : [];
+  if (selected && !list.includes(selected)) list.unshift(selected);
+  return list.map(u => `<option value="${esc(u)}" ${u === selected ? 'selected' : ''}>${esc(u)}</option>`).join('');
+}
+
+async function loadWPSites() {
+  const container = document.getElementById('wp-sites-container');
+  const r = await api('/api/wordpress/sites');
+  if (!r.success) {
+    container.innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-circle"></i>${esc(r.error || 'Error')}</div>`;
+    return;
+  }
+  if (!r.sites || !r.sites.length) {
+    wpLoginCreds = [];
+    container.innerHTML = `<div class="empty-state"><i class="bi bi-wordpress"></i>No WordPress installations found<br><small style="color:#585b70">Searched in /var/www/ and /opt/</small></div>`;
+    return;
+  }
+  wpLoginCreds = r.sites.map(s => ({
+    adminUrl: s.port ? `http://localhost:${s.port}/wp-admin/` : '',
+    username: s.wp_saved_admin_user || s.wp_admin_user || '',
+    savedUsername: s.wp_saved_admin_user || s.wp_admin_user || '',
+    adminUsers: s.wp_admin_users || (s.wp_admin_user ? [s.wp_admin_user] : []),
+    password: s.wp_admin_pass || '',
+  }));
+  container.innerHTML = `<div class="row g-3">${r.sites.map((s, i) => `
+    <div class="col-md-6">
+      <div class="wp-card">
+        <div class="d-flex align-items-start justify-content-between">
+          <div class="wp-title"><i class="bi bi-wordpress text-primary"></i> ${esc(s.name)}</div>
+          <button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;font-size:.72rem;"
+            onclick="deleteWPSite('${esc(s.name)}','${esc(s.path)}','${esc(s.db_name||'')}','${esc(s.db_user||'')}','${esc(s.nginx_site||s.name)}')">
+            <i class="bi bi-trash"></i> Delete
+          </button>
+        </div>
+        <div class="wp-meta mt-1">
+          <span><b>Path:</b> ${esc(s.path)}</span>
+          <span><b>Database:</b> ${esc(s.db_name || '—')}</span>
+          <span><b>DB User:</b> ${esc(s.db_user || '—')}</span>
+          <span><b>Table prefix:</b> ${esc(s.table_prefix || 'wp_')}</span>
+          <span><b>Port:</b> ${s.port ? `<a href="http://localhost:${esc(s.port)}" target="_blank">${esc(s.port)}</a>` : '—'}</span>
+          <span><b>Nginx site:</b> ${esc(s.nginx_site || '—')}</span>
+        </div>
+        <div class="mt-3 p-2 rounded" style="background:#12141c;border:1px solid #2d3158;font-size:.8rem;">
+          <div style="font-size:.7rem;color:#585b70;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">Saved WP Admin Login</div>
+          ${(s.wp_admin_users && s.wp_admin_users.length) || s.wp_admin_user ? `
+            <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+              <b style="color:#a6adc8;">User:</b>
+              <select id="wp-admin-user-${i}" class="input-dark" style="width:auto;min-width:150px;padding:3px 8px;font-size:.78rem;" onchange="setWpLoginUser(${i}, this.value)">
+                ${wpAdminUserOptions(s.wp_admin_users || [s.wp_admin_user], s.wp_saved_admin_user || s.wp_admin_user)}
+              </select>
+              <button class="btn btn-sm btn-outline-secondary" style="padding:2px 8px;font-size:.72rem;" onclick="copySelectedWpAdminUser(${i})"><i class="bi bi-clipboard"></i> Copy</button>
+            </div>` : ''}
+          ${s.wp_admin_pass ? `
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <b style="color:#a6adc8;">Pass${s.wp_saved_admin_user ? ` (${esc(s.wp_saved_admin_user)})` : ''}:</b>
+              <code id="wp-admin-pass-${i}" style="color:#f9e2af;word-break:break-all;">${esc(s.wp_admin_pass)}</code>
+              <button class="btn btn-sm btn-outline-secondary" style="padding:2px 8px;font-size:.72rem;" onclick="copyText('wp-admin-pass-${i}')"><i class="bi bi-clipboard"></i> Copy</button>
+            </div>` : `
+            <div style="color:#6c7086;">${s.wp_admin_user ? 'Password is not saved.' : 'Admin user not detected.'} Use <b>Passwords</b> to set a new password for the selected admin, then it will be saved here.</div>`}
+        </div>
+        ${s.error ? `<div class="mt-2 text-danger" style="font-size:.78rem;">Error: ${esc(s.error)}</div>` : ''}
+        <div class="mt-3 d-flex gap-2 flex-wrap">
+          ${s.port ? `<a class="btn btn-sm btn-outline-secondary" href="http://localhost:${esc(s.port)}/" target="_blank"><i class="bi bi-globe"></i> Site</a>` : ''}
+          ${s.port && s.wp_admin_user && s.wp_admin_pass
+            ? `<button class="btn btn-sm btn-success" onclick="autoLoginWP(${i})"><i class="bi bi-speedometer2"></i> WP Admin Auto Login</button>`
+            : s.port ? `<a class="btn btn-sm btn-outline-primary" href="http://localhost:${esc(s.port)}/wp-admin/" target="_blank"><i class="bi bi-speedometer2"></i> WP Admin</a>` : ''}
+          <button class="btn btn-sm btn-outline-success" onclick="openWPPma('${esc(s.name)}','${esc(s.path)}','${esc(s.db_name||'')}')"><i class="bi bi-database-gear"></i> phpMyAdmin</button>
+          <button class="btn btn-sm btn-outline-info" onclick="openSiteFolder('${esc(s.path)}')"><i class="bi bi-folder2-open"></i> Open Folder</button>
+          <button class="btn btn-sm btn-outline-warning" onclick="showChangePassModal('${esc(s.name)}','${esc(s.path)}','${esc(s.db_user||'')}','${esc(s.db_name||'')}',${i})"><i class="bi bi-key"></i> Passwords</button>
+          <button class="btn btn-sm btn-outline-secondary" onclick="changeWPPort('${esc(s.name)}','${esc(s.nginx_site||s.name)}','${esc(s.port||'')}')"><i class="bi bi-router"></i> Port</button>
+        </div>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+async function changeWPPort(name, nginxSite, currentPort) {
+  const port = prompt(`New port for ${name}:`, currentPort || '8090');
+  if (port === null) return;
+  const n = Number(port);
+  if (!Number.isInteger(n) || n < 1 || n > 65535) {
+    toast('Port must be a number between 1 and 65535', 'error');
+    return;
+  }
+  toast(`Changing ${name} to port ${n}…`, 'info');
+  const r = await api('/api/wordpress/port', 'POST', { nginx_site: nginxSite, port: n });
+  if (r.success) {
+    toast(`${name} is now on port ${n}`, 'success');
+    loadWPSites();
+  } else {
+    toast('Port change failed: ' + (r.stderr || r.error || 'unknown'), 'error');
+  }
+}
+
+function wordpressLoginUrl(adminUrl) {
+  try {
+    const u = new URL(adminUrl);
+    u.pathname = u.pathname.replace(/\/wp-admin\/?$/, '/wp-login.php');
+    if (!u.pathname.endsWith('/wp-login.php')) u.pathname = '/wp-login.php';
+    u.search = '';
+    u.hash = '';
+    return u.toString();
+  } catch(e) {
+    return '';
+  }
+}
+
+function submitWpLogin(adminUrl, username, password) {
+  const loginUrl = wordpressLoginUrl(adminUrl);
+  if (!loginUrl || !username || !password) {
+    toast('Missing saved WP login credentials', 'error');
+    return;
+  }
+
+  const targetName = 'wp_auto_login_' + Math.random().toString(36).slice(2);
+  const loginWindow = window.open(loginUrl, targetName);
+  if (!loginWindow) {
+    toast('Popup blocked. Allow popups for this panel and try again.', 'error');
+    return;
+  }
+  toast('Preparing WordPress login…', 'info');
+
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = loginUrl;
+  form.target = targetName;
+  form.style.display = 'none';
+
+  const fields = {
+    log: username,
+    pwd: password,
+    'wp-submit': 'Log In',
+    redirect_to: adminUrl,
+    testcookie: '1',
+  };
+  Object.entries(fields).forEach(([name, value]) => {
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = name;
+    input.value = value;
+    form.appendChild(input);
+  });
+
+  document.body.appendChild(form);
+  setTimeout(() => {
+    form.submit();
+    form.remove();
+  }, 5000);
+}
+
+function autoLoginWP(index) {
+  const creds = wpLoginCreds[index];
+  if (!creds) {
+    toast('Saved credentials not found. Refresh WordPress sites.', 'error');
+    return;
+  }
+  const selected = document.getElementById(`wp-admin-user-${index}`)?.value;
+  if (selected) creds.username = selected;
+  if (creds.password && creds.savedUsername && creds.username !== creds.savedUsername) {
+    toast(`Password is saved for ${creds.savedUsername}. Use Passwords to set one for ${creds.username} first.`, 'error');
+    return;
+  }
+  submitWpLogin(creds.adminUrl, creds.username, creds.password);
+}
+
+function setWpLoginUser(index, username) {
+  if (wpLoginCreds[index]) wpLoginCreds[index].username = username;
+}
+
+function copySelectedWpAdminUser(index) {
+  const val = document.getElementById(`wp-admin-user-${index}`)?.value || '';
+  if (!val) {
+    toast('No admin user selected', 'error');
+    return;
+  }
+  navigator.clipboard.writeText(val).then(() => toast('Copied!', 'success'));
+}
+
+async function openSiteFolder(path) {
+  const r = await api('/api/open_folder', 'POST', { path });
+  if (r.success) toast('Opening folder…', 'success');
+  else toast('Could not open folder: ' + (r.error || 'unknown'), 'error');
+}
+
+function autoLoginInstallResult() {
+  submitWpLogin(
+    document.getElementById('wp-result-admin').dataset.adminUrl,
+    document.getElementById('wp-result-wpu').textContent,
+    document.getElementById('wp-result-wpp').textContent
+  );
+}
+
+let _delPending = null;
+let _delPollInterval = null;
+
+function deleteWPSite(name, path, dbName, dbUser, nginxSite) {
+  _delPending = { name, path, dbName, dbUser, nginxSite };
+
+  document.getElementById('del-modal-body').innerHTML =
+    `This will permanently remove:<br>
+     <b>Files:</b> <code>${esc(path)}</code><br>
+     <b>Database:</b> <code>${esc(dbName)}</code><br>
+     <b>DB User:</b> <code>${esc(dbUser)}</code><br>
+     <b>Nginx site:</b> <code>${esc(nginxSite)}</code><br><br>
+     <span style="color:#f38ba8;font-weight:600;">This CANNOT be undone.</span>`;
+
+  document.getElementById('del-confirm-hint').textContent = name;
+  document.getElementById('del-confirm-input').value = '';
+  document.getElementById('del-confirm-btn').disabled = true;
+  document.getElementById('del-step-confirm').style.display = 'block';
+  document.getElementById('del-step-progress').style.display = 'none';
+  document.getElementById('del-done-row').style.display = 'none';
+
+  document.getElementById('delete-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('del-confirm-input').focus(), 50);
+}
+
+function checkDelConfirm() {
+  const val = document.getElementById('del-confirm-input').value;
+  document.getElementById('del-confirm-btn').disabled = (val !== _delPending?.name);
+}
+
+function closeDeleteModal() {
+  if (_delPollInterval) { clearInterval(_delPollInterval); _delPollInterval = null; }
+  document.getElementById('delete-modal').style.display = 'none';
+  _delPending = null;
+}
+
+async function confirmDelete() {
+  if (!_delPending) return;
+  const { name, path, dbName, dbUser, nginxSite } = _delPending;
+
+  // Switch to progress view
+  document.getElementById('del-step-confirm').style.display = 'none';
+  document.getElementById('del-step-progress').style.display = 'block';
+  const logEl = document.getElementById('del-progress-log');
+  logEl.textContent = 'Starting…\n';
+
+  const r = await apiDelete('/api/wordpress/sites', {
+    install_path: path, db_name: dbName, db_user: dbUser, nginx_site: nginxSite,
+  });
+
+  if (!r.success || !r.job_id) {
+    logEl.textContent = 'Error: ' + (r.error || 'Failed to start');
+    document.getElementById('del-done-row').style.display = 'flex';
+    return;
+  }
+
+  // Poll for progress
+  const jobId = r.job_id;
+  _delPollInterval = setInterval(async () => {
+    const job = await api(`/api/wordpress/delete/${jobId}`);
+    logEl.textContent = (job.logs || []).join('\n');
+    logEl.scrollTop = logEl.scrollHeight;
+
+    if (job.status === 'done' || job.status === 'error') {
+      clearInterval(_delPollInterval); _delPollInterval = null;
+      document.getElementById('del-done-row').style.display = 'flex';
+      if (job.status === 'done') {
+        toast(`"${name}" deleted`, 'success');
+        loadWPSites();
+      } else {
+        toast('Delete failed', 'error');
+      }
+    }
+  }, 800);
+}
+
+// ══ Settings ══════════════════════════════════════════════════════════════════
+async function changePassword() {
+  const p1 = document.getElementById('new-pw').value;
+  const p2 = document.getElementById('new-pw2').value;
+  if (!p1) { toast('Password cannot be empty', 'error'); return; }
+  if (p1 !== p2) { toast('Passwords do not match', 'error'); return; }
+  const r = await api('/api/settings', 'POST', { new_password: p1 });
+  if (r.success) { toast('Password changed. Please log in again.', 'success'); setTimeout(doLogout, 1500); }
+  else toast('Failed: ' + r.error, 'error');
+}
+
+async function saveMySQL() {
+  const user = document.getElementById('mysql-user').value.trim() || 'root';
+  const pw   = document.getElementById('mysql-pw').value;
+  const r = await api('/api/settings', 'POST', { mysql_user: user, mysql_password: pw });
+  if (r.success) toast('MySQL credentials saved', 'success');
+  else toast('Failed: ' + r.error, 'error');
+}
+
+// ══ WordPress Install ═════════════════════════════════════════════════════════
+
+function wpAutoFill() {
+  const name = document.getElementById('wp-site-name').value.trim().toLowerCase().replace(/[^\w\-]/g,'');
+  document.getElementById('wp-install-path').value = name ? `/var/www/${name}` : '';
+  document.getElementById('wp-db-name').value  = name ? `${name}_db`   : '';
+  document.getElementById('wp-db-user').value  = name ? `${name}_user` : '';
+  if (!document.getElementById('wp-admin-user').value.trim()) genWpAdminUser();
+  if (name) document.getElementById('wp-site-title').value = name.charAt(0).toUpperCase() + name.slice(1).replace(/[-_]/g,' ');
+}
+
+function _randPass(len=16) {
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%';
+  let p = '';
+  for (let i = 0; i < len; i++) p += chars[Math.floor(Math.random() * chars.length)];
+  return p;
+}
+
+function genWpPass() {
+  document.getElementById('wp-db-pass').value = _randPass();
+}
+
+function genWpAdminPass() {
+  document.getElementById('wp-admin-pass').value = _randPass();
+}
+
+function genWpAdminUser() {
+  const site = document.getElementById('wp-site-name').value.trim().toLowerCase().replace(/[^a-z0-9]/g,'').slice(0, 10);
+  const suffix = Math.random().toString(36).slice(2, 8);
+  document.getElementById('wp-admin-user').value = `${site || 'user'}_${suffix}`;
+}
+
+// sync port preview
+document.addEventListener('DOMContentLoaded', () => {
+  const portEl = document.getElementById('wp-port');
+  if (portEl) portEl.addEventListener('input', () => {
+    document.getElementById('wp-port-preview').textContent = portEl.value;
+  });
+});
+
+let wpPollInterval = null;
+let wpInstallResetTimer = null;
+let wpPluginLibrary = [];
+
+async function loadWpPluginLibrary() {
+  const container = document.getElementById('wp-plugin-list');
+  if (!container) return;
+  container.innerHTML = '<span class="spinner-sm"></span> Scanning plugins…';
+  const r = await api('/api/wordpress/plugins');
+  if (!r.success) {
+    container.innerHTML = `<span style="color:#f38ba8;">Could not scan plugins: ${esc(r.error || 'unknown')}</span>`;
+    return;
+  }
+  wpPluginLibrary = r.plugins || [];
+  const invalid = r.invalid || [];
+  if (!wpPluginLibrary.length && !invalid.length) {
+    container.innerHTML = 'No plugin zips found in <code>wp-plugin-library/</code>.';
+    return;
+  }
+  const pluginsHtml = wpPluginLibrary.map(p => `
+    <label class="d-flex align-items-start gap-2 mb-2" style="cursor:pointer;">
+      <input type="checkbox" class="form-check-input mt-1 wp-plugin-choice" value="${esc(p.id)}">
+      <span>
+        <b style="color:#cdd6f4;">${esc(p.name)}</b>
+        <span style="color:#6c7086;">v${esc(p.version || '—')}</span><br>
+        <small style="color:#585b70;">${esc(p.zip)} · ${esc(p.slug)}</small>
+      </span>
+    </label>`).join('');
+  const invalidHtml = invalid.map(i => `<div style="color:#f38ba8;font-size:.75rem;">Skipped ${esc(i.zip)}: ${esc(i.error)}</div>`).join('');
+  container.innerHTML = `${pluginsHtml || '<div>No valid plugin zips found.</div>'}${invalidHtml ? `<hr style="border-color:#2d3158;margin:8px 0;">${invalidHtml}` : ''}`;
+}
+
+function selectedWpPlugins() {
+  return [...document.querySelectorAll('.wp-plugin-choice:checked')].map(el => el.value);
+}
+
+function resetWpInstallForm() {
+  const fields = [
+    'wp-site-name', 'wp-install-path', 'wp-db-name', 'wp-db-user', 'wp-db-pass',
+    'wp-admin-user', 'wp-admin-pass', 'wp-site-title'
+  ];
+  fields.forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('wp-admin-email').value = 'admin@localhost.local';
+  document.getElementById('wp-install-log').textContent = 'Fill in the form and click Install…';
+  document.getElementById('wp-install-result').style.display = 'none';
+  document.getElementById('wp-install-btn').disabled = false;
+  document.getElementById('wp-install-btn').innerHTML = '<i class="bi bi-download"></i> Install WordPress';
+  document.querySelectorAll('.wp-plugin-choice').forEach(el => { el.checked = false; });
+  loadNextPort();
+}
+
+async function startWpInstall() {
+  if (wpInstallResetTimer) {
+    clearTimeout(wpInstallResetTimer);
+    wpInstallResetTimer = null;
+  }
+  const siteName   = document.getElementById('wp-site-name').value.trim();
+  const installPath= document.getElementById('wp-install-path').value.trim();
+  const port       = document.getElementById('wp-port').value.trim();
+  const dbName     = document.getElementById('wp-db-name').value.trim();
+  const dbUser     = document.getElementById('wp-db-user').value.trim();
+  const dbPass     = document.getElementById('wp-db-pass').value.trim();
+
+  if (!siteName || !installPath || !port || !dbName || !dbUser) {
+    toast('Fill in all required fields', 'error'); return;
+  }
+
+  const log   = document.getElementById('wp-install-log');
+  const btn   = document.getElementById('wp-install-btn');
+  const result= document.getElementById('wp-install-result');
+
+  log.textContent = 'Starting installation…\n';
+  result.style.display = 'none';
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-sm"></span> Installing…';
+
+  let wpAdminUser = document.getElementById('wp-admin-user').value.trim();
+  if (!wpAdminUser) {
+    genWpAdminUser();
+    wpAdminUser = document.getElementById('wp-admin-user').value.trim();
+  }
+  const wpAdminPass = document.getElementById('wp-admin-pass').value.trim();
+  const wpEmail     = document.getElementById('wp-admin-email').value.trim() || 'admin@localhost.local';
+  const wpTitle     = document.getElementById('wp-site-title').value.trim() || siteName;
+
+  const r = await api('/api/wordpress/install', 'POST', {
+    site_name: siteName, install_path: installPath,
+    port, db_name: dbName, db_user: dbUser,
+    db_pass: dbPass || undefined,
+    wp_admin: wpAdminUser, wp_admin_pass: wpAdminPass || undefined,
+    wp_email: wpEmail, wp_title: wpTitle,
+    selected_plugins: selectedWpPlugins(),
+  });
+
+  if (!r.success) {
+    log.textContent = 'Error: ' + (r.error || 'Failed to start');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-download"></i> Install WordPress';
+    return;
+  }
+
+  // Poll for progress
+  const jobId = r.job_id;
+  if (wpPollInterval) clearInterval(wpPollInterval);
+  wpPollInterval = setInterval(async () => {
+    const job = await api(`/api/wordpress/install/${jobId}`);
+    log.textContent = job.logs ? job.logs.join('\n') : '';
+    log.scrollTop = log.scrollHeight;
+
+    if (job.status === 'done') {
+      clearInterval(wpPollInterval);
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-download"></i> Install Another';
+      const res = job.result;
+      if (res.success) {
+        toast('WordPress installed!', 'success');
+        result.style.display = 'block';
+        document.getElementById('wp-result-url').href   = res.url;
+        document.getElementById('wp-result-admin').dataset.adminUrl = res.admin_url;
+        document.getElementById('wp-result-wpu').textContent = res.wp_admin;
+        document.getElementById('wp-result-wpp').textContent = res.wp_admin_pass;
+        document.getElementById('wp-result-db').textContent  = res.db_name;
+        document.getElementById('wp-result-dbu').textContent = res.db_user;
+        document.getElementById('wp-result-dbp').textContent = res.db_pass;
+        loadWPSites();
+        wpInstallResetTimer = setTimeout(() => {
+          resetWpInstallForm();
+          toast('Install form reset. Ready for another site.', 'info');
+        }, 10000);
+      }
+    } else if (job.status === 'error') {
+      clearInterval(wpPollInterval);
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-download"></i> Retry';
+      toast('Installation failed', 'error');
+    }
+  }, 1500);
+}
+
+// ══ Laravel ═══════════════════════════════════════════════════════════════════
+let laravelPollInterval = null;
+let laravelDeletePollInterval = null;
+
+function laravelAutoFill() {
+  const name = document.getElementById('lv-site-name').value.trim().toLowerCase().replace(/[^\w\-]/g,'');
+  document.getElementById('lv-install-path').value = name ? `/var/www/${name}` : '';
+  document.getElementById('lv-db-name').value = name ? `${name}_db` : '';
+  document.getElementById('lv-db-user').value = name ? `${name}_user` : '';
+}
+
+function genLaravelDbPass() {
+  document.getElementById('lv-db-pass').value = _randPass();
+}
+
+async function loadLaravelNextPort() {
+  const r = await api('/api/laravel/next_port');
+  if (r.success) {
+    const port = Number(r.port || 8100);
+    document.getElementById('lv-port').value = port;
+    document.getElementById('lv-port-preview').textContent = port;
+  }
+}
+
+async function loadLaravelApps() {
+  const container = document.getElementById('laravel-apps-container');
+  const r = await api('/api/laravel/apps');
+  if (!r.success) {
+    container.innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-circle"></i>${esc(r.error || 'Error')}</div>`;
+    return;
+  }
+  if (!r.apps || !r.apps.length) {
+    container.innerHTML = `<div class="empty-state"><i class="bi bi-code-square"></i>No Laravel apps found<br><small style="color:#585b70">Searched in /var/www and /opt</small></div>`;
+    return;
+  }
+  container.innerHTML = `<div class="row g-3">${r.apps.map((app, i) => `
+    <div class="col-md-6">
+      <div class="wp-card">
+        <div class="d-flex align-items-start justify-content-between">
+          <div class="wp-title"><i class="bi bi-code-square text-danger"></i> ${esc(app.name)}</div>
+          <button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;font-size:.72rem;" onclick="deleteLaravelApp('${esc(app.name)}','${esc(app.path)}','${esc(app.db_name||'')}','${esc(app.db_user||'')}','${esc(app.nginx_site||app.name)}')"><i class="bi bi-trash"></i> Delete</button>
+        </div>
+        <div class="wp-meta mt-1">
+          <span><b>Path:</b> ${esc(app.path)}</span>
+          <span><b>Database:</b> ${esc(app.db_name || '—')}</span>
+          <span><b>DB User:</b> ${esc(app.db_user || '—')}</span>
+          <span><b>Port:</b> ${app.port ? `<a href="http://localhost:${esc(app.port)}" target="_blank">${esc(app.port)}</a>` : '—'}</span>
+          <span><b>Nginx site:</b> ${esc(app.nginx_site || '—')}</span>
+          <span><b>Version:</b> ${esc(app.version || '—')}</span>
+        </div>
+        <div class="mt-3 p-2 rounded" style="background:#12141c;border:1px solid #2d3158;font-size:.8rem;">
+          <div style="font-size:.7rem;color:#585b70;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">Database Login</div>
+          <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+            <b style="color:#a6adc8;">DB:</b>
+            <code id="lv-db-name-${i}" style="color:#a6e3a1;">${esc(app.db_name || '')}</code>
+            <button class="btn btn-sm btn-outline-secondary" style="padding:2px 8px;font-size:.72rem;" onclick="copyText('lv-db-name-${i}')"><i class="bi bi-clipboard"></i> Copy</button>
+          </div>
+          <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+            <b style="color:#a6adc8;">User:</b>
+            <code id="lv-db-user-${i}" style="color:#a6e3a1;">${esc(app.db_user || '')}</code>
+            <button class="btn btn-sm btn-outline-secondary" style="padding:2px 8px;font-size:.72rem;" onclick="copyText('lv-db-user-${i}')"><i class="bi bi-clipboard"></i> Copy</button>
+          </div>
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <b style="color:#a6adc8;">Pass:</b>
+            <code id="lv-db-pass-${i}" style="color:#f9e2af;word-break:break-all;">${esc(app.db_pass || '')}</code>
+            <button class="btn btn-sm btn-outline-secondary" style="padding:2px 8px;font-size:.72rem;" onclick="copyText('lv-db-pass-${i}')"><i class="bi bi-clipboard"></i> Copy</button>
+          </div>
+        </div>
+        <div class="mt-3 d-flex gap-2 flex-wrap">
+          ${app.port ? `<a class="btn btn-sm btn-outline-secondary" href="http://localhost:${esc(app.port)}/" target="_blank"><i class="bi bi-globe"></i> Site</a>` : ''}
+          <button class="btn btn-sm btn-outline-info" onclick="openSiteFolder('${esc(app.path)}')"><i class="bi bi-folder2-open"></i> Open Folder</button>
+          <button class="btn btn-sm btn-outline-secondary" onclick="changeLaravelPort('${esc(app.name)}','${esc(app.nginx_site||app.name)}','${esc(app.port||'')}')"><i class="bi bi-router"></i> Port</button>
+          <button class="btn btn-sm btn-outline-primary" onclick="runLaravelTool('${esc(app.path)}','migrate')"><i class="bi bi-database-check"></i> Migrate</button>
+          <button class="btn btn-sm btn-outline-warning" onclick="runLaravelTool('${esc(app.path)}','cache_clear')"><i class="bi bi-broom"></i> Clear Cache</button>
+          <button class="btn btn-sm btn-outline-success" onclick="runLaravelTool('${esc(app.path)}','storage_link')"><i class="bi bi-link-45deg"></i> Storage Link</button>
+        </div>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+async function startLaravelInstall() {
+  const siteName = document.getElementById('lv-site-name').value.trim();
+  const installPath = document.getElementById('lv-install-path').value.trim();
+  const port = document.getElementById('lv-port').value.trim();
+  const dbName = document.getElementById('lv-db-name').value.trim();
+  const dbUser = document.getElementById('lv-db-user').value.trim();
+  const dbPass = document.getElementById('lv-db-pass').value.trim();
+  const laravelVersion = document.getElementById('lv-version').value;
+  if (!siteName || !installPath || !port || !dbName || !dbUser) {
+    toast('Fill in all required fields', 'error'); return;
+  }
+  const log = document.getElementById('lv-install-log');
+  const btn = document.getElementById('lv-install-btn');
+  const result = document.getElementById('lv-install-result');
+  log.textContent = 'Starting Laravel installation…\n';
+  result.style.display = 'none';
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-sm"></span> Creating…';
+
+  const r = await api('/api/laravel/install', 'POST', { site_name: siteName, install_path: installPath, port, db_name: dbName, db_user: dbUser, db_pass: dbPass || undefined, app_name: siteName, laravel_version: laravelVersion });
+  if (!r.success) {
+    log.textContent = 'Error: ' + (r.error || 'Failed to start');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-download"></i> Create Laravel App';
+    return;
+  }
+  if (laravelPollInterval) clearInterval(laravelPollInterval);
+  laravelPollInterval = setInterval(async () => {
+    const job = await api(`/api/laravel/install/${r.job_id}`);
+    log.textContent = job.logs ? job.logs.join('\n') : '';
+    log.scrollTop = log.scrollHeight;
+    if (job.status === 'done') {
+      clearInterval(laravelPollInterval);
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-download"></i> Create Another';
+      if (job.result?.success) {
+        toast('Laravel app created!', 'success');
+        document.getElementById('lv-result-url').href = job.result.url;
+        result.style.display = 'block';
+        loadLaravelApps();
+      }
+    } else if (job.status === 'error') {
+      clearInterval(laravelPollInterval);
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-download"></i> Retry';
+      toast('Laravel install failed', 'error');
+    }
+  }, 1500);
+}
+
+async function changeLaravelPort(name, nginxSite, currentPort) {
+  const port = prompt(`New port for ${name}:`, currentPort || '8100');
+  if (port === null) return;
+  const r = await api('/api/laravel/port', 'POST', { nginx_site: nginxSite, port });
+  if (r.success) { toast(`${name} is now on port ${port}`, 'success'); loadLaravelApps(); }
+  else toast('Port change failed: ' + (r.stderr || r.error || 'unknown'), 'error');
+}
+
+async function runLaravelTool(path, action) {
+  toast('Running Laravel command…', 'info');
+  const r = await api('/api/laravel/artisan', 'POST', { path, action });
+  if (r.success) toast((r.stdout || 'Command completed').slice(0, 180), 'success');
+  else toast('Laravel command failed: ' + (r.stderr || r.error || 'unknown'), 'error');
+}
+
+async function deleteLaravelApp(name, path, dbName, dbUser, nginxSite) {
+  if (!confirm(`Delete Laravel app ${name}? This removes files, database, user, and Nginx site.`)) return;
+  const r = await apiDelete('/api/laravel/apps', { path, db_name: dbName, db_user: dbUser, nginx_site: nginxSite });
+  if (!r.success) { toast('Delete failed: ' + (r.error || 'unknown'), 'error'); return; }
+  toast('Deleting Laravel app…', 'info');
+  if (laravelDeletePollInterval) clearInterval(laravelDeletePollInterval);
+  laravelDeletePollInterval = setInterval(async () => {
+    const job = await api(`/api/laravel/delete/${r.job_id}`);
+    if (job.status === 'done') {
+      clearInterval(laravelDeletePollInterval);
+      toast('Laravel app deleted', 'success');
+      loadLaravelApps();
+    } else if (job.status === 'error') {
+      clearInterval(laravelDeletePollInterval);
+      toast('Delete failed: ' + (job.result?.error || 'unknown'), 'error');
+    }
+  }, 1200);
+}
+
+// ══ phpMyAdmin ════════════════════════════════════════════════════════════════
+
+let pmaInfo = {};
+
+async function loadPmaStatus() {
+  const panel = document.getElementById('pma-status-panel');
+  const r = await api('/api/phpmyadmin/status');
+  pmaInfo = r;
+
+  if (!r || r.error) {
+    panel.innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-triangle"></i>Could not load status</div>`;
+    return;
+  }
+
+  const installed     = r.installed;
+  const nginxEnabled  = r.nginx_site_enabled;
+  const fpmActive     = r.php_fpm_status === 'active';
+  const fpmSvc        = r.php_fpm_service || 'php8.3-fpm';
+
+  panel.innerHTML = `
+    <div class="row g-3 mb-4">
+      <div class="col-md-4">
+        <div class="stat-card">
+          <div class="label">phpMyAdmin</div>
+          <div class="value" style="font-size:1.1rem;padding-top:6px;">
+            <span class="svc-status ${installed ? 'status-active' : 'status-inactive'}">${installed ? 'Installed' : 'Not Installed'}</span>
+          </div>
+          <div class="sub mt-1">${installed ? '/usr/share/phpmyadmin' : 'apt install phpmyadmin'}</div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="stat-card">
+          <div class="label">Nginx Site</div>
+          <div class="value" style="font-size:1.1rem;padding-top:6px;">
+            <span class="svc-status ${nginxEnabled ? 'status-active' : 'status-inactive'}">${nginxEnabled ? 'Enabled' : r.nginx_site_exists ? 'Disabled' : 'Not Created'}</span>
+          </div>
+          <div class="sub mt-1">${nginxEnabled ? `Listening on port ${r.pma_port}` : 'Configure in Nginx Setup tab'}</div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="stat-card">
+          <div class="label">PHP-FPM (${r.php_version})</div>
+          <div class="value" style="font-size:1.1rem;padding-top:6px;">
+            <span class="svc-status ${fpmActive ? 'status-active' : 'status-inactive'}">${fpmActive ? 'Active' : 'Inactive'}</span>
+          </div>
+          <div class="sub mt-1">${fpmSvc}</div>
+        </div>
+      </div>
+    </div>
+
+    ${installed && nginxEnabled ? `
+    <div class="service-card mb-3" style="border-color:#a6e3a1;">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <div class="svc-name"><i class="bi bi-check-circle text-success"></i> phpMyAdmin is ready</div>
+          <div style="font-size:.82rem;color:#6c7086;margin-top:4px;">Accessible at <code>${r.url}</code></div>
+        </div>
+        <a href="${r.url}" target="_blank" class="btn btn-success btn-sm"><i class="bi bi-box-arrow-up-right"></i> Open phpMyAdmin</a>
+      </div>
+    </div>` : ''}
+
+    <div class="row g-3">
+      ${!installed ? `
+      <div class="col-md-6">
+        <div class="service-card">
+          <div class="svc-name mb-2"><i class="bi bi-download text-warning"></i> Install phpMyAdmin</div>
+          <p style="font-size:.82rem;color:#6c7086;">Installs phpMyAdmin and required PHP extensions via apt.</p>
+          <div id="pma-install-log" class="log-box mb-2" style="height:80px;display:none;"></div>
+          <button class="btn btn-warning btn-sm" onclick="installPma()" id="pma-install-btn">
+            <i class="bi bi-download"></i> Install Now
+          </button>
+          <div style="font-size:.75rem;color:#585b70;margin-top:6px;">Requires sudo apt access (~2–5 min)</div>
+        </div>
+      </div>` : ''}
+
+      <div class="col-md-6">
+        <div class="service-card">
+          <div class="svc-name mb-2"><i class="bi bi-cpu text-success"></i> PHP-FPM Control</div>
+          <div class="action-btns" id="pma-phpfpm-btns">
+            ${serviceButtonsHtml(fpmSvc)}
+          </div>
+        </div>
+      </div>
+
+      ${installed ? `
+      <div class="col-md-6">
+        <div class="service-card">
+          <div class="svc-name mb-2"><i class="bi bi-arrow-left-right text-primary"></i> Nginx Site</div>
+          <div class="action-btns">
+            ${nginxEnabled
+              ? `<button class="btn btn-outline-danger btn-sm" onclick="pmaAction('disable')"><i class="bi bi-x-circle"></i> Disable</button>`
+              : `<button class="btn btn-success btn-sm" onclick="pmaAction('enable')"><i class="bi bi-check-circle"></i> Enable &amp; Reload</button>`}
+            <button class="btn btn-outline-secondary btn-sm" onclick="switchTab('phpmyadmin','nginx', document.querySelector('#page-phpmyadmin .custom-tabs button:nth-child(2)'))"><i class="bi bi-pencil"></i> Edit Config</button>
+          </div>
+        </div>
+      </div>` : ''}
+    </div>`;
+
+  syncServiceButtons('pma-phpfpm-btns', r.php_fpm_status || 'inactive', fpmSvc);
+}
+
+async function installPma() {
+  const btn = document.getElementById('pma-install-btn');
+  const log = document.getElementById('pma-install-log');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-sm"></span> Installing…';
+  log.style.display = 'block';
+  log.textContent = 'Running apt-get install… (this may take 2–5 minutes)';
+  const r = await api('/api/phpmyadmin/install', 'POST', {}, 300000);
+  log.textContent = r.stdout || r.stderr || r.error || 'Done';
+  if (r.installed) {
+    toast('phpMyAdmin installed successfully!', 'success');
+    loadPmaStatus();
+    loadPmaNginxConfig();
+  } else {
+    toast('Install failed – check log', 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-download"></i> Retry';
+  }
+}
+
+async function loadPmaNginxConfig() {
+  const r = await api('/api/phpmyadmin/nginx');
+  if (r.success) {
+    document.getElementById('pma-nginx-editor').value = r.content;
+    // Try to extract port for the port input
+    const m = r.content.match(/listen\s+(\d+)/);
+    if (m) document.getElementById('pma-port-input').value = m[1];
+  }
+}
+
+async function generatePmaConfig() {
+  const port = parseInt(document.getElementById('pma-port-input').value) || 8081;
+  const r = await api('/api/phpmyadmin/nginx', 'POST', { action: 'generate', port });
+  if (r.success) {
+    document.getElementById('pma-nginx-editor').value = r.content;
+    toast('Config generated', 'info');
+  } else {
+    toast('Failed: ' + r.error, 'error');
+  }
+}
+
+async function savePmaConfig() {
+  const content = document.getElementById('pma-nginx-editor').value;
+  const st = document.getElementById('pma-nginx-status');
+  const r = await api('/api/phpmyadmin/nginx', 'POST', { action: 'save', content });
+  if (r.success) {
+    toast('Nginx site config saved', 'success');
+    st.textContent = 'Saved. Click "Enable & Reload" to activate.';
+    st.style.color = '#a6e3a1'; st.style.display = 'block';
+  } else {
+    toast('Save failed: ' + (r.stderr || r.error), 'error');
+    st.textContent = 'Error: ' + (r.stderr || r.error);
+    st.style.color = '#f38ba8'; st.style.display = 'block';
+  }
+}
+
+async function pmaAction(action) {
+  const r = await api('/api/phpmyadmin/nginx', 'POST', { action });
+  if (r.success) {
+    toast(`phpMyAdmin nginx site ${action}d`, 'success');
+    loadPmaStatus();
+    refreshStatus();
+  } else {
+    toast(`Failed: ${r.stderr || r.error}`, 'error');
+  }
+}
+
+async function loadPmaPhpConfig() {
+  const r = await api('/api/phpmyadmin/config');
+  const ta = document.getElementById('pma-phpconfig-editor');
+  if (r.success) {
+    ta.value = r.content;
+  } else {
+    ta.value = '# ' + (r.error || 'Install phpMyAdmin first');
+  }
+}
+
+async function savePmaPhpConfig() {
+  const content = document.getElementById('pma-phpconfig-editor').value;
+  const msg = document.getElementById('pma-phpconfig-msg');
+  const r = await api('/api/phpmyadmin/config', 'POST', { content });
+  if (r.success) {
+    toast('config.inc.php saved', 'success');
+    msg.textContent = 'Saved successfully.'; msg.style.color = '#a6e3a1'; msg.style.display = 'block';
+  } else {
+    toast('Save failed: ' + (r.stderr || r.error), 'error');
+    msg.textContent = 'Error: ' + (r.stderr || r.error); msg.style.color = '#f38ba8'; msg.style.display = 'block';
+  }
+}
+
+async function genBlowfish() {
+  const r = await api('/api/phpmyadmin/blowfish', 'POST');
+  if (r.success) {
+    document.getElementById('pma-blowfish-val').textContent = r.secret;
+    document.getElementById('pma-blowfish-bar').style.display = 'block';
+    // Replace in config editor if there's already a blowfish_secret line
+    const ta = document.getElementById('pma-phpconfig-editor');
+    ta.value = ta.value.replace(
+      /(\$cfg\['blowfish_secret'\]\s*=\s*')[^']*(')/,
+      `$1${r.secret}$2`
+    );
+    toast('Blowfish secret generated & inserted', 'success');
+  }
+}
+
+// ══ Performance ═══════════════════════════════════════════════════════════════
+
+let _perfData = {};
+
+const PERF_FIELDS = {
+  nginx: [
+    { key:'worker_processes',     label:'Worker Processes',     type:'text',   unit:'',     hint:'auto or number of CPU cores' },
+    { key:'worker_connections',   label:'Worker Connections',   type:'number', unit:'',     hint:'Max connections per worker (e.g. 1024)' },
+    { key:'keepalive_timeout',    label:'Keepalive Timeout',    type:'number', unit:'sec',  hint:'Idle connection timeout (15–65)' },
+    { key:'client_max_body_size', label:'Max Upload Size',      type:'text',   unit:'',     hint:'e.g. 100M or 1G' },
+    { key:'gzip',                 label:'Gzip Compression',     type:'select', opts:['on','off'], hint:'Compress responses to save bandwidth' },
+    { key:'gzip_comp_level',      label:'Gzip Level',           type:'select', opts:['1','2','3','4','5','6','7','8','9'], hint:'1=fast, 9=smallest' },
+    { key:'server_tokens',        label:'Server Tokens',        type:'select', opts:['off','on'], hint:'off hides nginx version from headers' },
+  ],
+  php: [
+    { key:'memory_limit',        label:'Memory Limit',       type:'text',   unit:'',    hint:'Max RAM per script (e.g. 256M, 1G)' },
+    { key:'max_execution_time',  label:'Max Execution Time', type:'number', unit:'sec', hint:'0 = unlimited. Increase for slow imports' },
+    { key:'max_input_time',      label:'Max Input Time',     type:'number', unit:'sec', hint:'Max time to receive request data' },
+    { key:'upload_max_filesize', label:'Upload Max Size',    type:'text',   unit:'',    hint:'Max single file upload (e.g. 256M)' },
+    { key:'post_max_size',       label:'POST Max Size',      type:'text',   unit:'',    hint:'Must be ≥ upload_max_filesize (e.g. 256M)' },
+    { key:'max_file_uploads',    label:'Max File Uploads',   type:'number', unit:'',    hint:'Max number of files per request' },
+  ],
+  fpm: [
+    { key:'pm',                        label:'Process Manager',      type:'select', opts:['dynamic','static','ondemand'], hint:'dynamic = spawn on demand (recommended)' },
+    { key:'pm.max_children',           label:'Max Children',         type:'number', unit:'',    hint:'Max PHP workers. Each ~30–50MB RAM' },
+    { key:'pm.start_servers',          label:'Start Servers',        type:'number', unit:'',    hint:'Workers spawned at startup' },
+    { key:'pm.min_spare_servers',      label:'Min Spare Servers',    type:'number', unit:'',    hint:'Min idle workers kept alive' },
+    { key:'pm.max_spare_servers',      label:'Max Spare Servers',    type:'number', unit:'',    hint:'Max idle workers (kill excess)' },
+    { key:'pm.max_requests',           label:'Max Requests',         type:'number', unit:'',    hint:'Restart worker after N requests (500–1000)' },
+    { key:'request_terminate_timeout', label:'Request Timeout',      type:'text',   unit:'',    hint:'Kill if longer than this. 0 = disabled' },
+  ],
+  mysql: [
+    { key:'max_connections',         label:'Max Connections',        type:'number', unit:'',    hint:'Max simultaneous connections (default 151)' },
+    { key:'innodb_buffer_pool_size', label:'InnoDB Buffer Pool',     type:'text',   unit:'',    hint:'50–70% of RAM for DB servers (e.g. 512M)' },
+    { key:'slow_query_log',          label:'Slow Query Log',         type:'select', opts:['0','1'], hint:'1 = log slow queries to file' },
+    { key:'long_query_time',         label:'Slow Query Threshold',   type:'number', unit:'sec', hint:'Log queries slower than this' },
+    { key:'max_allowed_packet',      label:'Max Allowed Packet',     type:'text',   unit:'',    hint:'Max packet size for large imports (e.g. 256M)' },
+  ],
+};
+
+function buildPerfForm(section, data) {
+  const fields = PERF_FIELDS[section] || [];
+  return fields.map(f => {
+    const val = esc(data[f.key] || '');
+    let input;
+    if (f.type === 'select') {
+      const opts = f.opts.map(o => `<option value="${o}"${o==val?'selected':''}>${o}</option>`).join('');
+      input = `<select class="input-dark" data-key="${f.key}" style="flex:1;">${opts}</select>`;
+    } else {
+      input = `<input type="${f.type}" class="input-dark" data-key="${f.key}" value="${val}" style="flex:1;">`;
+    }
+    return `
+      <div class="mb-3">
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <label style="font-size:.82rem;color:#a6adc8;min-width:160px;">${f.label}</label>
+          ${input}
+          ${f.unit ? `<span style="font-size:.78rem;color:#585b70;white-space:nowrap;">${f.unit}</span>` : ''}
+        </div>
+        <div style="font-size:.72rem;color:#585b70;padding-left:164px;">${f.hint}</div>
+      </div>`;
+  }).join('');
+}
+
+async function loadPerformance() {
+  const r = await api('/api/performance');
+  _perfData = r;
+
+  document.getElementById('perf-nginx-form').innerHTML = buildPerfForm('nginx', r.nginx || {});
+  document.getElementById('perf-php-form').innerHTML   = buildPerfForm('php',   r.php   || {});
+  document.getElementById('perf-fpm-form').innerHTML   = buildPerfForm('fpm',   r.fpm   || {});
+  document.getElementById('perf-mysql-form').innerHTML = buildPerfForm('mysql', r.mysql || {});
+
+  if (r.php?.path)   document.getElementById('perf-php-path').textContent   = r.php.path;
+  if (r.fpm?.path)   document.getElementById('perf-fpm-path').textContent   = r.fpm.path;
+  if (r.mysql?.path) document.getElementById('perf-mysql-path').textContent = r.mysql.path;
+}
+
+async function savePerf(section) {
+  const container = document.getElementById(`perf-${section}-form`);
+  const outEl     = document.getElementById(`perf-${section}-out`);
+  const payload   = {};
+
+  container.querySelectorAll('[data-key]').forEach(el => {
+    payload[el.dataset.key] = el.value;
+  });
+
+  outEl.textContent = 'Saving…';
+  outEl.style.display = 'block';
+
+  const r = await api(`/api/performance/${section}`, 'POST', payload);
+  outEl.textContent = r.output || (r.success ? 'Done.' : (r.error || 'Failed'));
+  outEl.style.color = r.success ? '#a6e3a1' : '#f38ba8';
+
+  if (r.success) {
+    toast(`${section.toUpperCase()} settings saved`, 'success');
+    loadPerformance(); // refresh displayed values
+  } else {
+    toast(`Save failed: ${r.error || r.details || 'check output'}`, 'error');
+  }
+}
+
+// ══ Next Port ════════════════════════════════════════════════════════════════
+async function loadNextPort() {
+  const r = await api('/api/wordpress/next_port');
+  if (r.success) {
+    document.getElementById('wp-port').value = r.port;
+    document.getElementById('wp-port-preview').textContent = r.port;
+  }
+}
+
+// ══ phpMyAdmin Quick Access ═══════════════════════════════════════════════════
+async function openWPPma(siteName, path, dbName) {
+  const pma = await api('/api/phpmyadmin/status');
+  if (!pma.installed || !pma.nginx_site_enabled) {
+    toast('phpMyAdmin is not installed or not enabled. Set it up in the phpMyAdmin section.', 'error'); return;
+  }
+  const r = await api(`/api/wordpress/credentials?path=${encodeURIComponent(path)}`);
+  if (!r.success) { toast('Could not read wp-config.php: ' + r.error, 'error'); return; }
+
+  document.getElementById('cred-site-name').textContent = siteName;
+  document.getElementById('cred-db-name').textContent = r.db_name || dbName;
+  document.getElementById('cred-db-user').textContent = r.db_user;
+  document.getElementById('cred-db-pass').textContent = r.db_pass;
+  const pmaUrl = `${pma.url || 'http://localhost:8081'}/?db=${encodeURIComponent(r.db_name || dbName)}`;
+  document.getElementById('cred-pma-link').href = pmaUrl;
+  document.getElementById('cred-modal').style.display = 'flex';
+}
+
+function closeCredModal() {
+  document.getElementById('cred-modal').style.display = 'none';
+}
+
+function copyText(elemId) {
+  const val = document.getElementById(elemId).textContent;
+  navigator.clipboard.writeText(val).then(() => toast('Copied!', 'success'));
+}
+
+// ══ Change Passwords Modal ════════════════════════════════════════════════════
+let _cpSite = null;
+
+function showChangePassModal(name, path, dbUser, dbName, loginIndex=null) {
+  const login = loginIndex !== null ? wpLoginCreds[loginIndex] : null;
+  const selected = document.getElementById(`wp-admin-user-${loginIndex}`)?.value || login?.username || '';
+  _cpSite = { name, path, dbUser, dbName, loginIndex };
+  document.getElementById('chpass-site-name').textContent = name;
+  document.getElementById('chpass-db-user').textContent = dbUser;
+  document.getElementById('chpass-wp-user').innerHTML = wpAdminUserOptions(login?.adminUsers || (selected ? [selected] : []), selected);
+  document.getElementById('chpass-db-new').value = '';
+  document.getElementById('chpass-wp-new').value = '';
+  document.getElementById('chpass-db-msg').style.display = 'none';
+  document.getElementById('chpass-wp-msg').style.display = 'none';
+  document.getElementById('chpass-db-btn').disabled = false;
+  document.getElementById('chpass-wp-btn').disabled = false;
+  document.getElementById('chpass-modal').style.display = 'flex';
+}
+
+function closePassModal() {
+  document.getElementById('chpass-modal').style.display = 'none';
+  _cpSite = null;
+}
+
+function genPassInto(inputId) {
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%';
+  let p = '';
+  for (let i = 0; i < 16; i++) p += chars[Math.floor(Math.random() * chars.length)];
+  document.getElementById(inputId).value = p;
+  document.getElementById(inputId).type = 'text';
+  setTimeout(() => { document.getElementById(inputId).type = 'password'; }, 3000);
+}
+
+async function doChangeDbPass() {
+  if (!_cpSite) return;
+  const newPass = document.getElementById('chpass-db-new').value.trim();
+  if (!newPass) { toast('Enter a new DB password', 'error'); return; }
+  const btn = document.getElementById('chpass-db-btn');
+  const msg = document.getElementById('chpass-db-msg');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-sm"></span> Updating…';
+  const r = await api('/api/wordpress/change_db_password', 'POST', {
+    install_path: _cpSite.path,
+    db_user: _cpSite.dbUser,
+    new_pass: newPass,
+  });
+  btn.disabled = false;
+  btn.innerHTML = '<i class="bi bi-floppy"></i> Update DB Password';
+  if (r.success) {
+    msg.textContent = 'DB password updated.' + (r.config_updated ? ' wp-config.php updated.' : ' Warning: could not update wp-config.php.');
+    msg.style.color = r.config_updated ? '#a6e3a1' : '#f9e2af';
+    msg.style.display = 'block';
+    toast('DB password changed for ' + _cpSite.name, 'success');
+  } else {
+    msg.textContent = 'Error: ' + (r.error || 'Failed');
+    msg.style.color = '#f38ba8';
+    msg.style.display = 'block';
+    toast('DB password change failed', 'error');
+  }
+}
+
+async function doChangeWpPass() {
+  if (!_cpSite) return;
+  const newPass = document.getElementById('chpass-wp-new').value.trim();
+  if (!newPass) { toast('Enter a new WP admin password', 'error'); return; }
+  const btn = document.getElementById('chpass-wp-btn');
+  const msg = document.getElementById('chpass-wp-msg');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-sm"></span> Updating…';
+  const r = await api('/api/wordpress/change_wp_admin', 'POST', {
+    install_path: _cpSite.path,
+    wp_admin_user: document.getElementById('chpass-wp-user').value,
+    new_pass: newPass,
+  });
+  btn.disabled = false;
+  btn.innerHTML = '<i class="bi bi-floppy"></i> Update WP Admin Password';
+  if (r.success) {
+    msg.textContent = `WP admin password updated (via ${r.method}).`;
+    msg.style.color = '#a6e3a1';
+    msg.style.display = 'block';
+    toast('WP admin password changed for ' + _cpSite.name, 'success');
+    loadWPSites();
+  } else {
+    msg.textContent = 'Error: ' + (r.error || 'Failed');
+    msg.style.color = '#f38ba8';
+    msg.style.display = 'block';
+    toast('WP admin password change failed', 'error');
+  }
+}
+
+// ══ Utility ═══════════════════════════════════════════════════════════════════
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ══ Init ══════════════════════════════════════════════════════════════════════
+function initPanel() {
+  autoStartPanelServices();
+  refreshStatus();
+  if (statusInterval) clearInterval(statusInterval);
+  statusInterval = setInterval(refreshStatus, 7000);
+  document.querySelectorAll('#sudo-user-placeholder, .sudo-line').forEach(el => {
+    el.textContent = 'vjranga';
+  });
+  showPage(savedPage());
+}
+
+// Handle browser back/forward and direct hash URL
+window.addEventListener('hashchange', () => {
+  showPage(savedPage());
+});
+
+// Auto-login if token stored
+window.addEventListener('DOMContentLoaded', () => {
+  if (token) {
+    api('/api/status').then(r => {
+      if (r && r.system) showPanel();
+      else { token = ''; localStorage.removeItem('panel_token'); }
+    });
+  }
+  document.getElementById('login-pw').focus();
+});
+</script>
+</body>
+</html>
