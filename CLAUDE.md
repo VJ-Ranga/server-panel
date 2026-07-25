@@ -49,6 +49,11 @@ This creates `/etc/sudoers.d/server-panel` so the panel can control services, ed
 - Live CPU, RAM, disk, uptime stats (polls every 7 seconds)
 - Nginx, MySQL, PHP-FPM service cards with Start / Stop / Restart buttons
 
+### App Launcher
+- Unified create-focused page for WordPress, Laravel, CodeIgniter, and PHP Projects
+- Shows app cards with requirements, default port range, Create, and Manage actions
+- Reuses existing app-specific install forms and management pages
+
 ### Nginx
 - List all virtual hosts with enabled/disabled status
 - Enable / disable sites with one click
