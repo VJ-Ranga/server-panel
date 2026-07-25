@@ -142,6 +142,7 @@ body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#12141c;col
       <a href="#mysql" onclick="showPage('mysql',this); return false;"><i class="bi bi-database"></i> MySQL</a>
       <a href="#wordpress" onclick="showPage('wordpress',this); return false;"><i class="bi bi-wordpress"></i> WordPress</a>
       <a href="#laravel" onclick="showPage('laravel',this); return false;"><i class="bi bi-code-square"></i> Laravel</a>
+      <a href="#codeigniter" onclick="showPage('codeigniter',this); return false;"><i class="bi bi-braces"></i> CodeIgniter</a>
       <a href="#phpmyadmin" onclick="showPage('phpmyadmin',this); return false;"><i class="bi bi-database-gear"></i> phpMyAdmin</a>
       <a href="#performance" onclick="showPage('performance',this); return false;"><i class="bi bi-speedometer2"></i> Performance</a>
       <div class="nav-section">System</div>
@@ -577,6 +578,71 @@ body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#12141c;col
           </div>
           <div class="mt-3 service-card" style="font-size:.82rem;color:#6c7086;">
             <b style="color:#a6adc8;"><i class="bi bi-shield-check"></i> Requires sudo + Composer</b> — if Laravel install fails, install Composer and rerun:
+            <code style="color:#cba6f7;margin-left:6px;">sudo bash ~/Documents/server-panel/setup-sudo.sh vjranga</code>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CODEIGNITER ──────────────────────────────────────────────────── -->
+      <div id="page-codeigniter" class="page">
+        <div class="custom-tabs">
+          <button class="active" onclick="switchTab('codeigniter','apps',this)">Installed Apps</button>
+          <button onclick="switchTab('codeigniter','install',this); loadCodeIgniterNextPort()">Create New App</button>
+        </div>
+
+        <div id="codeigniter-tab-apps" class="tab-pane active">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="section-title mb-0"><i class="bi bi-braces"></i> CodeIgniter Apps</div>
+            <button class="btn btn-sm btn-outline-secondary" onclick="loadCodeIgniterApps()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+          </div>
+          <div id="codeigniter-apps-container"><div class="empty-state"><div class="spinner-sm mx-auto"></div></div></div>
+        </div>
+
+        <div id="codeigniter-tab-install" class="tab-pane">
+          <div class="row g-4">
+            <div class="col-lg-6">
+              <div class="service-card">
+                <div class="section-title"><i class="bi bi-download"></i> New CodeIgniter 4 App</div>
+                <div class="mb-3">
+                  <label class="form-label-sm">App Name <span style="color:#f38ba8;">*</span></label>
+                  <input id="ci-site-name" class="input-dark" placeholder="myciapp" oninput="codeIgniterAutoFill()">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label-sm">Install Path <span style="color:#f38ba8;">*</span></label>
+                  <input id="ci-install-path" class="input-dark" placeholder="/var/www/myciapp">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label-sm">Port <span style="color:#f38ba8;">*</span></label>
+                  <div class="d-flex gap-2">
+                    <input id="ci-port" class="input-dark" placeholder="8200" value="8200" type="number" style="flex:1;" oninput="document.getElementById('ci-port-preview').textContent=this.value||'8200'">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="loadCodeIgniterNextPort()"><i class="bi bi-arrow-repeat"></i></button>
+                  </div>
+                  <div style="font-size:.73rem;color:#585b70;margin-top:3px;">Access at http://localhost:<span id="ci-port-preview">8200</span></div>
+                </div>
+                <hr style="border-color:#2d3158;margin:16px 0;">
+                <div style="font-size:.8rem;color:#6c7086;margin-bottom:12px;"><i class="bi bi-database"></i> Database Settings</div>
+                <div class="mb-3"><label class="form-label-sm">Database Name <span style="color:#f38ba8;">*</span></label><input id="ci-db-name" class="input-dark" placeholder="myciapp_db"></div>
+                <div class="mb-3"><label class="form-label-sm">Database User <span style="color:#f38ba8;">*</span></label><input id="ci-db-user" class="input-dark" placeholder="myciapp_user"></div>
+                <div class="mb-3">
+                  <label class="form-label-sm">Database Password</label>
+                  <div class="d-flex gap-2"><input id="ci-db-pass" class="input-dark" placeholder="auto-generated if blank" style="flex:1;"><button class="btn btn-sm btn-outline-secondary" onclick="genCodeIgniterDbPass()"><i class="bi bi-arrow-repeat"></i></button></div>
+                </div>
+                <button class="btn btn-primary w-100 mt-2" onclick="startCodeIgniterInstall()" id="ci-install-btn"><i class="bi bi-download"></i> Create CodeIgniter App</button>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="service-card" style="height:100%;">
+                <div class="section-title"><i class="bi bi-terminal"></i> Installation Log</div>
+                <div id="ci-install-log" class="log-box" style="height:340px;color:#cdd6f4;">Fill in the form and click Create…</div>
+                <div id="ci-install-result" style="display:none;" class="mt-3 p-3 rounded">
+                  <div style="color:#a6e3a1;font-weight:600;margin-bottom:10px;"><i class="bi bi-check-circle-fill"></i> CodeIgniter app created!</div>
+                  <a id="ci-result-url" href="#" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-globe"></i> Open App</a>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="mt-3 service-card" style="font-size:.82rem;color:#6c7086;">
+            <b style="color:#a6adc8;"><i class="bi bi-shield-check"></i> Requires sudo + Composer</b> — if CodeIgniter install fails, install Composer and rerun:
             <code style="color:#cba6f7;margin-left:6px;">sudo bash ~/Documents/server-panel/setup-sudo.sh vjranga</code>
           </div>
         </div>
@@ -1152,7 +1218,7 @@ function setText(id, val) {
 }
 
 // ══ Navigation ════════════════════════════════════════════════════════════════
-const pageTitles = { dashboard:'Dashboard', nginx:'Nginx', mysql:'MySQL', wordpress:'WordPress', laravel:'Laravel', phpmyadmin:'phpMyAdmin', performance:'Performance', settings:'Settings' };
+const pageTitles = { dashboard:'Dashboard', nginx:'Nginx', mysql:'MySQL', wordpress:'WordPress', laravel:'Laravel', codeigniter:'CodeIgniter', phpmyadmin:'phpMyAdmin', performance:'Performance', settings:'Settings' };
 function validPage(name) {
   return name && document.getElementById('page-' + name) ? name : '';
 }
@@ -1189,6 +1255,7 @@ function onPageLoad(name) {
   if (name === 'mysql')      { loadDatabases(); }
   if (name === 'wordpress')  { loadWPSites(); loadNextPort(); loadWpPluginLibrary(); }
   if (name === 'laravel')    { loadLaravelApps(); loadLaravelNextPort(); }
+  if (name === 'codeigniter') { loadCodeIgniterApps(); loadCodeIgniterNextPort(); }
   if (name === 'phpmyadmin')  { loadPmaStatus(); loadPmaNginxConfig(); loadPmaPhpConfig(); }
   if (name === 'performance') { loadPerformance(); }
 }
@@ -1983,6 +2050,161 @@ async function deleteLaravelApp(name, path, dbName, dbUser, nginxSite) {
       loadLaravelApps();
     } else if (job.status === 'error') {
       clearInterval(laravelDeletePollInterval);
+      toast('Delete failed: ' + (job.result?.error || 'unknown'), 'error');
+    }
+  }, 1200);
+}
+
+// ══ CodeIgniter ═══════════════════════════════════════════════════════════════
+let codeIgniterPollInterval = null;
+let codeIgniterDeletePollInterval = null;
+
+function codeIgniterAutoFill() {
+  const raw = document.getElementById('ci-site-name').value.toLowerCase().replace(/[^a-z0-9-]/g,'');
+  document.getElementById('ci-site-name').value = raw;
+  document.getElementById('ci-install-path').value = raw ? `/var/www/${raw}` : '';
+  document.getElementById('ci-db-name').value = raw ? `${raw.replace(/-/g,'_')}_db` : '';
+  document.getElementById('ci-db-user').value = raw ? `${raw.replace(/-/g,'_').slice(0,16)}_user` : '';
+}
+
+function genCodeIgniterDbPass() {
+  document.getElementById('ci-db-pass').value = _randPass();
+}
+
+async function loadCodeIgniterNextPort() {
+  const r = await api('/api/codeigniter/next_port');
+  if (r.success) {
+    const port = Number(r.port || 8200);
+    document.getElementById('ci-port').value = port;
+    document.getElementById('ci-port-preview').textContent = port;
+  }
+}
+
+async function loadCodeIgniterApps() {
+  const container = document.getElementById('codeigniter-apps-container');
+  const r = await api('/api/codeigniter/apps');
+  if (!r.success) {
+    container.innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-circle"></i>${esc(r.error || 'Error')}</div>`;
+    return;
+  }
+  if (!r.apps || !r.apps.length) {
+    container.innerHTML = `<div class="empty-state"><i class="bi bi-braces"></i>No CodeIgniter apps found<br><small style="color:#585b70">Searched in /var/www and /opt</small></div>`;
+    return;
+  }
+  container.innerHTML = `<div class="row g-3">${r.apps.map((app, i) => `
+    <div class="col-md-6">
+      <div class="wp-card">
+        <div class="d-flex align-items-start justify-content-between">
+          <div class="wp-title"><i class="bi bi-braces text-info"></i> ${esc(app.name)}</div>
+          <button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;font-size:.72rem;" onclick="deleteCodeIgniterApp('${esc(app.name)}','${esc(app.path)}','${esc(app.db_name||'')}','${esc(app.db_user||'')}','${esc(app.nginx_site||app.name)}')"><i class="bi bi-trash"></i> Delete</button>
+        </div>
+        <div class="wp-meta mt-1">
+          <span><b>Path:</b> ${esc(app.path)}</span>
+          <span><b>Database:</b> ${esc(app.db_name || '—')}</span>
+          <span><b>DB User:</b> ${esc(app.db_user || '—')}</span>
+          <span><b>Port:</b> ${app.port ? `<a href="http://localhost:${esc(app.port)}" target="_blank">${esc(app.port)}</a>` : '—'}</span>
+          <span><b>Nginx site:</b> ${esc(app.nginx_site || '—')}</span>
+          <span><b>Version:</b> ${esc(app.version || 'CodeIgniter 4')}</span>
+        </div>
+        <div class="mt-3 p-2 rounded" style="background:#12141c;border:1px solid #2d3158;font-size:.8rem;">
+          <div style="font-size:.7rem;color:#585b70;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">Database Login</div>
+          <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+            <b style="color:#a6adc8;">DB:</b>
+            <code id="ci-db-name-${i}" style="color:#a6e3a1;">${esc(app.db_name || '')}</code>
+            <button class="btn btn-sm btn-outline-secondary" style="padding:2px 8px;font-size:.72rem;" onclick="copyText('ci-db-name-${i}')"><i class="bi bi-clipboard"></i> Copy</button>
+          </div>
+          <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+            <b style="color:#a6adc8;">User:</b>
+            <code id="ci-db-user-${i}" style="color:#a6e3a1;">${esc(app.db_user || '')}</code>
+            <button class="btn btn-sm btn-outline-secondary" style="padding:2px 8px;font-size:.72rem;" onclick="copyText('ci-db-user-${i}')"><i class="bi bi-clipboard"></i> Copy</button>
+          </div>
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <b style="color:#a6adc8;">Pass:</b>
+            <code id="ci-db-pass-${i}" style="color:#f9e2af;word-break:break-all;">${esc(app.db_pass || '')}</code>
+            <button class="btn btn-sm btn-outline-secondary" style="padding:2px 8px;font-size:.72rem;" onclick="copyText('ci-db-pass-${i}')"><i class="bi bi-clipboard"></i> Copy</button>
+          </div>
+        </div>
+        <div class="mt-3 d-flex gap-2 flex-wrap">
+          ${app.port ? `<a class="btn btn-sm btn-outline-secondary" href="http://localhost:${esc(app.port)}/" target="_blank"><i class="bi bi-globe"></i> Site</a>` : ''}
+          <a class="btn btn-sm btn-outline-warning ${app.db_name ? '' : 'disabled'}" href="${app.db_name ? `http://localhost:8081/index.php?route=/database/structure&db=${encodeURIComponent(app.db_name)}` : '#'}" target="_blank"><i class="bi bi-database"></i> phpMyAdmin</a>
+          <button class="btn btn-sm btn-outline-info" onclick="openSiteFolder('${esc(app.path)}')"><i class="bi bi-folder2-open"></i> Open Folder</button>
+          <button class="btn btn-sm btn-outline-secondary" onclick="changeCodeIgniterPort('${esc(app.name)}','${esc(app.nginx_site||app.name)}','${esc(app.port||'')}')"><i class="bi bi-router"></i> Port</button>
+        </div>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+async function startCodeIgniterInstall() {
+  const siteName = document.getElementById('ci-site-name').value.trim();
+  const installPath = document.getElementById('ci-install-path').value.trim();
+  const port = document.getElementById('ci-port').value.trim();
+  const dbName = document.getElementById('ci-db-name').value.trim();
+  const dbUser = document.getElementById('ci-db-user').value.trim();
+  const dbPass = document.getElementById('ci-db-pass').value.trim();
+  if (!siteName || !installPath || !port || !dbName || !dbUser) {
+    toast('Fill in all required fields', 'error'); return;
+  }
+  const log = document.getElementById('ci-install-log');
+  const btn = document.getElementById('ci-install-btn');
+  const result = document.getElementById('ci-install-result');
+  log.textContent = 'Starting CodeIgniter installation…\n';
+  result.style.display = 'none';
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-sm"></span> Creating…';
+
+  const r = await api('/api/codeigniter/install', 'POST', { site_name: siteName, install_path: installPath, port, db_name: dbName, db_user: dbUser, db_pass: dbPass || undefined });
+  if (!r.success) {
+    log.textContent = 'Error: ' + (r.error || 'Failed to start');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-download"></i> Create CodeIgniter App';
+    return;
+  }
+  if (codeIgniterPollInterval) clearInterval(codeIgniterPollInterval);
+  codeIgniterPollInterval = setInterval(async () => {
+    const job = await api(`/api/codeigniter/install/${r.job_id}`);
+    log.textContent = job.logs ? job.logs.join('\n') : '';
+    log.scrollTop = log.scrollHeight;
+    if (job.status === 'done') {
+      clearInterval(codeIgniterPollInterval);
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-download"></i> Create Another';
+      if (job.result?.success) {
+        toast('CodeIgniter app created!', 'success');
+        document.getElementById('ci-result-url').href = job.result.url;
+        result.style.display = 'block';
+        loadCodeIgniterApps();
+      }
+    } else if (job.status === 'error') {
+      clearInterval(codeIgniterPollInterval);
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-download"></i> Retry';
+      toast('CodeIgniter install failed', 'error');
+    }
+  }, 1500);
+}
+
+async function changeCodeIgniterPort(name, nginxSite, currentPort) {
+  const port = prompt(`New port for ${name}:`, currentPort || '8200');
+  if (port === null) return;
+  const r = await api('/api/codeigniter/port', 'POST', { nginx_site: nginxSite, port });
+  if (r.success) { toast(`${name} is now on port ${port}`, 'success'); loadCodeIgniterApps(); }
+  else toast('Port change failed: ' + (r.stderr || r.error || 'unknown'), 'error');
+}
+
+async function deleteCodeIgniterApp(name, path, dbName, dbUser, nginxSite) {
+  if (!confirm(`Delete CodeIgniter app ${name}? This removes files, database, user, and Nginx site.`)) return;
+  const r = await apiDelete('/api/codeigniter/apps', { path, db_name: dbName, db_user: dbUser, nginx_site: nginxSite });
+  if (!r.success) { toast('Delete failed: ' + (r.error || 'unknown'), 'error'); return; }
+  toast('Deleting CodeIgniter app…', 'info');
+  if (codeIgniterDeletePollInterval) clearInterval(codeIgniterDeletePollInterval);
+  codeIgniterDeletePollInterval = setInterval(async () => {
+    const job = await api(`/api/codeigniter/delete/${r.job_id}`);
+    if (job.status === 'done') {
+      clearInterval(codeIgniterDeletePollInterval);
+      toast('CodeIgniter app deleted', 'success');
+      loadCodeIgniterApps();
+    } else if (job.status === 'error') {
+      clearInterval(codeIgniterDeletePollInterval);
       toast('Delete failed: ' + (job.result?.error || 'unknown'), 'error');
     }
   }, 1200);

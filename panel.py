@@ -500,12 +500,13 @@ def read_env_file(path):
     data = {}
     if not os.path.exists(path):
         return data
-    for line in open(path, errors="ignore"):
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, val = line.split("=", 1)
-        data[key] = val.strip().strip('"').strip("'")
+    with open(path, errors="ignore") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, val = line.split("=", 1)
+            data[key] = val.strip().strip('"').strip("'")
     return data
 
 
@@ -677,6 +678,161 @@ def delete_laravel_job(job_id, app_path, db_name, db_user, nginx_site, cfg):
             mysql_cmd(cfg, f"DROP USER IF EXISTS '{db_user}'@'localhost'; FLUSH PRIVILEGES;")
         log("▶ Removing files and Nginx site…")
         helper = os.path.join(SCRIPT_DIR, "laravel-helper.sh")
+        r = run_cmd(f"sudo {shell_quote(helper)} delete {shell_quote(app_path)} {shell_quote(nginx_site)}", timeout=60)
+        log((r["stdout"] + r["stderr"]).strip())
+        job["status"] = "done"
+        job["result"] = {"success": True}
+    except Exception as e:
+        log(f"✖ Error: {e}")
+        job["status"] = "error"
+        job["result"] = {"success": False, "error": str(e)}
+
+def get_codeigniter_apps():
+    apps = []
+    patterns = ["/var/www/*/spark", "/opt/*/spark", "/opt/*/*/spark"]
+    found = []
+    for p in patterns:
+        found.extend(glob.glob(p))
+    for spark in sorted(set(found)):
+        app_path = os.path.dirname(spark)
+        name = os.path.basename(app_path)
+        env = read_env_file(os.path.join(app_path, ".env"))
+        nginx_site = find_nginx_site_for_path(os.path.join(app_path, "public")) or find_nginx_site_for_path(app_path) or name
+        version = ""
+        r = run_cmd(f"cd {shell_quote(app_path)} && php spark --version", timeout=10)
+        if r["success"]:
+            version = r["stdout"].strip() or r["stderr"].strip()
+        apps.append({
+            "name": name,
+            "path": app_path,
+            "app_url": env.get("app.baseURL", ""),
+            "db_name": env.get("database.default.database", ""),
+            "db_user": env.get("database.default.username", ""),
+            "db_pass": env.get("database.default.password", ""),
+            "nginx_site": nginx_site,
+            "port": get_nginx_site_port(nginx_site),
+            "version": version,
+        })
+    return apps
+
+
+def install_codeigniter_job(job_id, params, cfg):
+    job = _jobs[job_id]
+
+    def log(msg):
+        job["logs"].append(msg)
+        print(msg)
+
+    created = {"src": "", "dir": False, "db": False, "db_user": False, "nginx": False}
+    site_name = install_path = db_name = db_user = None
+    try:
+        site_name = re.sub(r"[^\w\-]", "", params.get("site_name", "codeigniter"))
+        if not site_name:
+            raise ValueError("Site name is invalid")
+        install_path = validate_install_path(params.get("install_path", f"/var/www/{site_name}"))
+        db_name = re.sub(r"[^\w\-]", "", params.get("db_name", f"{site_name}_db"))
+        db_user = re.sub(r"[^\w\-]", "", params.get("db_user", f"{site_name[:16]}_user"))
+        db_pass = params.get("db_pass") or secrets.token_urlsafe(14)
+        if not db_name or not db_user:
+            raise ValueError("Database name or user is invalid")
+        if "'" in db_pass or "\\" in db_pass:
+            raise ValueError("Database password cannot contain single quotes or backslashes")
+        port = parse_port(params.get("port", 8200), 8200)
+        php_ver, _ = detect_php_fpm()
+
+        r = run_cmd("command -v composer")
+        if not r["success"]:
+            raise Exception("Composer is not installed. Install Composer first to create CodeIgniter apps.")
+
+        tmp_src = f"/tmp/_panel_codeigniter_{site_name}_{secrets.token_hex(4)}"
+        created["src"] = tmp_src
+
+        log("▶ [1/6] Creating CodeIgniter 4 project with Composer…")
+        r = run_cmd(f"composer create-project codeigniter4/appstarter {shell_quote(tmp_src)} --no-interaction", timeout=1800)
+        if not r["success"]:
+            raise Exception("Composer create-project failed:\n" + (r["stderr"] or r["stdout"]))
+        log("  CodeIgniter project created")
+
+        log(f"▶ [2/6] Creating database '{db_name}' and user '{db_user}'…")
+        sql = f"CREATE DATABASE IF NOT EXISTS `{db_name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+        r = mysql_cmd(cfg, sql)
+        if r.get("stderr") and "ERROR" in r["stderr"]:
+            raise Exception("MySQL error (create db): " + r["stderr"])
+        created["db"] = True
+        sql = (
+            f"CREATE USER IF NOT EXISTS '{db_user}'@'localhost' IDENTIFIED WITH mysql_native_password BY '{db_pass}';\n"
+            f"GRANT ALL PRIVILEGES ON `{db_name}`.* TO '{db_user}'@'localhost';\nFLUSH PRIVILEGES;"
+        )
+        r = mysql_cmd(cfg, sql)
+        if r.get("stderr") and "ERROR" in r["stderr"]:
+            raise Exception("MySQL error (create user): " + r["stderr"])
+        created["db_user"] = True
+
+        log("▶ [3/6] Writing CodeIgniter .env…")
+        env_path = os.path.join(tmp_src, ".env")
+        env_content = open(env_path).read() if os.path.exists(env_path) else ""
+        for key, value in {
+            "CI_ENVIRONMENT": "development",
+            "app.baseURL": f"http://localhost:{port}/",
+            "database.default.hostname": "127.0.0.1",
+            "database.default.database": db_name,
+            "database.default.username": db_user,
+            "database.default.password": db_pass,
+            "database.default.DBDriver": "MySQLi",
+            "database.default.port": "3306",
+        }.items():
+            env_content = set_env_value(env_content, key, value)
+        open(env_path, "w").write(env_content)
+
+        log("▶ [4/6] Preparing CodeIgniter app…")
+        os.makedirs(os.path.join(tmp_src, "writable"), exist_ok=True)
+
+        log("▶ [5/6] Installing files and Nginx site…")
+        helper = os.path.join(SCRIPT_DIR, "codeigniter-helper.sh")
+        r = run_cmd(
+            f"sudo {shell_quote(helper)} install {shell_quote(tmp_src)} {shell_quote(install_path)} {shell_quote(site_name)} {shell_quote(php_ver)} {shell_quote(port)}",
+            timeout=120,
+        )
+        if not r["success"]:
+            raise Exception("System setup failed:\n" + r["stdout"] + r["stderr"])
+        created["dir"] = True
+        created["nginx"] = True
+        log(r["stdout"].strip())
+
+        log("▶ [6/6] Done!")
+        log(f"  URL: http://localhost:{port}")
+        job["status"] = "done"
+        job["result"] = {"success": True, "url": f"http://localhost:{port}", "install_path": install_path, "db_name": db_name, "db_user": db_user, "db_pass": db_pass, "nginx_site": site_name}
+    except Exception as e:
+        log(f"\n✖ Error: {e}")
+        log("↩ Rolling back what was created…")
+        if created.get("db_user") and db_user:
+            mysql_cmd(cfg, f"DROP USER IF EXISTS '{db_user}'@'localhost'; FLUSH PRIVILEGES;")
+        if created.get("db") and db_name:
+            mysql_cmd(cfg, f"DROP DATABASE IF EXISTS `{db_name}`;")
+        if created.get("dir") or created.get("nginx"):
+            helper = os.path.join(SCRIPT_DIR, "codeigniter-helper.sh")
+            run_cmd(f"sudo {shell_quote(helper)} delete {shell_quote(install_path or '')} {shell_quote(site_name or '')}", timeout=60)
+        job["status"] = "error"
+        job["result"] = {"success": False, "error": str(e)}
+    finally:
+        if created.get("src"):
+            run_cmd(f"rm -rf {shell_quote(created['src'])}")
+
+
+def delete_codeigniter_job(job_id, app_path, db_name, db_user, nginx_site, cfg):
+    job = _jobs[job_id]
+    def log(msg):
+        job["logs"].append(msg); print(msg)
+    try:
+        if db_name and re.fullmatch(r"[\w\-]+", db_name):
+            log(f"▶ Dropping database '{db_name}'…")
+            mysql_cmd(cfg, f"DROP DATABASE IF EXISTS `{db_name}`;")
+        if db_user and db_user not in ("root", "—") and re.fullmatch(r"[\w\-]+", db_user):
+            log(f"▶ Dropping user '{db_user}'…")
+            mysql_cmd(cfg, f"DROP USER IF EXISTS '{db_user}'@'localhost'; FLUSH PRIVILEGES;")
+        log("▶ Removing files and Nginx site…")
+        helper = os.path.join(SCRIPT_DIR, "codeigniter-helper.sh")
         r = run_cmd(f"sudo {shell_quote(helper)} delete {shell_quote(app_path)} {shell_quote(nginx_site)}", timeout=60)
         log((r["stdout"] + r["stderr"]).strip())
         job["status"] = "done"
@@ -1380,11 +1536,17 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/laravel/apps":
             self.send_json({"success": True, "apps": get_laravel_apps()})
 
+        elif path == "/api/codeigniter/apps":
+            self.send_json({"success": True, "apps": get_codeigniter_apps()})
+
         elif path == "/api/wordpress/next_port":
             self.send_json({"success": True, "port": find_next_port()})
 
         elif path == "/api/laravel/next_port":
             self.send_json({"success": True, "port": find_next_port(8100)})
+
+        elif path == "/api/codeigniter/next_port":
+            self.send_json({"success": True, "port": find_next_port(8200)})
 
         elif path == "/api/wordpress/credentials":
             qs = parse_qs(urlparse(self.path).query)
@@ -1408,6 +1570,13 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json({"error": "Job not found"}, 404)
 
         elif path.startswith("/api/laravel/install/") or path.startswith("/api/laravel/delete/"):
+            job_id = path.split("/")[-1]
+            if job_id in _jobs:
+                self.send_json(_jobs[job_id])
+            else:
+                self.send_json({"error": "Job not found"}, 404)
+
+        elif path.startswith("/api/codeigniter/install/") or path.startswith("/api/codeigniter/delete/"):
             job_id = path.split("/")[-1]
             if job_id in _jobs:
                 self.send_json(_jobs[job_id])
@@ -1627,6 +1796,23 @@ class Handler(BaseHTTPRequestHandler):
             except ValueError as e:
                 self.send_json({"success": False, "error": str(e)}); return
             helper = os.path.join(SCRIPT_DIR, "laravel-helper.sh")
+            r = run_cmd(f"sudo {shell_quote(helper)} set-port {shell_quote(nginx_site)} {shell_quote(port)}", timeout=30)
+            self.send_json({**r, "port": port})
+
+        elif path == "/api/codeigniter/install":
+            job_id = secrets.token_hex(8)
+            _jobs[job_id] = {"status": "running", "logs": [], "result": {}}
+            t = threading.Thread(target=install_codeigniter_job, args=(job_id, data, cfg), daemon=True)
+            t.start()
+            self.send_json({"success": True, "job_id": job_id})
+
+        elif path == "/api/codeigniter/port":
+            nginx_site = data.get("nginx_site", "")
+            try:
+                port = parse_port(data.get("port"), None)
+            except ValueError as e:
+                self.send_json({"success": False, "error": str(e)}); return
+            helper = os.path.join(SCRIPT_DIR, "codeigniter-helper.sh")
             r = run_cmd(f"sudo {shell_quote(helper)} set-port {shell_quote(nginx_site)} {shell_quote(port)}", timeout=30)
             self.send_json({**r, "port": port})
 
@@ -1901,6 +2087,21 @@ echo 'ok';
             _jobs[job_id] = {"status": "running", "logs": [], "result": {}}
             t = threading.Thread(
                 target=delete_laravel_job,
+                args=(job_id, app_path, db_name, db_user, nginx_site, cfg),
+                daemon=True,
+            )
+            t.start()
+            self.send_json({"success": True, "job_id": job_id})
+
+        elif path == "/api/codeigniter/apps":
+            app_path   = data.get("path", "")
+            db_name    = data.get("db_name", "")
+            db_user    = data.get("db_user", "")
+            nginx_site = data.get("nginx_site", "")
+            job_id     = secrets.token_hex(8)
+            _jobs[job_id] = {"status": "running", "logs": [], "result": {}}
+            t = threading.Thread(
+                target=delete_codeigniter_job,
                 args=(job_id, app_path, db_name, db_user, nginx_site, cfg),
                 daemon=True,
             )

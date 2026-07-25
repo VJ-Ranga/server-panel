@@ -36,6 +36,8 @@ This creates `/etc/sudoers.d/server-panel` so the panel can control services, ed
 | `setup-sudo.sh` | Run once with sudo to grant passwordless sudo rules |
 | `wp-install-helper.sh` | Sudo helper — copies WP files, sets permissions, creates nginx site |
 | `wp-delete-helper.sh` | Sudo helper — removes WP files and nginx site |
+| `laravel-helper.sh` | Sudo helper — copies Laravel files, sets permissions, creates nginx site |
+| `codeigniter-helper.sh` | Sudo helper — copies CodeIgniter files, sets permissions, creates nginx site |
 | `perf-helper.sh` | Sudo helper — saves tuned Nginx/PHP-FPM/MySQL config files and restarts services |
 | `start-panel.sh` | Desktop launcher helper — starts the panel and opens the browser |
 | `panel-icon.svg` | Desktop launcher icon |
@@ -80,6 +82,21 @@ This creates `/etc/sudoers.d/server-panel` so the panel can control services, ed
   - Reads DB credentials from `wp-config.php` for phpMyAdmin quick access
   - Changes DB user password and updates `wp-config.php`
   - Changes WP admin password for user ID 1 via WP-CLI or PHP fallback
+
+### CodeIgniter
+- Auto-discovers CodeIgniter 4 apps by scanning for `spark` in `/var/www`, `/opt`, and `/opt/*/*`
+- **Create New App** wizard:
+  - Creates a CodeIgniter 4 app with Composer (`codeigniter4/appstarter`)
+  - Creates database + user with mysql_native_password
+  - Writes `.env` with app URL and database settings
+  - Creates and enables nginx site on chosen port with `public/` as webroot
+  - Live progress log in browser
+  - Full rollback on failure (removes files, DB, user, nginx site)
+- Installed Apps dashboard:
+  - Opens frontend, app folder, and phpMyAdmin for the selected app
+  - Shows detected Nginx site and port
+  - Changes the Nginx listen port safely via helper script + `nginx -t`
+  - Deletes app files, database, database user, and Nginx site
 
 ### phpMyAdmin
 - Install via apt with one click (live log)
@@ -142,6 +159,13 @@ This creates `/etc/sudoers.d/server-panel` so the panel can control services, ed
 | POST | `/api/wordpress/change_wp_admin` | Change WP admin password for user ID 1 |
 | DELETE | `/api/wordpress/sites` | Start delete job → returns job_id |
 | GET | `/api/wordpress/delete/<job_id>` | Poll delete progress |
+| GET | `/api/codeigniter/apps` | List CodeIgniter 4 apps |
+| GET | `/api/codeigniter/next_port` | Find next available suggested CodeIgniter port |
+| POST | `/api/codeigniter/install` | Start CodeIgniter 4 install job |
+| GET | `/api/codeigniter/install/<job_id>` | Poll CodeIgniter install progress |
+| POST | `/api/codeigniter/port` | Change a CodeIgniter Nginx site listen port |
+| DELETE | `/api/codeigniter/apps` | Start CodeIgniter delete job |
+| GET | `/api/codeigniter/delete/<job_id>` | Poll CodeIgniter delete progress |
 | GET | `/api/performance` | Read Nginx/PHP/FPM/MySQL performance settings |
 | POST | `/api/performance/nginx` | Save selected Nginx performance settings |
 | POST | `/api/performance/php` | Save selected PHP settings |

@@ -33,6 +33,7 @@ $USER ALL=(ALL) NOPASSWD: /usr/bin/apt-get install -y phpmyadmin *
 $USER ALL=(ALL) NOPASSWD: /home/$USER/Documents/server-panel/wp-install-helper.sh *
 $USER ALL=(ALL) NOPASSWD: /home/$USER/Documents/server-panel/wp-delete-helper.sh *
 $USER ALL=(ALL) NOPASSWD: /home/$USER/Documents/server-panel/laravel-helper.sh *
+$USER ALL=(ALL) NOPASSWD: /home/$USER/Documents/server-panel/codeigniter-helper.sh *
 $USER ALL=(ALL) NOPASSWD: /home/$USER/Documents/server-panel/perf-helper.sh *
 EOF
 
