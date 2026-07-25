@@ -137,6 +137,7 @@ body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#12141c;col
     <nav class="sidebar-nav mt-1">
       <div class="nav-section">Overview</div>
       <a href="#dashboard" class="active" onclick="showPage('dashboard',this); return false;"><i class="bi bi-grid-1x2"></i> Dashboard</a>
+      <a href="#app-launcher" onclick="showPage('app-launcher',this); return false;"><i class="bi bi-rocket-takeoff"></i> App Launcher</a>
       <div class="nav-section">Services</div>
       <a href="#nginx" onclick="showPage('nginx',this); return false;"><i class="bi bi-arrow-left-right"></i> Nginx</a>
       <a href="#mysql" onclick="showPage('mysql',this); return false;"><i class="bi bi-database"></i> MySQL</a>
@@ -258,6 +259,50 @@ body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#12141c;col
               </div>
               <div style="font-size:.8rem;color:#585b70;margin-bottom:14px;">FastCGI process manager · PHP <span id="d-php-ver">—</span></div>
               <div class="action-btns" id="d-phpfpm-btns"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── APP LAUNCHER ───────────────────────────────────────────────── -->
+      <div id="page-app-launcher" class="page">
+        <div class="d-flex align-items-center justify-content-between mb-4">
+          <div>
+            <div class="section-title mb-1"><i class="bi bi-rocket-takeoff"></i> App Launcher</div>
+            <div style="font-size:.86rem;color:#6c7086;">Create a new local site or app from one place.</div>
+          </div>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-6 col-xl-3">
+            <div id="launcher-wordpress" class="service-card h-100">
+              <div class="section-title"><i class="bi bi-wordpress"></i> WordPress</div>
+              <p style="color:#a6adc8;font-size:.86rem;min-height:58px;">Create a WordPress site with database, admin user, Nginx site, and optional plugins.</p>
+              <div style="font-size:.76rem;color:#6c7086;margin-bottom:14px;">Starts near 8090 · MySQL required</div>
+              <div class="d-flex gap-2 flex-wrap"><button class="btn btn-sm btn-primary" onclick="appLauncherCreate('wordpress')"><i class="bi bi-plus-circle"></i> Create</button><button class="btn btn-sm btn-outline-secondary" onclick="appLauncherManage('wordpress')"><i class="bi bi-grid"></i> Manage</button></div>
+            </div>
+          </div>
+          <div class="col-md-6 col-xl-3">
+            <div id="launcher-laravel" class="service-card h-100">
+              <div class="section-title"><i class="bi bi-code-square"></i> Laravel</div>
+              <p style="color:#a6adc8;font-size:.86rem;min-height:58px;">Create a Laravel app with Composer, database credentials, and an Nginx public webroot.</p>
+              <div style="font-size:.76rem;color:#6c7086;margin-bottom:14px;">Starts near 8100 · Composer required</div>
+              <div class="d-flex gap-2 flex-wrap"><button class="btn btn-sm btn-primary" onclick="appLauncherCreate('laravel')"><i class="bi bi-plus-circle"></i> Create</button><button class="btn btn-sm btn-outline-secondary" onclick="appLauncherManage('laravel')"><i class="bi bi-grid"></i> Manage</button></div>
+            </div>
+          </div>
+          <div class="col-md-6 col-xl-3">
+            <div id="launcher-codeigniter" class="service-card h-100">
+              <div class="section-title"><i class="bi bi-braces"></i> CodeIgniter</div>
+              <p style="color:#a6adc8;font-size:.86rem;min-height:58px;">Create a CodeIgniter 4 app with Composer, `.env`, database, and Nginx public webroot.</p>
+              <div style="font-size:.76rem;color:#6c7086;margin-bottom:14px;">Starts near 8200 · Composer required</div>
+              <div class="d-flex gap-2 flex-wrap"><button class="btn btn-sm btn-primary" onclick="appLauncherCreate('codeigniter')"><i class="bi bi-plus-circle"></i> Create</button><button class="btn btn-sm btn-outline-secondary" onclick="appLauncherManage('codeigniter')"><i class="bi bi-grid"></i> Manage</button></div>
+            </div>
+          </div>
+          <div class="col-md-6 col-xl-3">
+            <div id="launcher-php-projects" class="service-card h-100">
+              <div class="section-title"><i class="bi bi-filetype-php"></i> PHP Project</div>
+              <p style="color:#a6adc8;font-size:.86rem;min-height:58px;">Create a plain PHP project from Blank, PHP Only, or PHP + DB templates.</p>
+              <div style="font-size:.76rem;color:#6c7086;margin-bottom:14px;">Starts near 8300 · DB optional</div>
+              <div class="d-flex gap-2 flex-wrap"><button class="btn btn-sm btn-primary" onclick="appLauncherCreate('php-projects')"><i class="bi bi-plus-circle"></i> Create</button><button class="btn btn-sm btn-outline-secondary" onclick="appLauncherManage('php-projects')"><i class="bi bi-grid"></i> Manage</button></div>
             </div>
           </div>
         </div>
@@ -1282,7 +1327,7 @@ function setText(id, val) {
 }
 
 // ══ Navigation ════════════════════════════════════════════════════════════════
-const pageTitles = { dashboard:'Dashboard', nginx:'Nginx', mysql:'MySQL', wordpress:'WordPress', laravel:'Laravel', codeigniter:'CodeIgniter', 'php-projects':'PHP Projects', phpmyadmin:'phpMyAdmin', performance:'Performance', settings:'Settings' };
+const pageTitles = { dashboard:'Dashboard', 'app-launcher':'App Launcher', nginx:'Nginx', mysql:'MySQL', wordpress:'WordPress', laravel:'Laravel', codeigniter:'CodeIgniter', 'php-projects':'PHP Projects', phpmyadmin:'phpMyAdmin', performance:'Performance', settings:'Settings' };
 function validPage(name) {
   return name && document.getElementById('page-' + name) ? name : '';
 }
@@ -1312,6 +1357,39 @@ function showPage(name, el) {
   localStorage.setItem('panel_page', name);
   if (window.location.hash !== '#' + name) window.location.hash = name;
   onPageLoad(name);
+}
+
+function openAppLauncherTarget(appType, tabName) {
+  if (!validPage(appType)) { toast('Target page not found', 'error'); return; }
+  const link = document.querySelector(`.sidebar-nav a[href="#${appType}"]`);
+  showPage(appType, link);
+  const btn = document.querySelector(`#page-${appType} .custom-tabs button[onclick*="'${tabName}'"]`);
+  if (!btn) { toast('Target tab not found', 'error'); return; }
+  switchTab(appType, tabName, btn);
+}
+
+function appLauncherCreate(type) {
+  const targets = {
+    'wordpress': 'install',
+    'laravel': 'install',
+    'codeigniter': 'install',
+    'php-projects': 'install',
+  };
+  const target = targets[type];
+  if (!target) { toast('Unknown app type', 'error'); return; }
+  openAppLauncherTarget(type, target);
+}
+
+function appLauncherManage(type) {
+  const targets = {
+    'wordpress': 'sites',
+    'laravel': 'apps',
+    'codeigniter': 'apps',
+    'php-projects': 'apps',
+  };
+  const target = targets[type];
+  if (!target) { toast('Unknown app type', 'error'); return; }
+  openAppLauncherTarget(type, target);
 }
 
 function onPageLoad(name) {
