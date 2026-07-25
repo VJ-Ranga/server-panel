@@ -34,6 +34,7 @@ $USER ALL=(ALL) NOPASSWD: /home/$USER/Documents/server-panel/wp-install-helper.s
 $USER ALL=(ALL) NOPASSWD: /home/$USER/Documents/server-panel/wp-delete-helper.sh *
 $USER ALL=(ALL) NOPASSWD: /home/$USER/Documents/server-panel/laravel-helper.sh *
 $USER ALL=(ALL) NOPASSWD: /home/$USER/Documents/server-panel/codeigniter-helper.sh *
+$USER ALL=(ALL) NOPASSWD: /home/$USER/Documents/server-panel/php-project-helper.sh *
 $USER ALL=(ALL) NOPASSWD: /home/$USER/Documents/server-panel/perf-helper.sh *
 EOF
 

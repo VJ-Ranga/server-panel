@@ -843,6 +843,260 @@ def delete_codeigniter_job(job_id, app_path, db_name, db_user, nginx_site, cfg):
         job["result"] = {"success": False, "error": str(e)}
 
 
+PHP_PROJECT_META = ".server-panel-project.json"
+PHP_PROJECT_TEMPLATES = {"blank", "php", "php_db"}
+
+
+def read_php_project_metadata(project_path):
+    meta_path = os.path.join(project_path, PHP_PROJECT_META)
+    with open(meta_path, errors="ignore") as f:
+        data = json.load(f)
+    if data.get("type") != "php":
+        raise ValueError("Not a panel PHP project")
+    return data
+
+
+def get_php_projects():
+    projects = []
+    patterns = [f"/var/www/*/{PHP_PROJECT_META}", f"/opt/*/{PHP_PROJECT_META}", f"/opt/*/*/{PHP_PROJECT_META}"]
+    found = []
+    for p in patterns:
+        found.extend(glob.glob(p))
+    for meta_path in sorted(set(found)):
+        app_path = os.path.dirname(meta_path)
+        try:
+            meta = read_php_project_metadata(app_path)
+        except Exception:
+            continue
+        name = meta.get("name") or os.path.basename(app_path)
+        nginx_site = find_nginx_site_for_path(app_path) or meta.get("nginx_site") or name
+        port = get_nginx_site_port(nginx_site) or meta.get("port") or ""
+        projects.append({
+            "name": name,
+            "template": meta.get("template", "blank"),
+            "path": app_path,
+            "install_path": app_path,
+            "nginx_site": nginx_site,
+            "port": port,
+            "db_name": meta.get("db_name", ""),
+            "db_user": meta.get("db_user", ""),
+            "db_created": bool(meta.get("db_created")),
+            "created_at": meta.get("created_at", 0),
+        })
+    return projects
+
+
+def php_export(value):
+    return json.dumps(str(value))
+
+
+def write_php_project_files(src_dir, metadata, db_pass=""):
+    os.makedirs(src_dir, exist_ok=True)
+    template = metadata.get("template", "blank")
+    meta_path = os.path.join(src_dir, PHP_PROJECT_META)
+    with open(meta_path, "w") as f:
+        json.dump(metadata, f, indent=2)
+
+    if template == "blank":
+        return
+
+    project_name = metadata.get("name", "PHP Project")
+    if template == "php_db":
+        config = """<?php
+return [
+    'host' => '127.0.0.1',
+    'database' => %s,
+    'username' => %s,
+    'password' => %s,
+    'charset' => 'utf8mb4',
+];
+""" % (php_export(metadata.get("db_name", "")), php_export(metadata.get("db_user", "")), php_export(db_pass))
+        with open(os.path.join(src_dir, "config.php"), "w") as f:
+            f.write(config)
+        index = """<?php
+$projectName = %s;
+$config = require __DIR__ . '/config.php';
+$status = 'Not checked';
+$details = '';
+try {
+    $dsn = "mysql:host={$config['host']};dbname={$config['database']};charset={$config['charset']}";
+    $pdo = new PDO($dsn, $config['username'], $config['password'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $status = 'Connected';
+    $details = 'Database connection successful.';
+} catch (Throwable $e) {
+    $status = 'Failed';
+    $details = $e->getMessage();
+}
+?>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><?= htmlspecialchars($projectName) ?></title>
+  <style>body{font-family:system-ui,sans-serif;max-width:760px;margin:48px auto;padding:0 20px;line-height:1.5}code{background:#f3f4f6;padding:2px 6px;border-radius:4px}.ok{color:#047857}.bad{color:#b91c1c}</style>
+</head>
+<body>
+  <h1><?= htmlspecialchars($projectName) ?></h1>
+  <p>Plain PHP project with MySQL connection test.</p>
+  <p><strong>PHP:</strong> <?= htmlspecialchars(PHP_VERSION) ?></p>
+  <p><strong>Database:</strong> <code><?= htmlspecialchars($config['database']) ?></code></p>
+  <p><strong>Status:</strong> <span class="<?= $status === 'Connected' ? 'ok' : 'bad' ?>"><?= htmlspecialchars($status) ?></span></p>
+  <p><?= htmlspecialchars($details) ?></p>
+</body>
+</html>
+""" % php_export(project_name)
+    else:
+        index = """<?php
+$projectName = %s;
+?>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><?= htmlspecialchars($projectName) ?></title>
+  <style>body{font-family:system-ui,sans-serif;max-width:760px;margin:48px auto;padding:0 20px;line-height:1.5}code{background:#f3f4f6;padding:2px 6px;border-radius:4px}</style>
+</head>
+<body>
+  <h1><?= htmlspecialchars($projectName) ?></h1>
+  <p>Plain PHP project is running.</p>
+  <p><strong>PHP:</strong> <?= htmlspecialchars(PHP_VERSION) ?></p>
+  <p><strong>Server time:</strong> <?= htmlspecialchars(date('Y-m-d H:i:s')) ?></p>
+  <p><strong>Document root:</strong> <code><?= htmlspecialchars($_SERVER['DOCUMENT_ROOT'] ?? __DIR__) ?></code></p>
+</body>
+</html>
+""" % php_export(project_name)
+
+    with open(os.path.join(src_dir, "index.php"), "w") as f:
+        f.write(index)
+
+
+def install_php_project_job(job_id, params, cfg):
+    job = _jobs[job_id]
+
+    def log(msg):
+        job["logs"].append(msg)
+        print(msg)
+
+    created = {"src": "", "dir": False, "db": False, "db_user": False, "nginx": False}
+    site_name = install_path = db_name = db_user = None
+    try:
+        site_name = re.sub(r"[^\w\-]", "", params.get("site_name", "php-project"))
+        if not site_name:
+            raise ValueError("Project name is invalid")
+        install_path = validate_install_path(params.get("install_path", f"/var/www/{site_name}"))
+        template = str(params.get("template", "php")).strip().lower()
+        if template not in PHP_PROJECT_TEMPLATES:
+            raise ValueError("Unsupported PHP project template")
+        port = parse_port(params.get("port", 8300), 8300)
+        db_pass = ""
+        if template == "php_db":
+            db_name = re.sub(r"[^\w\-]", "", params.get("db_name", f"{site_name}_db"))
+            db_user = re.sub(r"[^\w\-]", "", params.get("db_user", f"{site_name[:16]}_user"))
+            db_pass = params.get("db_pass") or secrets.token_urlsafe(14)
+            if not db_name or not db_user:
+                raise ValueError("Database name or user is invalid")
+            if "'" in db_pass or "\\" in db_pass:
+                raise ValueError("Database password cannot contain single quotes or backslashes")
+        php_ver, _ = detect_php_fpm()
+        tmp_src = f"/tmp/_panel_php_project_{site_name}_{secrets.token_hex(4)}"
+        created["src"] = tmp_src
+
+        if template == "php_db":
+            log(f"▶ [1/4] Creating database '{db_name}' and user '{db_user}'...")
+            sql = f"CREATE DATABASE IF NOT EXISTS `{db_name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+            r = mysql_cmd(cfg, sql)
+            if r.get("stderr") and "ERROR" in r["stderr"]:
+                raise Exception("MySQL error (create db): " + r["stderr"])
+            created["db"] = True
+            sql = (
+                f"CREATE USER IF NOT EXISTS '{db_user}'@'localhost' IDENTIFIED WITH mysql_native_password BY '{db_pass}';\n"
+                f"GRANT ALL PRIVILEGES ON `{db_name}`.* TO '{db_user}'@'localhost';\nFLUSH PRIVILEGES;"
+            )
+            r = mysql_cmd(cfg, sql)
+            if r.get("stderr") and "ERROR" in r["stderr"]:
+                raise Exception("MySQL error (create user): " + r["stderr"])
+            created["db_user"] = True
+        else:
+            log("▶ [1/4] Database skipped for this template")
+
+        log("▶ [2/4] Generating project files...")
+        metadata = {
+            "type": "php",
+            "name": site_name,
+            "template": template,
+            "install_path": install_path,
+            "nginx_site": site_name,
+            "port": port,
+            "db_name": db_name or "",
+            "db_user": db_user or "",
+            "db_created": template == "php_db",
+            "created_at": int(time.time()),
+        }
+        write_php_project_files(tmp_src, metadata, db_pass)
+
+        log("▶ [3/4] Installing files and Nginx site...")
+        helper = os.path.join(SCRIPT_DIR, "php-project-helper.sh")
+        r = run_cmd(
+            f"sudo {shell_quote(helper)} install {shell_quote(tmp_src)} {shell_quote(install_path)} {shell_quote(site_name)} {shell_quote(php_ver)} {shell_quote(port)}",
+            timeout=120,
+        )
+        if not r["success"]:
+            raise Exception("System setup failed:\n" + r["stdout"] + r["stderr"])
+        created["dir"] = True
+        created["nginx"] = True
+        log(r["stdout"].strip())
+
+        log("▶ [4/4] Done!")
+        log(f"  URL: http://localhost:{port}")
+        job["status"] = "done"
+        job["result"] = {"success": True, "url": f"http://localhost:{port}", "install_path": install_path, "template": template, "db_name": db_name or "", "db_user": db_user or "", "db_pass": db_pass, "nginx_site": site_name}
+    except Exception as e:
+        log(f"\n✖ Error: {e}")
+        log("↩ Rolling back what was created...")
+        if created.get("db_user") and db_user:
+            mysql_cmd(cfg, f"DROP USER IF EXISTS '{db_user}'@'localhost'; FLUSH PRIVILEGES;")
+        if created.get("db") and db_name:
+            mysql_cmd(cfg, f"DROP DATABASE IF EXISTS `{db_name}`;")
+        if created.get("dir") or created.get("nginx"):
+            helper = os.path.join(SCRIPT_DIR, "php-project-helper.sh")
+            run_cmd(f"sudo {shell_quote(helper)} delete {shell_quote(install_path or '')} {shell_quote(site_name or '')}", timeout=60)
+        job["status"] = "error"
+        job["result"] = {"success": False, "error": str(e)}
+    finally:
+        if created.get("src"):
+            run_cmd(f"rm -rf {shell_quote(created['src'])}")
+
+
+def delete_php_project_job(job_id, app_path, db_name, db_user, nginx_site, cfg):
+    job = _jobs[job_id]
+    def log(msg):
+        job["logs"].append(msg); print(msg)
+    try:
+        meta = read_php_project_metadata(app_path)
+        db_created = bool(meta.get("db_created"))
+        safe_db_name = meta.get("db_name") or db_name
+        safe_db_user = meta.get("db_user") or db_user
+        safe_nginx_site = meta.get("nginx_site") or nginx_site
+        if db_created and safe_db_name and re.fullmatch(r"[\w\-]+", safe_db_name):
+            log(f"▶ Dropping database '{safe_db_name}'...")
+            mysql_cmd(cfg, f"DROP DATABASE IF EXISTS `{safe_db_name}`;")
+        if db_created and safe_db_user and safe_db_user not in ("root", "—") and re.fullmatch(r"[\w\-]+", safe_db_user):
+            log(f"▶ Dropping user '{safe_db_user}'...")
+            mysql_cmd(cfg, f"DROP USER IF EXISTS '{safe_db_user}'@'localhost'; FLUSH PRIVILEGES;")
+        log("▶ Removing files and Nginx site...")
+        helper = os.path.join(SCRIPT_DIR, "php-project-helper.sh")
+        r = run_cmd(f"sudo {shell_quote(helper)} delete {shell_quote(app_path)} {shell_quote(safe_nginx_site)}", timeout=60)
+        log((r["stdout"] + r["stderr"]).strip())
+        job["status"] = "done" if r["success"] else "error"
+        job["result"] = {"success": bool(r["success"]), "error": "" if r["success"] else (r["stderr"] or r["stdout"])}
+    except Exception as e:
+        log(f"✖ Error: {e}")
+        job["status"] = "error"
+        job["result"] = {"success": False, "error": str(e)}
+
+
 def mysql_cmd(cfg, query, database=None):
     user = cfg.get("mysql_user", "root")
     pwd  = cfg.get("mysql_password", "")
@@ -1539,6 +1793,9 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/codeigniter/apps":
             self.send_json({"success": True, "apps": get_codeigniter_apps()})
 
+        elif path == "/api/php-projects/apps":
+            self.send_json({"success": True, "apps": get_php_projects()})
+
         elif path == "/api/wordpress/next_port":
             self.send_json({"success": True, "port": find_next_port()})
 
@@ -1547,6 +1804,9 @@ class Handler(BaseHTTPRequestHandler):
 
         elif path == "/api/codeigniter/next_port":
             self.send_json({"success": True, "port": find_next_port(8200)})
+
+        elif path == "/api/php-projects/next_port":
+            self.send_json({"success": True, "port": find_next_port(8300)})
 
         elif path == "/api/wordpress/credentials":
             qs = parse_qs(urlparse(self.path).query)
@@ -1577,6 +1837,13 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json({"error": "Job not found"}, 404)
 
         elif path.startswith("/api/codeigniter/install/") or path.startswith("/api/codeigniter/delete/"):
+            job_id = path.split("/")[-1]
+            if job_id in _jobs:
+                self.send_json(_jobs[job_id])
+            else:
+                self.send_json({"error": "Job not found"}, 404)
+
+        elif path.startswith("/api/php-projects/install/") or path.startswith("/api/php-projects/delete/"):
             job_id = path.split("/")[-1]
             if job_id in _jobs:
                 self.send_json(_jobs[job_id])
@@ -1813,6 +2080,23 @@ class Handler(BaseHTTPRequestHandler):
             except ValueError as e:
                 self.send_json({"success": False, "error": str(e)}); return
             helper = os.path.join(SCRIPT_DIR, "codeigniter-helper.sh")
+            r = run_cmd(f"sudo {shell_quote(helper)} set-port {shell_quote(nginx_site)} {shell_quote(port)}", timeout=30)
+            self.send_json({**r, "port": port})
+
+        elif path == "/api/php-projects/install":
+            job_id = secrets.token_hex(8)
+            _jobs[job_id] = {"status": "running", "logs": [], "result": {}}
+            t = threading.Thread(target=install_php_project_job, args=(job_id, data, cfg), daemon=True)
+            t.start()
+            self.send_json({"success": True, "job_id": job_id})
+
+        elif path == "/api/php-projects/port":
+            nginx_site = data.get("nginx_site", "")
+            try:
+                port = parse_port(data.get("port"), None)
+            except ValueError as e:
+                self.send_json({"success": False, "error": str(e)}); return
+            helper = os.path.join(SCRIPT_DIR, "php-project-helper.sh")
             r = run_cmd(f"sudo {shell_quote(helper)} set-port {shell_quote(nginx_site)} {shell_quote(port)}", timeout=30)
             self.send_json({**r, "port": port})
 
@@ -2102,6 +2386,21 @@ echo 'ok';
             _jobs[job_id] = {"status": "running", "logs": [], "result": {}}
             t = threading.Thread(
                 target=delete_codeigniter_job,
+                args=(job_id, app_path, db_name, db_user, nginx_site, cfg),
+                daemon=True,
+            )
+            t.start()
+            self.send_json({"success": True, "job_id": job_id})
+
+        elif path == "/api/php-projects/apps":
+            app_path   = data.get("path", "")
+            db_name    = data.get("db_name", "")
+            db_user    = data.get("db_user", "")
+            nginx_site = data.get("nginx_site", "")
+            job_id     = secrets.token_hex(8)
+            _jobs[job_id] = {"status": "running", "logs": [], "result": {}}
+            t = threading.Thread(
+                target=delete_php_project_job,
                 args=(job_id, app_path, db_name, db_user, nginx_site, cfg),
                 daemon=True,
             )

@@ -38,6 +38,7 @@ This creates `/etc/sudoers.d/server-panel` so the panel can control services, ed
 | `wp-delete-helper.sh` | Sudo helper — removes WP files and nginx site |
 | `laravel-helper.sh` | Sudo helper — copies Laravel files, sets permissions, creates nginx site |
 | `codeigniter-helper.sh` | Sudo helper — copies CodeIgniter files, sets permissions, creates nginx site |
+| `php-project-helper.sh` | Sudo helper — copies plain PHP files, sets permissions, creates nginx site |
 | `perf-helper.sh` | Sudo helper — saves tuned Nginx/PHP-FPM/MySQL config files and restarts services |
 | `start-panel.sh` | Desktop launcher helper — starts the panel and opens the browser |
 | `panel-icon.svg` | Desktop launcher icon |
@@ -97,6 +98,22 @@ This creates `/etc/sudoers.d/server-panel` so the panel can control services, ed
   - Shows detected Nginx site and port
   - Changes the Nginx listen port safely via helper script + `nginx -t`
   - Deletes app files, database, database user, and Nginx site
+
+### PHP Projects
+- Creates and manages panel-created plain PHP projects
+- **Create New Project** wizard:
+  - Template choices: Blank Folder, PHP Only, PHP + DB
+  - Creates optional MySQL database + user only for PHP + DB projects
+  - Generates starter `index.php` and `config.php` when selected
+  - Creates `.server-panel-project.json` metadata for safe discovery/deletion
+  - Creates and enables nginx site on chosen port
+  - Live progress log in browser
+  - Full rollback on failure
+- Installed Projects dashboard:
+  - Lists only panel-created PHP projects with metadata
+  - Opens frontend, app folder, and phpMyAdmin when a DB exists
+  - Changes the Nginx listen port safely via helper script + `nginx -t`
+  - Deletes files, Nginx site, and DB resources only when metadata confirms panel ownership
 
 ### phpMyAdmin
 - Install via apt with one click (live log)
@@ -166,6 +183,13 @@ This creates `/etc/sudoers.d/server-panel` so the panel can control services, ed
 | POST | `/api/codeigniter/port` | Change a CodeIgniter Nginx site listen port |
 | DELETE | `/api/codeigniter/apps` | Start CodeIgniter delete job |
 | GET | `/api/codeigniter/delete/<job_id>` | Poll CodeIgniter delete progress |
+| GET | `/api/php-projects/apps` | List panel-created PHP projects |
+| GET | `/api/php-projects/next_port` | Find next available suggested PHP project port |
+| POST | `/api/php-projects/install` | Start plain PHP project install job |
+| GET | `/api/php-projects/install/<job_id>` | Poll PHP project install progress |
+| POST | `/api/php-projects/port` | Change a PHP project Nginx site listen port |
+| DELETE | `/api/php-projects/apps` | Start PHP project delete job |
+| GET | `/api/php-projects/delete/<job_id>` | Poll PHP project delete progress |
 | GET | `/api/performance` | Read Nginx/PHP/FPM/MySQL performance settings |
 | POST | `/api/performance/nginx` | Save selected Nginx performance settings |
 | POST | `/api/performance/php` | Save selected PHP settings |
