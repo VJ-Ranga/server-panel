@@ -52,7 +52,8 @@ This creates `/etc/sudoers.d/server-panel` so the panel can control services, ed
 ### App Launcher
 - Single app hub for WordPress, Laravel, CodeIgniter, and PHP Projects
 - Keeps app-specific pages out of the sidebar so future app types do not make navigation longer
-- Shows app cards with requirements, default port range, installed counts, and up to three recent projects
+- Shows compact app cards with requirements, default port range, and installed counts
+- Shows up to three recent projects per app type in a grouped Recent Projects section below the cards
 - Create opens existing install forms; View All/Manage opens existing hidden app-specific management pages
 - Full app lists, deletes, port changes, and advanced controls stay on the app-specific pages
 
