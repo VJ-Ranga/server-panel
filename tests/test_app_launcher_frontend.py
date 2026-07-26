@@ -50,6 +50,21 @@ class AppLauncherFrontendTests(unittest.TestCase):
             rf'[\'\"]?{escaped_page_name}[\'\"]?\s*:\s*[\'\"]{escaped_title}[\'\"]'
         )
 
+    def launcher_card_block(self, card_id):
+        start = self.html.index(f'id="{card_id}"')
+        next_card = re.search(
+            r'id="launcher-(?:wordpress|laravel|codeigniter|php-projects)"',
+            self.html[start + 1:],
+        )
+        app_end = self.html.index('id="launcher-recent-projects"')
+        end = start + 1 + next_card.start() if next_card else app_end
+        return self.html[start:end]
+
+    def recent_projects_section(self):
+        start = self.html.index('id="launcher-recent-projects"')
+        end = self.html.index('<!-- ── NGINX', start)
+        return self.html[start:end]
+
     def test_sidebar_keeps_app_launcher_and_hides_app_pages(self):
         for text in [
             "showPage('app-launcher',this)",
@@ -91,14 +106,36 @@ class AppLauncherFrontendTests(unittest.TestCase):
         for text in ["Server", "Nginx", "MySQL", "phpMyAdmin", "Performance", "System", "Settings"]:
             self.assertIn(text, self.sidebar)
 
-    def test_all_launcher_cards_have_dashboard_placeholders(self):
+    def test_cards_keep_counts_and_recent_containers_move_below_cards(self):
+        self.assertIn('id="launcher-recent-projects"', self.html)
+        recent_section = self.recent_projects_section()
+
         for app_type, card_id, label, port, _, noun in self.LAUNCHER_APPS:
+            card_block = self.launcher_card_block(card_id)
+
             self.assertIn(card_id, self.html)
-            self.assertIn(label, self.html)
-            self.assertIn(f"Starts near {port}", self.html)
-            self.assertIn(f'id="launcher-{app_type}-count"', self.html)
-            self.assertIn(f'id="launcher-{app_type}-recent"', self.html)
+            self.assertIn(label, card_block)
+            self.assertIn(f"Starts near {port}", card_block)
+            self.assertIn(f'id="launcher-{app_type}-count"', card_block)
+            self.assertNotIn(f'id="launcher-{app_type}-recent"', card_block)
+            self.assertIn(f'id="launcher-{app_type}-recent"', recent_section)
             self.assertIn(noun, self.html)
+
+    def test_recent_projects_section_is_grouped_by_app_type(self):
+        recent_section = self.recent_projects_section()
+
+        for text in [
+            "Recent Projects",
+            "WordPress",
+            "Laravel",
+            "CodeIgniter",
+            "PHP Projects",
+            "No WordPress sites yet",
+            "No Laravel apps yet",
+            "No CodeIgniter apps yet",
+            "No PHP projects yet",
+        ]:
+            self.assertIn(text, recent_section)
 
     def test_launcher_cards_have_create_and_view_all_actions(self):
         for app_type, card_id, _, _, _, _ in self.LAUNCHER_APPS:
@@ -238,14 +275,9 @@ class AppLauncherFrontendTests(unittest.TestCase):
         self.assert_render_summary_pattern(r'appLauncherManage\(type\)')
         self.assert_render_summary_pattern(r'\bManage\b')
 
-        for app_type, card_id, _, _, _, _ in self.LAUNCHER_APPS:
-            escaped_app_type = re.escape(app_type)
-            escaped_card_id = re.escape(card_id)
-
-            self.assert_html_pattern(
-                rf'id="{escaped_card_id}"{self.LAUNCHER_CARD_BOUNDARY}'
-                rf'id="launcher-{escaped_app_type}-recent"'
-            )
+        recent_section = self.recent_projects_section()
+        for app_type, _, _, _, _, _ in self.LAUNCHER_APPS:
+            self.assertIn(f'id="launcher-{app_type}-recent"', recent_section)
 
     def test_launcher_recent_open_links_use_noopener_noreferrer(self):
         self.assert_render_summary_pattern(
