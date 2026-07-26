@@ -50,9 +50,11 @@ This creates `/etc/sudoers.d/server-panel` so the panel can control services, ed
 - Nginx, MySQL, PHP-FPM service cards with Start / Stop / Restart buttons
 
 ### App Launcher
-- Unified create-focused page for WordPress, Laravel, CodeIgniter, and PHP Projects
-- Shows app cards with requirements, default port range, Create, and Manage actions
-- Reuses existing app-specific install forms and management pages
+- Single app hub for WordPress, Laravel, CodeIgniter, and PHP Projects
+- Keeps app-specific pages out of the sidebar so future app types do not make navigation longer
+- Shows app cards with requirements, default port range, installed counts, and up to three recent projects
+- Create opens existing install forms; View All/Manage opens existing hidden app-specific management pages
+- Full app lists, deletes, port changes, and advanced controls stay on the app-specific pages
 
 ### Nginx
 - List all virtual hosts with enabled/disabled status
