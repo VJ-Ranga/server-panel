@@ -10,9 +10,8 @@ class PhpProjectsFrontendTests(unittest.TestCase):
         with open(os.path.join(PROJECT_ROOT, "index.html"), encoding="utf-8") as f:
             cls.html = f.read()
 
-    def test_sidebar_page_and_titles_exist(self):
+    def test_hidden_page_title_and_loaders_exist(self):
         for text in [
-            "showPage('php-projects',this)",
             'id="page-php-projects"',
             "'php-projects':'PHP Projects'",
             "loadPhpProjects(); loadPhpProjectNextPort();",
