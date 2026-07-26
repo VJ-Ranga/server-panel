@@ -173,6 +173,29 @@ class AppLauncherFrontendTests(unittest.TestCase):
             r'.*?switchTab\(appType,\s*tabName,'
         )
 
+    def test_show_page_falls_back_to_app_launcher_for_hidden_app_routes(self):
+        self.assert_html_pattern(
+            r'const\s+appLauncherPageTypes\s*=\s*\[\s*'
+            r'[\'\"]wordpress[\'\"]\s*,\s*'
+            r'[\'\"]laravel[\'\"]\s*,\s*'
+            r'[\'\"]codeigniter[\'\"]\s*,\s*'
+            r'[\'\"]php-projects[\'\"]\s*\]'
+        )
+        self.assert_html_pattern(
+            r'function isAppLauncherPage\(name\)\s*{\s*'
+            r'return appLauncherPageTypes\.includes\(name\);\s*'
+            r'}'
+        )
+        self.assert_html_pattern(
+            r'function showPage\(name,\s*el\)\s*{'
+            r'(?:(?!\nfunction\s+\w+\().)*?'
+            r'const\s+link\s*=\s*document\.querySelector\(`\.sidebar-nav a\[href="#\$\{name\}"\]`\);'
+            r'(?:(?!\nfunction\s+\w+\().)*?'
+            r'if\s*\(link\)\s*link\.classList\.add\([\'\"]active[\'\"]\);'
+            r'\s*else\s+if\s*\(isAppLauncherPage\(name\)\)\s*'
+            r'appLauncherLink\(\)\?\.classList\.add\([\'\"]active[\'\"]\);'
+        )
+
     def test_app_launcher_summary_functions_use_existing_apis(self):
         for function_name in [
             "async function loadAppLauncherSummary(",
@@ -223,6 +246,11 @@ class AppLauncherFrontendTests(unittest.TestCase):
                 rf'id="{escaped_card_id}"{self.LAUNCHER_CARD_BOUNDARY}'
                 rf'id="launcher-{escaped_app_type}-recent"'
             )
+
+    def test_launcher_recent_open_links_use_noopener_noreferrer(self):
+        self.assert_render_summary_pattern(
+            r'target="_blank"\s+rel="noopener noreferrer">Open</a>'
+        )
 
 
 if __name__ == "__main__":

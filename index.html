@@ -1341,9 +1341,14 @@ function setText(id, val) {
 }
 
 // ══ Navigation ════════════════════════════════════════════════════════════════
+const appLauncherPageTypes = ['wordpress', 'laravel', 'codeigniter', 'php-projects'];
 const pageTitles = { dashboard:'Dashboard', 'app-launcher':'App Launcher', nginx:'Nginx', mysql:'MySQL', wordpress:'WordPress', laravel:'Laravel', codeigniter:'CodeIgniter', 'php-projects':'PHP Projects', phpmyadmin:'phpMyAdmin', performance:'Performance', settings:'Settings' };
 function validPage(name) {
   return name && document.getElementById('page-' + name) ? name : '';
+}
+
+function isAppLauncherPage(name) {
+  return appLauncherPageTypes.includes(name);
 }
 
 function savedPage() {
@@ -1365,7 +1370,11 @@ function showPage(name, el) {
   document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
   if (el) el.classList.add('active');
-  else document.querySelector(`.sidebar-nav a[href="#${name}"]`)?.classList.add('active');
+  else {
+    const link = document.querySelector(`.sidebar-nav a[href="#${name}"]`);
+    if (link) link.classList.add('active');
+    else if (isAppLauncherPage(name)) appLauncherLink()?.classList.add('active');
+  }
   document.getElementById('page-title').textContent = pageTitles[name] || name;
   currentPage = name;
   localStorage.setItem('panel_page', name);
@@ -1452,7 +1461,7 @@ function renderAppLauncherCardSummary(type, items) {
         <div style="color:#6c7086;font-size:.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${launcherItemMeta(item)}</div>
       </div>
       <div class="d-flex gap-1 flex-shrink-0">
-        ${url ? `<a class="btn btn-sm btn-outline-secondary" style="padding:2px 7px;font-size:.72rem;" href="${url}" target="_blank">Open</a>` : ''}
+        ${url ? `<a class="btn btn-sm btn-outline-secondary" style="padding:2px 7px;font-size:.72rem;" href="${url}" target="_blank" rel="noopener noreferrer">Open</a>` : ''}
         <button class="btn btn-sm btn-outline-primary" style="padding:2px 7px;font-size:.72rem;" data-launcher-manage>Manage</button>
       </div>
     </div>`;
