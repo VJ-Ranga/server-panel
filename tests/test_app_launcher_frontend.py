@@ -51,18 +51,24 @@ class AppLauncherFrontendTests(unittest.TestCase):
         )
 
     def launcher_card_block(self, card_id):
-        start = self.html.index(f'id="{card_id}"')
+        start = self.html.find(f'id="{card_id}"')
+        self.assertNotEqual(start, -1, f'Missing launcher card: {card_id}')
         next_card = re.search(
             r'id="launcher-(?:wordpress|laravel|codeigniter|php-projects)"',
             self.html[start + 1:],
         )
-        app_end = self.html.index('id="launcher-recent-projects"')
+        app_end = self.html.find('id="launcher-recent-projects"')
+        if app_end == -1:
+            app_end = len(self.html)
         end = start + 1 + next_card.start() if next_card else app_end
         return self.html[start:end]
 
     def recent_projects_section(self):
-        start = self.html.index('id="launcher-recent-projects"')
-        end = self.html.index('<!-- ── NGINX', start)
+        start = self.html.find('id="launcher-recent-projects"')
+        self.assertNotEqual(start, -1, 'Missing Recent Projects section: launcher-recent-projects')
+        end = self.html.find('<!-- ── NGINX', start)
+        if end == -1:
+            end = len(self.html)
         return self.html[start:end]
 
     def test_sidebar_keeps_app_launcher_and_hides_app_pages(self):
