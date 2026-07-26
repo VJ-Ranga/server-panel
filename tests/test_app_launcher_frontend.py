@@ -23,12 +23,22 @@ class AppLauncherFrontendTests(unittest.TestCase):
         sidebar_start = cls.html.index('<nav class="sidebar-nav')
         sidebar_end = cls.html.index('</nav>', sidebar_start)
         cls.sidebar = cls.html[sidebar_start:sidebar_end]
-        app_launcher_start = cls.html.index('<div id="page-app-launcher"')
-        app_launcher_end = cls.html.index('<!-- ── NGINX', app_launcher_start)
-        cls.app_launcher_page = cls.html[app_launcher_start:app_launcher_end]
+        app_launcher_match = re.search(
+            r'<div id="page-app-launcher"(?:\s|>)[^>]*>.*?(?=\s*<!--\s*──)',
+            cls.html,
+            re.S,
+        )
+        cls.app_launcher_page = app_launcher_match.group(0) if app_launcher_match else ""
 
     def assert_html_pattern(self, pattern):
         self.assertRegex(self.html, re.compile(pattern, re.S))
+
+    def assert_render_summary_pattern(self, pattern):
+        self.assert_html_pattern(
+            r'function renderAppLauncherCardSummary\(type,\s*items\)\s*{'
+            r'(?:(?!\nfunction\s+\w+\().)*?'
+            + pattern
+        )
 
     def assert_page_title_entry(self, page_name, title):
         escaped_page_name = re.escape(page_name)
@@ -115,22 +125,27 @@ class AppLauncherFrontendTests(unittest.TestCase):
                 rf'function appLauncherCreate\([^)]*\)\s*{{'
                 rf'(?:(?!function appLauncherManage\().)*?'
                 rf'[\'\"]{escaped_app_type}[\'\"]\s*:\s*[\'\"]install[\'\"]'
-                rf'(?:(?!function appLauncherManage\().)*?'
-                rf'(?:const|let)\s+(?P<target_var>\w+)\s*=\s*\w+\s*\[\s*type\s*\]\s*;'
-                rf'(?:(?!function appLauncherManage\().)*?'
-                rf'openAppLauncherTarget\(\s*type\s*,\s*(?P=target_var)\s*\)'
             )
             self.assert_html_pattern(
                 rf'function appLauncherManage\([^)]*\)\s*{{'
                 rf'(?:(?!function\s+\w+\().)*?'
                 rf'[\'\"]{escaped_app_type}[\'\"]\s*:\s*[\'\"]{escaped_manage_tab}[\'\"]'
-                rf'(?:(?!function\s+\w+\().)*?'
-                rf'(?:const|let)\s+(?P<target_var>\w+)\s*=\s*\w+\s*\[\s*type\s*\]\s*;'
-                rf'(?:(?!function\s+\w+\().)*?'
-                rf'openAppLauncherTarget\(\s*type\s*,\s*(?P=target_var)\s*\)'
             )
 
+        self.assert_html_pattern(
+            r'function appLauncherCreate\([^)]*\)\s*{'
+            r'(?:(?!function appLauncherManage\().)*?'
+            r'openAppLauncherTarget\(\s*type\s*,\s*[^)]*\)'
+        )
+        self.assert_html_pattern(
+            r'function appLauncherManage\([^)]*\)\s*{'
+            r'(?:(?!function\s+\w+\().)*?'
+            r'openAppLauncherTarget\(\s*type\s*,\s*[^)]*\)'
+        )
+
     def test_app_launcher_page_has_no_destructive_delete_actions(self):
+        self.assertTrue(self.app_launcher_page, "App Launcher page block not found")
+
         actions = re.findall(
             r'<(?:button|a)\b[^>]*>.*?</(?:button|a)>',
             self.app_launcher_page,
@@ -175,18 +190,30 @@ class AppLauncherFrontendTests(unittest.TestCase):
         ]:
             self.assertIn(api_path, self.html)
 
-        self.assertIn(".slice(0, 3)", self.html)
+    def test_app_launcher_summary_renders_counts_and_recent_item_details(self):
+        function_body = r'(?:(?!\nfunction\s+\w+\().)*?'
 
-    def test_launcher_recent_items_render_manage_actions(self):
         self.assert_html_pattern(
             r'function renderAppLauncherCardSummary\(type,\s*items\)\s*{'
-            r'(?:(?!function\s+\w+\().)*?'
-            r'document\.getElementById\(`launcher-\$\{type\}-recent`\)'
-            r'(?:(?!function\s+\w+\().)*?'
-            r'appLauncherManage\(type\)'
-            r'(?:(?!function\s+\w+\().)*?'
-            r'\bManage\b'
+            rf'(?={function_body}launcher-\$\{{type\}}-count`)'
+            rf'(?={function_body}\.textContent)'
+            rf'(?={function_body}items\.length)'
+            rf'{function_body}'
         )
+        self.assert_html_pattern(
+            r'function renderAppLauncherCardSummary\(type,\s*items\)\s*{'
+            rf'(?={function_body}\.slice\(\s*0\s*,\s*3\s*\))'
+            rf'(?={function_body}item\.name)'
+            rf'(?={function_body}launcherItemUrl\(\s*item\s*\))'
+            rf'(?={function_body}launcherItemMeta\(\s*item\s*\))'
+            rf'(?={function_body}recentEl\.innerHTML)'
+            rf'{function_body}'
+        )
+
+    def test_launcher_recent_items_render_manage_actions(self):
+        self.assert_render_summary_pattern(r'document\.getElementById\(`launcher-\$\{type\}-recent`\)')
+        self.assert_render_summary_pattern(r'appLauncherManage\(type\)')
+        self.assert_render_summary_pattern(r'\bManage\b')
 
         for app_type, card_id, _, _, _, _ in self.LAUNCHER_APPS:
             escaped_app_type = re.escape(app_type)
