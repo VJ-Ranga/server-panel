@@ -15,6 +15,12 @@ class AppLauncherFrontendTests(unittest.TestCase):
     LAUNCHER_CARD_BOUNDARY = (
         r'(?:(?!id="launcher-(?:wordpress|laravel|codeigniter|php-projects)").)*?'
     )
+    RECENT_GROUPS = [
+        ("wordpress", "WordPress", "No WordPress sites yet"),
+        ("laravel", "Laravel", "No Laravel apps yet"),
+        ("codeigniter", "CodeIgniter", "No CodeIgniter apps yet"),
+        ("php-projects", "PHP Projects", "No PHP projects yet"),
+    ]
 
     @classmethod
     def setUpClass(cls):
@@ -70,6 +76,25 @@ class AppLauncherFrontendTests(unittest.TestCase):
         if end == -1:
             end = len(self.html)
         return self.html[start:end]
+
+    def recent_group_block(self, app_type):
+        recent_section = self.recent_projects_section()
+        group_index = next(
+            index
+            for index, (group_app_type, _, _) in enumerate(self.RECENT_GROUPS)
+            if group_app_type == app_type
+        )
+        _, heading, _ = self.RECENT_GROUPS[group_index]
+        start = recent_section.find(heading)
+        self.assertNotEqual(start, -1, f'Missing recent group heading: {heading}')
+
+        next_start = len(recent_section)
+        for _, next_heading, _ in self.RECENT_GROUPS[group_index + 1:]:
+            candidate = recent_section.find(next_heading, start + len(heading))
+            if candidate != -1:
+                next_start = candidate
+                break
+        return recent_section[start:next_start]
 
     def test_sidebar_keeps_app_launcher_and_hides_app_pages(self):
         for text in [
@@ -129,19 +154,13 @@ class AppLauncherFrontendTests(unittest.TestCase):
 
     def test_recent_projects_section_is_grouped_by_app_type(self):
         recent_section = self.recent_projects_section()
+        self.assertIn("Recent Projects", recent_section)
 
-        for text in [
-            "Recent Projects",
-            "WordPress",
-            "Laravel",
-            "CodeIgniter",
-            "PHP Projects",
-            "No WordPress sites yet",
-            "No Laravel apps yet",
-            "No CodeIgniter apps yet",
-            "No PHP projects yet",
-        ]:
-            self.assertIn(text, recent_section)
+        for app_type, heading, empty_text in self.RECENT_GROUPS:
+            group_block = self.recent_group_block(app_type)
+            self.assertIn(heading, group_block)
+            self.assertIn(f'id="launcher-{app_type}-recent"', group_block)
+            self.assertIn(empty_text, group_block)
 
     def test_launcher_cards_have_create_and_view_all_actions(self):
         for app_type, card_id, _, _, _, _ in self.LAUNCHER_APPS:
@@ -282,8 +301,11 @@ class AppLauncherFrontendTests(unittest.TestCase):
         self.assert_render_summary_pattern(r'\bManage\b')
 
         recent_section = self.recent_projects_section()
-        for app_type, _, _, _, _, _ in self.LAUNCHER_APPS:
-            self.assertIn(f'id="launcher-{app_type}-recent"', recent_section)
+        for app_type, heading, empty_text in self.RECENT_GROUPS:
+            group_block = self.recent_group_block(app_type)
+            self.assertIn(heading, group_block)
+            self.assertIn(f'id="launcher-{app_type}-recent"', group_block)
+            self.assertIn(empty_text, group_block)
 
     def test_launcher_recent_open_links_use_noopener_noreferrer(self):
         self.assert_render_summary_pattern(
