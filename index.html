@@ -56,6 +56,8 @@ body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#12141c;col
 .service-card .svc-status{font-size:.78rem;padding:3px 10px;border-radius:20px;font-weight:500;}
 .status-active{background:#1d3a2e;color:#a6e3a1;}
 .status-inactive{background:#3a1d1d;color:#f38ba8;}
+.status-running{background:#1d3a2e;color:#a6e3a1;}
+.status-stopped{background:#3a1d1d;color:#f38ba8;}
 .status-unknown{background:#2a2a2a;color:#a6adc8;}
 .action-btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;}
 .action-btns .btn{font-size:.78rem;padding:5px 12px;}
@@ -138,13 +140,9 @@ body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#12141c;col
       <div class="nav-section">Overview</div>
       <a href="#dashboard" class="active" onclick="showPage('dashboard',this); return false;"><i class="bi bi-grid-1x2"></i> Dashboard</a>
       <a href="#app-launcher" onclick="showPage('app-launcher',this); return false;"><i class="bi bi-rocket-takeoff"></i> App Launcher</a>
-      <div class="nav-section">Services</div>
+      <div class="nav-section">Server</div>
       <a href="#nginx" onclick="showPage('nginx',this); return false;"><i class="bi bi-arrow-left-right"></i> Nginx</a>
       <a href="#mysql" onclick="showPage('mysql',this); return false;"><i class="bi bi-database"></i> MySQL</a>
-      <a href="#wordpress" onclick="showPage('wordpress',this); return false;"><i class="bi bi-wordpress"></i> WordPress</a>
-      <a href="#laravel" onclick="showPage('laravel',this); return false;"><i class="bi bi-code-square"></i> Laravel</a>
-      <a href="#codeigniter" onclick="showPage('codeigniter',this); return false;"><i class="bi bi-braces"></i> CodeIgniter</a>
-      <a href="#php-projects" onclick="showPage('php-projects',this); return false;"><i class="bi bi-filetype-php"></i> PHP Projects</a>
       <a href="#phpmyadmin" onclick="showPage('phpmyadmin',this); return false;"><i class="bi bi-database-gear"></i> phpMyAdmin</a>
       <a href="#performance" onclick="showPage('performance',this); return false;"><i class="bi bi-speedometer2"></i> Performance</a>
       <div class="nav-section">System</div>
@@ -278,7 +276,11 @@ body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#12141c;col
               <div class="section-title"><i class="bi bi-wordpress"></i> WordPress</div>
               <p style="color:#a6adc8;font-size:.86rem;min-height:58px;">Create a WordPress site with database, admin user, Nginx site, and optional plugins.</p>
               <div style="font-size:.76rem;color:#6c7086;margin-bottom:14px;">Starts near 8090 · MySQL required</div>
-              <div class="d-flex gap-2 flex-wrap"><button class="btn btn-sm btn-primary" onclick="appLauncherCreate('wordpress')"><i class="bi bi-plus-circle"></i> Create</button><button class="btn btn-sm btn-outline-secondary" onclick="appLauncherManage('wordpress')"><i class="bi bi-grid"></i> Manage</button></div>
+              <div class="d-flex align-items-center justify-content-between mb-3">
+                <span id="launcher-wordpress-count" class="svc-status status-unknown">Loading sites...</span>
+              </div>
+              <div id="launcher-wordpress-recent" class="mb-3" style="min-height:74px;"></div>
+              <div class="d-flex gap-2 flex-wrap"><button class="btn btn-sm btn-primary" onclick="appLauncherCreate('wordpress')"><i class="bi bi-plus-circle"></i> Create</button><button class="btn btn-sm btn-outline-secondary" onclick="appLauncherManage('wordpress')"><i class="bi bi-grid"></i> View All</button></div>
             </div>
           </div>
           <div class="col-md-6 col-xl-3">
@@ -286,7 +288,11 @@ body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#12141c;col
               <div class="section-title"><i class="bi bi-code-square"></i> Laravel</div>
               <p style="color:#a6adc8;font-size:.86rem;min-height:58px;">Create a Laravel app with Composer, database credentials, and an Nginx public webroot.</p>
               <div style="font-size:.76rem;color:#6c7086;margin-bottom:14px;">Starts near 8100 · Composer required</div>
-              <div class="d-flex gap-2 flex-wrap"><button class="btn btn-sm btn-primary" onclick="appLauncherCreate('laravel')"><i class="bi bi-plus-circle"></i> Create</button><button class="btn btn-sm btn-outline-secondary" onclick="appLauncherManage('laravel')"><i class="bi bi-grid"></i> Manage</button></div>
+              <div class="d-flex align-items-center justify-content-between mb-3">
+                <span id="launcher-laravel-count" class="svc-status status-unknown">Loading apps...</span>
+              </div>
+              <div id="launcher-laravel-recent" class="mb-3" style="min-height:74px;"></div>
+              <div class="d-flex gap-2 flex-wrap"><button class="btn btn-sm btn-primary" onclick="appLauncherCreate('laravel')"><i class="bi bi-plus-circle"></i> Create</button><button class="btn btn-sm btn-outline-secondary" onclick="appLauncherManage('laravel')"><i class="bi bi-grid"></i> View All</button></div>
             </div>
           </div>
           <div class="col-md-6 col-xl-3">
@@ -294,7 +300,11 @@ body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#12141c;col
               <div class="section-title"><i class="bi bi-braces"></i> CodeIgniter</div>
               <p style="color:#a6adc8;font-size:.86rem;min-height:58px;">Create a CodeIgniter 4 app with Composer, `.env`, database, and Nginx public webroot.</p>
               <div style="font-size:.76rem;color:#6c7086;margin-bottom:14px;">Starts near 8200 · Composer required</div>
-              <div class="d-flex gap-2 flex-wrap"><button class="btn btn-sm btn-primary" onclick="appLauncherCreate('codeigniter')"><i class="bi bi-plus-circle"></i> Create</button><button class="btn btn-sm btn-outline-secondary" onclick="appLauncherManage('codeigniter')"><i class="bi bi-grid"></i> Manage</button></div>
+              <div class="d-flex align-items-center justify-content-between mb-3">
+                <span id="launcher-codeigniter-count" class="svc-status status-unknown">Loading apps...</span>
+              </div>
+              <div id="launcher-codeigniter-recent" class="mb-3" style="min-height:74px;"></div>
+              <div class="d-flex gap-2 flex-wrap"><button class="btn btn-sm btn-primary" onclick="appLauncherCreate('codeigniter')"><i class="bi bi-plus-circle"></i> Create</button><button class="btn btn-sm btn-outline-secondary" onclick="appLauncherManage('codeigniter')"><i class="bi bi-grid"></i> View All</button></div>
             </div>
           </div>
           <div class="col-md-6 col-xl-3">
@@ -302,7 +312,11 @@ body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#12141c;col
               <div class="section-title"><i class="bi bi-filetype-php"></i> PHP Project</div>
               <p style="color:#a6adc8;font-size:.86rem;min-height:58px;">Create a plain PHP project from Blank, PHP Only, or PHP + DB templates.</p>
               <div style="font-size:.76rem;color:#6c7086;margin-bottom:14px;">Starts near 8300 · DB optional</div>
-              <div class="d-flex gap-2 flex-wrap"><button class="btn btn-sm btn-primary" onclick="appLauncherCreate('php-projects')"><i class="bi bi-plus-circle"></i> Create</button><button class="btn btn-sm btn-outline-secondary" onclick="appLauncherManage('php-projects')"><i class="bi bi-grid"></i> Manage</button></div>
+              <div class="d-flex align-items-center justify-content-between mb-3">
+                <span id="launcher-php-projects-count" class="svc-status status-unknown">Loading projects...</span>
+              </div>
+              <div id="launcher-php-projects-recent" class="mb-3" style="min-height:74px;"></div>
+              <div class="d-flex gap-2 flex-wrap"><button class="btn btn-sm btn-primary" onclick="appLauncherCreate('php-projects')"><i class="bi bi-plus-circle"></i> Create</button><button class="btn btn-sm btn-outline-secondary" onclick="appLauncherManage('php-projects')"><i class="bi bi-grid"></i> View All</button></div>
             </div>
           </div>
         </div>
@@ -1359,10 +1373,13 @@ function showPage(name, el) {
   onPageLoad(name);
 }
 
+function appLauncherLink() {
+  return document.querySelector('.sidebar-nav a[href="#app-launcher"]');
+}
+
 function openAppLauncherTarget(appType, tabName) {
   if (!validPage(appType)) { toast('Target page not found', 'error'); return; }
-  const link = document.querySelector(`.sidebar-nav a[href="#${appType}"]`);
-  showPage(appType, link);
+  showPage(appType, appLauncherLink());
   const btn = document.querySelector(`#page-${appType} .custom-tabs button[onclick*="'${tabName}'"]`);
   if (!btn) { toast('Target tab not found', 'error'); return; }
   switchTab(appType, tabName, btn);
@@ -1392,7 +1409,73 @@ function appLauncherManage(type) {
   openAppLauncherTarget(type, target);
 }
 
+const appLauncherSummaryConfig = {
+  'wordpress': { endpoint: '/api/wordpress/sites', key: 'sites', noun: 'site', empty: 'No WordPress sites yet' },
+  'laravel': { endpoint: '/api/laravel/apps', key: 'apps', noun: 'app', empty: 'No Laravel apps yet' },
+  'codeigniter': { endpoint: '/api/codeigniter/apps', key: 'apps', noun: 'app', empty: 'No CodeIgniter apps yet' },
+  'php-projects': { endpoint: '/api/php-projects/apps', key: 'apps', noun: 'project', empty: 'No PHP projects yet' },
+};
+
+async function loadAppLauncherSummary() {
+  await Promise.all(Object.entries(appLauncherSummaryConfig).map(async ([type, config]) => {
+    try {
+      const r = await api(config.endpoint);
+      if (!r.success) throw new Error(r.error || 'Error');
+      renderAppLauncherCardSummary(type, r[config.key] || []);
+    } catch (err) {
+      const countEl = document.getElementById(`launcher-${type}-count`);
+      const recentEl = document.getElementById(`launcher-${type}-recent`);
+      if (countEl) { countEl.className = 'svc-status status-stopped'; countEl.textContent = 'Load failed'; }
+      if (recentEl) recentEl.innerHTML = `<div class="empty-state" style="padding:10px;font-size:.78rem;"><i class="bi bi-exclamation-circle"></i>${esc(err.message || 'Failed to load')}</div>`;
+    }
+  }));
+}
+
+function renderAppLauncherCardSummary(type, items) {
+  const countEl = document.getElementById(`launcher-${type}-count`);
+  const recentEl = document.getElementById(`launcher-${type}-recent`);
+  if (!countEl || !recentEl) return;
+  const config = appLauncherSummaryConfig[type] || { noun: 'item', empty: 'No items yet' };
+  items = Array.isArray(items) ? items : [];
+  const noun = items.length === 1 ? config.noun : `${config.noun}s`;
+  countEl.className = items.length ? 'svc-status status-running' : 'svc-status status-unknown';
+  countEl.textContent = `${items.length} ${noun}`;
+  if (!items.length) {
+    recentEl.innerHTML = `<div style="color:#6c7086;font-size:.8rem;line-height:1.35;">${esc(config.empty)}</div>`;
+    return;
+  }
+  recentEl.innerHTML = items.slice(0, 3).map(item => {
+    const url = launcherItemUrl(item);
+    return `<div class="d-flex align-items-center justify-content-between gap-2 py-1" style="border-top:1px solid #2d3158;">
+      <div style="min-width:0;">
+        <div style="color:#cdd6f4;font-size:.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(item.name || 'Untitled')}</div>
+        <div style="color:#6c7086;font-size:.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${launcherItemMeta(item)}</div>
+      </div>
+      <div class="d-flex gap-1 flex-shrink-0">
+        ${url ? `<a class="btn btn-sm btn-outline-secondary" style="padding:2px 7px;font-size:.72rem;" href="${url}" target="_blank">Open</a>` : ''}
+        <button class="btn btn-sm btn-outline-primary" style="padding:2px 7px;font-size:.72rem;" data-launcher-manage>Manage</button>
+      </div>
+    </div>`;
+  }).join('');
+  recentEl.querySelectorAll('[data-launcher-manage]').forEach(btn => {
+    btn.addEventListener('click', () => appLauncherManage(type));
+  });
+}
+
+function launcherItemUrl(item) {
+  return item && item.port ? `http://localhost:${esc(item.port)}/` : '';
+}
+
+function launcherItemMeta(item) {
+  const parts = [];
+  if (item.port) parts.push(`:${item.port}`);
+  if (item.path) parts.push(item.path);
+  if (!parts.length && item.db_name) parts.push(item.db_name);
+  return esc(parts.join(' · ') || 'No port detected');
+}
+
 function onPageLoad(name) {
+  if (name === 'app-launcher') { loadAppLauncherSummary(); }
   if (name === 'nginx')      { loadNginxSites(); loadNginxConfig(); }
   if (name === 'mysql')      { loadDatabases(); }
   if (name === 'wordpress')  { loadWPSites(); loadNextPort(); loadWpPluginLibrary(); }
