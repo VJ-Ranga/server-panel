@@ -27,6 +27,16 @@ class AppLauncherFrontendTests(unittest.TestCase):
     def assert_html_pattern(self, pattern):
         self.assertRegex(self.html, re.compile(pattern, re.S))
 
+    def assert_page_title_entry(self, page_name, title):
+        escaped_page_name = re.escape(page_name)
+        escaped_title = re.escape(title)
+
+        self.assert_html_pattern(
+            rf'const\s+pageTitles\s*=\s*{{'
+            rf'(?:(?!;).)*?'
+            rf'[\'\"]?{escaped_page_name}[\'\"]?\s*:\s*[\'\"]{escaped_title}[\'\"]'
+        )
+
     def test_sidebar_keeps_app_launcher_and_hides_app_pages(self):
         for text in [
             "showPage('app-launcher',this)",
@@ -42,6 +52,16 @@ class AppLauncherFrontendTests(unittest.TestCase):
             'href="#php-projects"',
         ]:
             self.assertNotIn(hidden_href, self.sidebar)
+
+        self.assertIn('<div class="nav-section">Overview</div>', self.sidebar)
+
+        for page_name, title in [
+            ("wordpress", "WordPress"),
+            ("laravel", "Laravel"),
+            ("codeigniter", "CodeIgniter"),
+            ("php-projects", "PHP Projects"),
+        ]:
+            self.assert_page_title_entry(page_name, title)
 
         for text in ["Server", "Nginx", "MySQL", "phpMyAdmin", "Performance", "System", "Settings"]:
             self.assertIn(text, self.sidebar)
@@ -120,7 +140,26 @@ class AppLauncherFrontendTests(unittest.TestCase):
             self.assertIn(api_path, self.html)
 
         self.assertIn(".slice(0, 3)", self.html)
-        self.assertIn("appLauncherManage(type)", self.html)
+
+    def test_launcher_recent_items_render_manage_actions(self):
+        self.assert_html_pattern(
+            r'function renderAppLauncherCardSummary\(type,\s*items\)\s*{'
+            r'(?:(?!function\s+\w+\().)*?'
+            r'document\.getElementById\(`launcher-\$\{type\}-recent`\)'
+            r'(?:(?!function\s+\w+\().)*?'
+            r'appLauncherManage\(type\)'
+            r'(?:(?!function\s+\w+\().)*?'
+            r'\bManage\b'
+        )
+
+        for app_type, card_id, _, _, _, _ in self.LAUNCHER_APPS:
+            escaped_app_type = re.escape(app_type)
+            escaped_card_id = re.escape(card_id)
+
+            self.assert_html_pattern(
+                rf'id="{escaped_card_id}"{self.LAUNCHER_CARD_BOUNDARY}'
+                rf'id="launcher-{escaped_app_type}-recent"'
+            )
 
 
 if __name__ == "__main__":
