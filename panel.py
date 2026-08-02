@@ -307,6 +307,13 @@ def validate_install_path(path):
     return path.rstrip("/")
 
 
+def path_modified_at(path):
+    try:
+        return int(os.path.getmtime(path))
+    except OSError:
+        return 0
+
+
 def svc_status(service):
     r = run_cmd(f"systemctl is-active {service}")
     return r["stdout"].strip() or "inactive"
@@ -451,16 +458,18 @@ def get_wp_sites():
     sites = []
     patterns = ["/var/www/*/wp-config.php", "/var/www/html/*/wp-config.php",
                 "/var/www/*/*/wp-config.php", "/opt/*/wp-config.php",
-                "/opt/*/*/wp-config.php", "/opt/wp-config.php"]
+                "/opt/*/*/wp-config.php", "/opt/wp-config.php",
+                os.path.expanduser("~/local/*/wp-config.php")]
     found = []
     for p in patterns:
         found.extend(glob.glob(p))
     for wp_cfg in found:
         site_path = os.path.dirname(wp_cfg)
         site_name = os.path.basename(site_path)
-        entry = {"name": site_name, "path": site_path, "db_name": "—"}
+        entry = {"name": site_name, "path": site_path, "db_name": "—", "modified_at": path_modified_at(site_path)}
         try:
-            content = open(wp_cfg).read()
+            with open(wp_cfg) as f:
+                content = f.read()
             m = re.search(r"define\(\s*['\"]DB_NAME['\"]\s*,\s*['\"]([^'\"]+)['\"]", content)
             if m:
                 entry["db_name"] = m.group(1)
@@ -545,6 +554,7 @@ def get_laravel_apps():
             "nginx_site": nginx_site,
             "port": get_nginx_site_port(nginx_site),
             "version": version,
+            "modified_at": path_modified_at(app_path),
         })
     return apps
 
@@ -712,6 +722,7 @@ def get_codeigniter_apps():
             "nginx_site": nginx_site,
             "port": get_nginx_site_port(nginx_site),
             "version": version,
+            "modified_at": path_modified_at(app_path),
         })
     return apps
 
@@ -882,6 +893,7 @@ def get_php_projects():
             "db_user": meta.get("db_user", ""),
             "db_created": bool(meta.get("db_created")),
             "created_at": meta.get("created_at", 0),
+            "modified_at": path_modified_at(app_path),
         })
     return projects
 

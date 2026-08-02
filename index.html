@@ -459,6 +459,19 @@ body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#12141c;col
             <div class="section-title mb-0"><i class="bi bi-wordpress"></i> WordPress Sites</div>
             <button class="btn btn-sm btn-outline-secondary" onclick="loadWPSites()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
           </div>
+          <div class="d-flex gap-2 flex-wrap align-items-center mb-3">
+            <input id="wordpress-list-search" class="input-dark" style="max-width:320px;" placeholder="Search sites..." oninput="renderCurrentAppList('wordpress')">
+            <select id="wordpress-list-sort" class="input-dark" style="max-width:180px;" onchange="renderCurrentAppList('wordpress')">
+              <option value="newest" selected>Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="name_asc">Name A-Z</option>
+              <option value="name_desc">Name Z-A</option>
+              <option value="port_asc">Port low-high</option>
+              <option value="port_desc">Port high-low</option>
+            </select>
+            <button class="btn btn-sm btn-outline-secondary" onclick="clearAppListSearch('wordpress')">Clear</button>
+            <span id="wordpress-list-count" style="color:#6c7086;font-size:.82rem;"></span>
+          </div>
           <div id="wp-sites-container">
             <div class="empty-state"><div class="spinner-sm mx-auto"></div></div>
           </div>
@@ -478,8 +491,19 @@ body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#12141c;col
                 </div>
 
                 <div class="mb-3">
+                  <label class="form-label-sm">Install Location <span style="color:#f38ba8;">*</span></label>
+                  <select id="wp-install-location" class="input-dark" onchange="wpAutoFill(true)">
+                    <option value="/var/www">/var/www</option>
+                    <option value="/opt">/opt</option>
+                    <option value="home-local" selected>~/local</option>
+                  </select>
+                  <div style="font-size:.73rem;color:#585b70;margin-top:3px;">Choose the base folder; the site name is appended automatically</div>
+                </div>
+
+                <div class="mb-3">
                   <label class="form-label-sm">Install Path <span style="color:#f38ba8;">*</span></label>
-                  <input id="wp-install-path" class="input-dark" placeholder="/var/www/mysite">
+                  <input id="wp-install-path" class="input-dark" placeholder="/home/vjranga/local/mysite">
+                  <div style="font-size:.73rem;color:#585b70;margin-top:3px;">You can still edit this path manually if needed</div>
                 </div>
 
                 <div class="mb-3">
@@ -613,6 +637,19 @@ body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#12141c;col
             <div class="section-title mb-0"><i class="bi bi-code-square"></i> Laravel Apps</div>
             <button class="btn btn-sm btn-outline-secondary" onclick="loadLaravelApps()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
           </div>
+          <div class="d-flex gap-2 flex-wrap align-items-center mb-3">
+            <input id="laravel-list-search" class="input-dark" style="max-width:320px;" placeholder="Search apps..." oninput="renderCurrentAppList('laravel')">
+            <select id="laravel-list-sort" class="input-dark" style="max-width:180px;" onchange="renderCurrentAppList('laravel')">
+              <option value="newest" selected>Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="name_asc">Name A-Z</option>
+              <option value="name_desc">Name Z-A</option>
+              <option value="port_asc">Port low-high</option>
+              <option value="port_desc">Port high-low</option>
+            </select>
+            <button class="btn btn-sm btn-outline-secondary" onclick="clearAppListSearch('laravel')">Clear</button>
+            <span id="laravel-list-count" style="color:#6c7086;font-size:.82rem;"></span>
+          </div>
           <div id="laravel-apps-container"><div class="empty-state"><div class="spinner-sm mx-auto"></div></div></div>
         </div>
 
@@ -685,6 +722,19 @@ body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#12141c;col
             <div class="section-title mb-0"><i class="bi bi-braces"></i> CodeIgniter Apps</div>
             <button class="btn btn-sm btn-outline-secondary" onclick="loadCodeIgniterApps()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
           </div>
+          <div class="d-flex gap-2 flex-wrap align-items-center mb-3">
+            <input id="codeigniter-list-search" class="input-dark" style="max-width:320px;" placeholder="Search apps..." oninput="renderCurrentAppList('codeigniter')">
+            <select id="codeigniter-list-sort" class="input-dark" style="max-width:180px;" onchange="renderCurrentAppList('codeigniter')">
+              <option value="newest" selected>Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="name_asc">Name A-Z</option>
+              <option value="name_desc">Name Z-A</option>
+              <option value="port_asc">Port low-high</option>
+              <option value="port_desc">Port high-low</option>
+            </select>
+            <button class="btn btn-sm btn-outline-secondary" onclick="clearAppListSearch('codeigniter')">Clear</button>
+            <span id="codeigniter-list-count" style="color:#6c7086;font-size:.82rem;"></span>
+          </div>
           <div id="codeigniter-apps-container"><div class="empty-state"><div class="spinner-sm mx-auto"></div></div></div>
         </div>
 
@@ -749,6 +799,19 @@ body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#12141c;col
           <div class="d-flex align-items-center justify-content-between mb-3">
             <div class="section-title mb-0"><i class="bi bi-filetype-php"></i> PHP Projects</div>
             <button class="btn btn-sm btn-outline-secondary" onclick="loadPhpProjects()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+          </div>
+          <div class="d-flex gap-2 flex-wrap align-items-center mb-3">
+            <input id="php-projects-list-search" class="input-dark" style="max-width:320px;" placeholder="Search projects..." oninput="renderCurrentAppList('php-projects')">
+            <select id="php-projects-list-sort" class="input-dark" style="max-width:180px;" onchange="renderCurrentAppList('php-projects')">
+              <option value="newest" selected>Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="name_asc">Name A-Z</option>
+              <option value="name_desc">Name Z-A</option>
+              <option value="port_asc">Port low-high</option>
+              <option value="port_desc">Port high-low</option>
+            </select>
+            <button class="btn btn-sm btn-outline-secondary" onclick="clearAppListSearch('php-projects')">Clear</button>
+            <span id="php-projects-list-count" style="color:#6c7086;font-size:.82rem;"></span>
           </div>
           <div id="php-projects-container"><div class="empty-state"><div class="spinner-sm mx-auto"></div></div></div>
         </div>
@@ -1688,6 +1751,69 @@ async function runQuery() {
 }
 
 // ══ WordPress ═════════════════════════════════════════════════════════════════
+const appListState = {
+  wordpress: { items: [] },
+  laravel: { items: [] },
+  codeigniter: { items: [] },
+  'php-projects': { items: [] },
+};
+
+function appListSearchText(app) {
+  return [
+    app.name, app.path, app.install_path, app.db_name, app.db_user,
+    app.nginx_site, app.port, app.template, app.version, app.app_name, app.app_url,
+  ].filter(v => v !== undefined && v !== null).join(' ').toLowerCase();
+}
+
+function appListTimestamp(app) {
+  return Number(app.created_at || app.modified_at || 0) || 0;
+}
+
+function appListPort(app) {
+  const port = Number(app.port || 0);
+  return Number.isFinite(port) ? port : 0;
+}
+
+function filterAndSortApps(type, items) {
+  const searchEl = document.getElementById(`${type}-list-search`);
+  const sortEl = document.getElementById(`${type}-list-sort`);
+  const query = (searchEl ? searchEl.value : '').trim().toLowerCase();
+  const sort = sortEl ? sortEl.value : 'newest';
+  let list = [...(items || [])];
+  if (query) list = list.filter(app => appListSearchText(app).includes(query));
+  list.sort((a, b) => {
+    if (sort === 'oldest') return appListTimestamp(a) - appListTimestamp(b);
+    if (sort === 'name_asc') return String(a.name || '').localeCompare(String(b.name || ''));
+    if (sort === 'name_desc') return String(b.name || '').localeCompare(String(a.name || ''));
+    if (sort === 'port_asc') return appListPort(a) - appListPort(b);
+    if (sort === 'port_desc') return appListPort(b) - appListPort(a);
+    return appListTimestamp(b) - appListTimestamp(a);
+  });
+  return list;
+}
+
+function renderAppListCount(type, shown, total) {
+  const el = document.getElementById(`${type}-list-count`);
+  if (el) el.textContent = `Showing ${shown} of ${total}`;
+}
+
+function renderAppListControls(type, shown, total) {
+  renderAppListCount(type, shown, total);
+}
+
+function clearAppListSearch(type) {
+  const el = document.getElementById(`${type}-list-search`);
+  if (el) el.value = '';
+  renderCurrentAppList(type);
+}
+
+function renderCurrentAppList(type) {
+  if (type === 'wordpress') renderWordPressSites();
+  else if (type === 'laravel') renderLaravelApps();
+  else if (type === 'codeigniter') renderCodeIgniterApps();
+  else if (type === 'php-projects') renderPhpProjects();
+}
+
 let wpLoginCreds = [];
 
 function wpAdminUserOptions(users, selected='') {
@@ -1703,19 +1829,33 @@ async function loadWPSites() {
     container.innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-circle"></i>${esc(r.error || 'Error')}</div>`;
     return;
   }
-  if (!r.sites || !r.sites.length) {
+  appListState.wordpress.items = r.sites || [];
+  renderWordPressSites();
+}
+
+function renderWordPressSites() {
+  const container = document.getElementById('wp-sites-container');
+  const total = appListState.wordpress.items.length;
+  const sites = filterAndSortApps('wordpress', appListState.wordpress.items);
+  renderAppListControls('wordpress', sites.length, total);
+  if (!total) {
     wpLoginCreds = [];
-    container.innerHTML = `<div class="empty-state"><i class="bi bi-wordpress"></i>No WordPress installations found<br><small style="color:#585b70">Searched in /var/www/ and /opt/</small></div>`;
+    container.innerHTML = `<div class="empty-state"><i class="bi bi-wordpress"></i>No WordPress installations found<br><small style="color:#585b70">Searched in /var/www, /opt, and ~/local</small></div>`;
     return;
   }
-  wpLoginCreds = r.sites.map(s => ({
+  if (!sites.length) {
+    wpLoginCreds = [];
+    container.innerHTML = `<div class="empty-state"><i class="bi bi-search"></i>No WordPress sites match your search</div>`;
+    return;
+  }
+  wpLoginCreds = sites.map(s => ({
     adminUrl: s.port ? `http://localhost:${s.port}/wp-admin/` : '',
     username: s.wp_saved_admin_user || s.wp_admin_user || '',
     savedUsername: s.wp_saved_admin_user || s.wp_admin_user || '',
     adminUsers: s.wp_admin_users || (s.wp_admin_user ? [s.wp_admin_user] : []),
     password: s.wp_admin_pass || '',
   }));
-  container.innerHTML = `<div class="row g-3">${r.sites.map((s, i) => `
+  container.innerHTML = `<div class="row g-3">${sites.map((s, i) => `
     <div class="col-md-6">
       <div class="wp-card">
         <div class="d-flex align-items-start justify-content-between">
@@ -1979,9 +2119,17 @@ async function saveMySQL() {
 
 // ══ WordPress Install ═════════════════════════════════════════════════════════
 
+function getWpInstallBase() {
+  const locationEl = document.getElementById('wp-install-location');
+  const selected = locationEl ? locationEl.value : 'home-local';
+  if (selected === 'home-local') return '/home/vjranga/local';
+  return selected || '/var/www';
+}
+
 function wpAutoFill() {
   const name = document.getElementById('wp-site-name').value.trim().toLowerCase().replace(/[^\w\-]/g,'');
-  document.getElementById('wp-install-path').value = name ? `/var/www/${name}` : '';
+  const base = getWpInstallBase();
+  document.getElementById('wp-install-path').value = name ? `${base}/${name}` : '';
   document.getElementById('wp-db-name').value  = name ? `${name}_db`   : '';
   document.getElementById('wp-db-user').value  = name ? `${name}_user` : '';
   if (!document.getElementById('wp-admin-user').value.trim()) genWpAdminUser();
@@ -2059,6 +2207,7 @@ function resetWpInstallForm() {
     'wp-admin-user', 'wp-admin-pass', 'wp-site-title'
   ];
   fields.forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('wp-install-location').value = 'home-local';
   document.getElementById('wp-admin-email').value = 'admin@localhost.local';
   document.getElementById('wp-install-log').textContent = 'Fill in the form and click Install…';
   document.getElementById('wp-install-result').style.display = 'none';
@@ -2187,11 +2336,24 @@ async function loadLaravelApps() {
     container.innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-circle"></i>${esc(r.error || 'Error')}</div>`;
     return;
   }
-  if (!r.apps || !r.apps.length) {
+  appListState.laravel.items = r.apps || [];
+  renderLaravelApps();
+}
+
+function renderLaravelApps() {
+  const container = document.getElementById('laravel-apps-container');
+  const total = appListState.laravel.items.length;
+  const apps = filterAndSortApps('laravel', appListState.laravel.items);
+  renderAppListControls('laravel', apps.length, total);
+  if (!total) {
     container.innerHTML = `<div class="empty-state"><i class="bi bi-code-square"></i>No Laravel apps found<br><small style="color:#585b70">Searched in /var/www and /opt</small></div>`;
     return;
   }
-  container.innerHTML = `<div class="row g-3">${r.apps.map((app, i) => `
+  if (!apps.length) {
+    container.innerHTML = `<div class="empty-state"><i class="bi bi-search"></i>No Laravel apps match your search</div>`;
+    return;
+  }
+  container.innerHTML = `<div class="row g-3">${apps.map((app, i) => `
     <div class="col-md-6">
       <div class="wp-card">
         <div class="d-flex align-items-start justify-content-between">
@@ -2352,11 +2514,24 @@ async function loadCodeIgniterApps() {
     container.innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-circle"></i>${esc(r.error || 'Error')}</div>`;
     return;
   }
-  if (!r.apps || !r.apps.length) {
+  appListState.codeigniter.items = r.apps || [];
+  renderCodeIgniterApps();
+}
+
+function renderCodeIgniterApps() {
+  const container = document.getElementById('codeigniter-apps-container');
+  const total = appListState.codeigniter.items.length;
+  const apps = filterAndSortApps('codeigniter', appListState.codeigniter.items);
+  renderAppListControls('codeigniter', apps.length, total);
+  if (!total) {
     container.innerHTML = `<div class="empty-state"><i class="bi bi-braces"></i>No CodeIgniter apps found<br><small style="color:#585b70">Searched in /var/www and /opt</small></div>`;
     return;
   }
-  container.innerHTML = `<div class="row g-3">${r.apps.map((app, i) => `
+  if (!apps.length) {
+    container.innerHTML = `<div class="empty-state"><i class="bi bi-search"></i>No CodeIgniter apps match your search</div>`;
+    return;
+  }
+  container.innerHTML = `<div class="row g-3">${apps.map((app, i) => `
     <div class="col-md-6">
       <div class="wp-card">
         <div class="d-flex align-items-start justify-content-between">
@@ -2518,11 +2693,24 @@ async function loadPhpProjects() {
     container.innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-circle"></i>${esc(r.error || 'Error')}</div>`;
     return;
   }
-  if (!r.apps || !r.apps.length) {
+  appListState['php-projects'].items = r.apps || [];
+  renderPhpProjects();
+}
+
+function renderPhpProjects() {
+  const container = document.getElementById('php-projects-container');
+  const total = appListState['php-projects'].items.length;
+  const apps = filterAndSortApps('php-projects', appListState['php-projects'].items);
+  renderAppListControls('php-projects', apps.length, total);
+  if (!total) {
     container.innerHTML = `<div class="empty-state"><i class="bi bi-filetype-php"></i>No PHP projects found<br><small style="color:#585b70">Only panel-created PHP projects are listed</small></div>`;
     return;
   }
-  container.innerHTML = `<div class="row g-3">${r.apps.map((app, i) => `
+  if (!apps.length) {
+    container.innerHTML = `<div class="empty-state"><i class="bi bi-search"></i>No PHP projects match your search</div>`;
+    return;
+  }
+  container.innerHTML = `<div class="row g-3">${apps.map((app, i) => `
     <div class="col-md-6">
       <div class="wp-card">
         <div class="d-flex align-items-start justify-content-between">

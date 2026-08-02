@@ -10,8 +10,30 @@ PANEL_USER="${SUDO_USER:-$(logname 2>/dev/null || true)}"
 
 is_safe_wp_path() {
     case "$1" in
+        *"/../"*|*"/.."|*"//"*) return 1 ;;
+    esac
+    case "$1" in
         /var/www/*|/opt/*) return 0 ;;
-        *) return 1 ;;
+    esac
+    if [ -n "$PANEL_USER" ]; then
+        case "$1" in
+            /home/"$PANEL_USER"/local/*) return 0 ;;
+        esac
+    fi
+    return 1
+}
+
+ensure_www_data_home_access() {
+    if [ -z "$PANEL_USER" ]; then
+        return 0
+    fi
+    case "$1" in
+        /home/"$PANEL_USER"/local/*)
+            if command -v setfacl >/dev/null 2>&1; then
+                setfacl -m u:www-data:--x "/home/"$PANEL_USER""
+                setfacl -m u:www-data:rx "/home/"$PANEL_USER"/local" 2>/dev/null || true
+            fi
+            ;;
     esac
 }
 
@@ -21,6 +43,7 @@ if [ "$INSTALL_PATH" = "--fix-perms" ]; then
         echo "Error: unsafe path or wp-config.php not found: $INSTALL_PATH"
         exit 1
     fi
+    ensure_www_data_home_access "$INSTALL_PATH"
     if [ -n "$PANEL_USER" ]; then
         chown www-data:"$PANEL_USER" "$INSTALL_PATH/wp-config.php"
     else
@@ -37,6 +60,7 @@ if [ "$INSTALL_PATH" = "--fix-site-perms" ]; then
         echo "Error: unsafe path or directory not found: $INSTALL_PATH"
         exit 1
     fi
+    ensure_www_data_home_access "$INSTALL_PATH"
     chown -R www-data:www-data "$INSTALL_PATH"
     find "$INSTALL_PATH" -type d -exec chmod 2775 {} \;
     find "$INSTALL_PATH" -type f -exec chmod 664 {} \;
@@ -100,6 +124,8 @@ if ! is_safe_wp_path "$INSTALL_PATH"; then
     echo "Error: unsafe install path: $INSTALL_PATH"
     exit 1
 fi
+
+ensure_www_data_home_access "$INSTALL_PATH"
 
 echo "[helper] Creating directory $INSTALL_PATH"
 mkdir -p "$INSTALL_PATH"
