@@ -115,6 +115,8 @@ WordPress support can:
 - Change database user password and update `wp-config.php`.
 - Change WordPress admin password for user ID 1.
 - Delete a site with a live progress log.
+- Update WordPress core for selected local sites without changing plugins, themes, `wp-content`, or `wp-config.php`.
+- Reuse one cached official archive across updates, refreshing it only when WordPress releases a newer version.
 
 ### Laravel
 

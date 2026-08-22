@@ -454,6 +454,343 @@ def detect_wp_admin_user(db_name, db_user, db_pass, db_host, table_prefix):
     return users[0] if users else ""
 
 
+
+def get_wp_core_version(install_path):
+    """Read the installed WordPress version from wp-includes/version.php."""
+    version_file = os.path.join(install_path, "wp-includes", "version.php")
+    try:
+        content = open(version_file, errors="ignore").read()
+        match = re.search(r"\$wp_version\s*=\s*'([^']+)'", content)
+        return match.group(1) if match else ""
+    except OSError:
+        return ""
+
+
+
+
+def compare_wp_versions(a, b):
+    """Compare two WordPress version strings. Returns -1, 0, or 1.
+
+    Follows a subset of PHP version_compare semantics sufficient for deciding
+    whether an installed WordPress core is older than a target release. Numeric
+    parts are compared as integers; transitions between digits and letters start
+    a new part; '.' and '-' are separators. Pre-release suffixes rank below the
+    equivalent release: dev < alpha < beta < rc < (release). Missing trailing
+    numeric parts are treated as 0 so '6.5' == '6.5.0'; missing trailing
+    suffix parts are treated as release-level so '6.5-RC1' < '6.5'. Empty or
+    unparseable versions compare as less than any real version so they are
+    never treated as newer than a known target.
+    """
+    def parts(v):
+        out = []
+        cur = ""
+        cur_kind = None
+        for ch in (v or ""):
+            if ch in ".-":
+                if cur:
+                    out.append(int(cur) if cur_kind == "d" else cur.lower())
+                    cur = ""
+                    cur_kind = None
+                continue
+            kind = "d" if ch.isdigit() else "a"
+            if cur and kind != cur_kind:
+                out.append(int(cur) if cur_kind == "d" else cur.lower())
+                cur = ""
+            cur += ch
+            cur_kind = kind
+        if cur:
+            out.append(int(cur) if cur_kind == "d" else cur.lower())
+        return out
+
+    _SUFFIX_RANK = {"dev": 0, "alpha": 1, "a": 1, "beta": 2, "b": 2, "rc": 3}
+
+    def rank(p):
+        if isinstance(p, int):
+            return (2, p, "")
+        return (1, _SUFFIX_RANK.get(p, 4), p)
+
+    if not a and not b:
+        return 0
+    if not a:
+        return -1
+    if not b:
+        return 1
+
+    ap = [rank(x) for x in parts(a)]
+    bp = [rank(x) for x in parts(b)]
+    length = max(len(ap), len(bp))
+    for i in range(length):
+        # When one side runs out of parts, synthesize a matching part:
+        # - if the other side is numeric, treat missing as 0 (so 6.5 == 6.5.0)
+        # - if the other side is a suffix, treat missing as release-level
+        if i < len(ap):
+            ai = ap[i]
+        else:
+            ai = (2, 0, "") if i < len(bp) and bp[i][0] == 2 else (1, 4, "")
+        if i < len(bp):
+            bi = bp[i]
+        else:
+            bi = (2, 0, "") if i < len(ap) and ap[i][0] == 2 else (1, 4, "")
+        if ai < bi:
+            return -1
+        if ai > bi:
+            return 1
+    return 0
+
+
+def get_latest_wp_version():
+    """Fetch the latest WordPress version from the WordPress.org API."""
+    result = run_cmd("curl -sf https://api.wordpress.org/core/version-check/1.7/", timeout=15)
+    if not result["success"]:
+        return ""
+    try:
+        return json.loads(result["stdout"])["offers"][0]["version"]
+    except (KeyError, IndexError, TypeError, json.JSONDecodeError):
+        return ""
+
+
+def _prepare_wp_cache(log_func=None, allow_download=True):
+    """Ensure the WordPress cache tarball is current.
+
+    Creates WP_CACHE_DIR, compares get_latest_wp_version() with the cached
+    version marker, downloads to WP_CACHE_TAR + '.part' with curl, then
+    uses os.replace() and writes the version marker only after success.
+
+    allow_download=False is used by the status GET path: it only inspects the
+    existing cache and never blocks on the long (up to 3600s) archive download.
+    Downloading belongs to POST/job preparation (update_wordpress_core_job).
+
+    Returns dict with: success, target_version, cached_version, cache_state.
+    cache_state is one of: 'current', 'refreshed', 'cached-unverified', 'unavailable'.
+    """
+    os.makedirs(WP_CACHE_DIR, exist_ok=True)
+    target_version = get_latest_wp_version()
+    cached_ver = ""
+    if os.path.exists(WP_CACHE_VERSION):
+        try:
+            cached_ver = open(WP_CACHE_VERSION).read().strip()
+        except OSError:
+            pass
+    has_tar = os.path.exists(WP_CACHE_TAR) and os.path.getsize(WP_CACHE_TAR) > 0
+
+    def _cached_unverified():
+        # Existing tar is preserved even when it cannot be verified against the
+        # remote version (download failed, download skipped, or version unknown).
+        return {
+            "success": True,
+            "target_version": cached_ver or "",
+            "cached_version": cached_ver,
+            "cache_state": "cached-unverified",
+        }
+
+    if target_version:
+        if log_func:
+            log_func(f"  Target version: {target_version}, cached version: {cached_ver or 'none'}")
+
+        if has_tar and target_version == cached_ver:
+            return {
+                "success": True,
+                "target_version": target_version,
+                "cached_version": cached_ver,
+                "cache_state": "current",
+            }
+
+        # Cache is missing or stale — a download would be needed. The status GET
+        # path must not block for the archive download, so without download
+        # permission we only report what is already on disk.
+        if not allow_download:
+            if has_tar:
+                return _cached_unverified()
+            return {
+                "success": False,
+                "target_version": target_version,
+                "cached_version": cached_ver,
+                "cache_state": "unavailable",
+            }
+
+        if log_func:
+            log_func(f"  Downloading WordPress {target_version}…")
+        tmp_tar = WP_CACHE_TAR + ".part"
+        if os.path.exists(tmp_tar):
+            os.remove(tmp_tar)
+        r = run_cmd(
+            f"curl -fL --retry 3 -o {shell_quote(tmp_tar)} https://wordpress.org/latest.tar.gz",
+            timeout=3600,
+        )
+        if not r["success"]:
+            if log_func:
+                log_func(f"  Download failed: {r.get('error', 'curl error')}")
+            if has_tar:
+                # Preserve the existing cache: still usable, just not verified
+                # against the remote version we failed to fetch.
+                return _cached_unverified()
+            return {
+                "success": False,
+                "target_version": target_version,
+                "cached_version": cached_ver,
+                "cache_state": "unavailable",
+            }
+        os.replace(tmp_tar, WP_CACHE_TAR)
+        with open(WP_CACHE_VERSION, "w") as f:
+            f.write(target_version)
+        if log_func:
+            log_func("  Download complete and cache updated.")
+        return {
+            "success": True,
+            "target_version": target_version,
+            "cached_version": cached_ver,
+            "cache_state": "refreshed",
+        }
+
+    # Fallback: remote version unknown
+    if has_tar:
+        return _cached_unverified()
+
+    return {
+        "success": False,
+        "target_version": "",
+        "cached_version": "",
+        "cache_state": "unavailable",
+    }
+
+
+def get_wp_core_update_status():
+    """Return WordPress core update status including cache and all sites.
+
+    Read-only GET: inspects the current cache and installed site versions
+    without triggering the long archive download. Cache downloads happen only
+    during POST/job preparation (update_wordpress_core_job calls
+    _prepare_wp_cache with allow_download=True).
+    """
+    cache_info = _prepare_wp_cache(allow_download=False)
+    sites = get_wp_sites()
+    site_details = []
+    for site in sites:
+        site_path = site["path"]
+        installed_ver = get_wp_core_version(site_path)
+        target_ver = cache_info.get("target_version") or ""
+        needs_update = bool(
+            target_ver
+            and installed_ver
+            and compare_wp_versions(installed_ver, target_ver) < 0
+        )
+        site_details.append({
+            "path": site_path,
+            "name": site["name"],
+            "installed_version": installed_ver,
+            "needs_update": needs_update,
+        })
+    return {
+        "success": True,
+        "cached_version": cache_info.get("cached_version", ""),
+        "target_version": cache_info.get("target_version", ""),
+        "cache_state": cache_info.get("cache_state", "unavailable"),
+        "sites": site_details,
+    }
+
+
+def start_wordpress_core_update(paths):
+    """Validate paths against currently discovered WP sites and start an update job.
+
+    Request-time validation happens here; the actual work (cache preparation
+    and per-site core replacement via wp-install-helper.sh --core-update) runs
+    in update_wordpress_core_job on a background thread.
+    """
+    if not isinstance(paths, list) or len(paths) == 0:
+        return {"success": False, "error": "paths must be a non-empty list"}
+    known_paths = {site["path"] for site in get_wp_sites()}
+    for p in paths:
+        if p not in known_paths:
+            return {"success": False, "error": "Unknown WordPress site path"}
+    job_id = secrets.token_hex(8)
+    _jobs[job_id] = {"status": "running", "logs": [], "result": {}}
+    t = threading.Thread(target=update_wordpress_core_job, args=(job_id, paths), daemon=True)
+    t.start()
+    return {"success": True, "job_id": job_id}
+
+
+def update_wordpress_core_job(job_id, paths):
+    """Background job that replaces WordPress core files for each given site.
+
+    Prepares the WordPress cache archive itself via _prepare_wp_cache with
+    allow_download=True, so a missing or stale cache is downloaded here on the
+    background thread — never during the GET status call. It then calls the
+    privileged wp-install-helper.sh --core-update for each site. Sites already
+    on the target version are skipped. Per-site failures — including sites that
+    disappeared from discovery after request validation — are recorded and the
+    loop continues; one bad site does not abort the batch. No WP database
+    upgrade is performed here (core-only replacement).
+    """
+    job = _jobs[job_id]
+    results = []
+
+    def log(message):
+        job["logs"].append(message)
+        print(message)
+
+    try:
+        cache_info = _prepare_wp_cache(log_func=log, allow_download=True)
+        target_version = cache_info.get("target_version", "")
+        if not cache_info.get("success") or not target_version or not os.path.exists(WP_CACHE_TAR):
+            raise RuntimeError("No WordPress core archive is available")
+
+        known_sites = {site["path"]: site for site in get_wp_sites()}
+        helper = os.path.join(SCRIPT_DIR, "wp-install-helper.sh")
+        for site_path in paths:
+            site = known_sites.get(site_path)
+            if site is None:
+                name = os.path.basename(site_path.rstrip("/")) or site_path
+                log(f"{name}: site no longer found in WordPress discovery; skipped.")
+                results.append({
+                    "path": site_path,
+                    "name": name,
+                    "status": "failed",
+                    "error": "Site no longer found in WordPress discovery",
+                })
+                continue
+            name = site["name"]
+            installed = site.get("wp_version", "")
+            cmp = compare_wp_versions(installed, target_version) if installed else -1
+            if cmp >= 0:
+                log(f"{name}: already on WordPress {installed or 'unknown'} (target {target_version}); skipped — never downgrade.")
+                results.append({"path": site_path, "name": name, "status": "already-current", "error": ""})
+                continue
+            if not installed:
+                log(f"{name}: installed WordPress version is unknown; skipped — cannot update safely.")
+                results.append({
+                    "path": site_path,
+                    "name": name,
+                    "status": "failed",
+                    "error": "Installed WordPress version is unknown",
+                })
+                continue
+            log(f"{name}: updating WordPress {installed} to {target_version}...")
+            result = run_cmd(
+                f"sudo {shell_quote(helper)} --core-update {shell_quote(site_path)} {shell_quote(WP_CACHE_TAR)}",
+                timeout=180,
+            )
+            if result["success"]:
+                log(f"{name}: updated successfully.")
+                results.append({"path": site_path, "name": name, "status": "updated", "error": ""})
+            else:
+                error = (result["stderr"] or result["stdout"] or "Unknown update failure").strip()
+                log(f"{name}: failed: {error}")
+                results.append({"path": site_path, "name": name, "status": "failed", "error": error})
+        any_failed = any(r.get("status") == "failed" for r in results)
+        all_current = all(r.get("status") == "already-current" for r in results)
+        job["status"] = "done"
+        job["result"] = {
+            "success": not any_failed,
+            "target_version": target_version,
+            "sites": results,
+            "all_current": all_current,
+        }
+    except Exception as exc:
+        log(f"Core update could not start: {exc}")
+        job["status"] = "error"
+        job["result"] = {"success": False, "error": str(exc), "sites": results}
+
+
 def get_wp_sites():
     sites = []
     patterns = ["/var/www/*/wp-config.php", "/var/www/html/*/wp-config.php",
@@ -467,6 +804,7 @@ def get_wp_sites():
         site_path = os.path.dirname(wp_cfg)
         site_name = os.path.basename(site_path)
         entry = {"name": site_name, "path": site_path, "db_name": "—", "modified_at": path_modified_at(site_path)}
+        entry["wp_version"] = get_wp_core_version(site_path)
         try:
             with open(wp_cfg) as f:
                 content = f.read()
@@ -1799,6 +2137,9 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/wordpress/plugins":
             self.send_json(get_wp_plugin_library())
 
+        elif path == "/api/wordpress/core-update-status":
+            self.send_json(get_wp_core_update_status())
+
         elif path == "/api/laravel/apps":
             self.send_json({"success": True, "apps": get_laravel_apps()})
 
@@ -1835,6 +2176,13 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(get_system_info())
 
         elif path.startswith("/api/wordpress/install/") or path.startswith("/api/wordpress/delete/"):
+            job_id = path.split("/")[-1]
+            if job_id in _jobs:
+                self.send_json(_jobs[job_id])
+            else:
+                self.send_json({"error": "Job not found"}, 404)
+
+        elif path.startswith("/api/wordpress/core-update/"):
             job_id = path.split("/")[-1]
             if job_id in _jobs:
                 self.send_json(_jobs[job_id])
@@ -2051,6 +2399,13 @@ class Handler(BaseHTTPRequestHandler):
             t = threading.Thread(target=install_wordpress_job, args=(job_id, data, cfg), daemon=True)
             t.start()
             self.send_json({"success": True, "job_id": job_id})
+
+        elif path == "/api/wordpress/core-update":
+            paths = data.get("paths")
+            if not isinstance(paths, list) or len(paths) == 0 or not all(isinstance(p, str) for p in paths):
+                self.send_json({"success": False, "error": "paths must be a non-empty list of strings"}); return
+            result = start_wordpress_core_update(paths)
+            self.send_json(result)
 
         elif path == "/api/wordpress/port":
             nginx_site = data.get("nginx_site", "")

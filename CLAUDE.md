@@ -91,6 +91,12 @@ This creates `/etc/sudoers.d/server-panel` so the panel can control services, ed
   - Reads DB credentials from `wp-config.php` for phpMyAdmin quick access
   - Changes DB user password and updates `wp-config.php`
   - Changes WP admin password for user ID 1 via WP-CLI or PHP fallback
+- **Core Update** with shared cache:
+  - Checks the installed core version of each local site against the latest version in a shared cached official archive
+  - Reuses one cached archive across sites, refreshing it only when WordPress releases a newer version
+  - Updates only core files, leaving plugins, themes, `wp-content`, and `wp-config.php` untouched
+  - Uses maintenance mode per site during the update and always removes it
+  - Skips already-current sites and continues after per-site errors
 
 ### CodeIgniter
 - Auto-discovers CodeIgniter 4 apps by scanning for `spark` in `/var/www`, `/opt`, and `/opt/*/*`
@@ -184,6 +190,9 @@ This creates `/etc/sudoers.d/server-panel` so the panel can control services, ed
 | POST | `/api/wordpress/change_wp_admin` | Change WP admin password for user ID 1 |
 | DELETE | `/api/wordpress/sites` | Start delete job → returns job_id |
 | GET | `/api/wordpress/delete/<job_id>` | Poll delete progress |
+| GET | `/api/wordpress/core-update-status` | Latest known WP version + shared cache state |
+| POST | `/api/wordpress/core-update` | Start bulk core update job → returns job_id |
+| GET | `/api/wordpress/core-update/<job_id>` | Poll core update progress |
 | GET | `/api/codeigniter/apps` | List CodeIgniter 4 apps |
 | GET | `/api/codeigniter/next_port` | Find next available suggested CodeIgniter port |
 | POST | `/api/codeigniter/install` | Start CodeIgniter 4 install job |

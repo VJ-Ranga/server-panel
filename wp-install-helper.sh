@@ -37,6 +37,17 @@ ensure_www_data_home_access() {
     esac
 }
 
+set_wp_update_perms() {
+    # Repair ownership/modes on the replaced core paths only.
+    # wp-content/ and wp-config.php are intentionally never touched here.
+    find "$INSTALL_PATH/wp-admin" "$INSTALL_PATH/wp-includes" -type d -exec chmod 2775 {} \;
+    find "$INSTALL_PATH/wp-admin" "$INSTALL_PATH/wp-includes" -type f -exec chmod 664 {} \;
+    for file in index.php license.txt readme.html wp-activate.php wp-blog-header.php wp-comments-post.php wp-config-sample.php wp-cron.php wp-links-opml.php wp-load.php wp-login.php wp-mail.php wp-settings.php wp-signup.php wp-trackback.php xmlrpc.php; do
+        [ -f "$INSTALL_PATH/$file" ] && chown www-data:www-data "$INSTALL_PATH/$file"
+        [ -f "$INSTALL_PATH/$file" ] && chmod 664 "$INSTALL_PATH/$file"
+    done
+}
+
 if [ "$INSTALL_PATH" = "--fix-perms" ]; then
     INSTALL_PATH="$SITE_NAME"
     if ! is_safe_wp_path "$INSTALL_PATH" || [ ! -f "$INSTALL_PATH/wp-config.php" ]; then
@@ -117,6 +128,82 @@ PY
     nginx -t
     systemctl reload nginx
     echo "[helper] Changed $NGINX_SITE to port $PORT"
+    exit 0
+fi
+
+if [ "$INSTALL_PATH" = "--core-update" ]; then
+    INSTALL_PATH="$SITE_NAME"
+    ARCHIVE_PATH="$PHP_VER"
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+    EXPECTED_ARCHIVE="$SCRIPT_DIR/cache/wordpress/latest.tar.gz"
+    if ! is_safe_wp_path "$INSTALL_PATH" || [ ! -f "$INSTALL_PATH/wp-config.php" ]; then
+        echo "Error: unsafe WordPress site path"
+        exit 1
+    fi
+    if [ ! -d "$INSTALL_PATH/wp-content" ]; then
+        echo "Error: unsafe WordPress site path (missing wp-content)"
+        exit 1
+    fi
+    if [ "$ARCHIVE_PATH" != "$EXPECTED_ARCHIVE" ] || [ ! -r "$ARCHIVE_PATH" ]; then
+        echo "Error: invalid WordPress core archive"
+        exit 1
+    fi
+
+    STAGE_DIR="$(mktemp -d /tmp/_panel_wp_update.XXXXXX)"
+    BACKUP_DIR="$(mktemp -d /tmp/_panel_wp_backup.XXXXXX)"
+    MAINTENANCE_FILE="$INSTALL_PATH/.maintenance"
+    RESTORE_NEEDED=1
+    cleanup() {
+        if [ "$RESTORE_NEEDED" = "1" ] && [ -d "$BACKUP_DIR/wp-admin" ]; then
+            echo "[helper] Restoring previous wp-admin and wp-includes from backup…" >&2
+            rm -rf "$INSTALL_PATH/wp-admin" "$INSTALL_PATH/wp-includes"
+            mv "$BACKUP_DIR/wp-admin" "$BACKUP_DIR/wp-includes" "$INSTALL_PATH/" 2>/dev/null || true
+        fi
+        rm -f "$MAINTENANCE_FILE"
+        rm -rf "$STAGE_DIR" "$BACKUP_DIR"
+    }
+    trap cleanup EXIT
+
+    printf '<?php $upgrading = %s; ?>\n' "$(date +%s)" > "$MAINTENANCE_FILE"
+    tar -xzf "$ARCHIVE_PATH" -C "$STAGE_DIR"
+    [ -d "$STAGE_DIR/wordpress/wp-admin" ] && [ -d "$STAGE_DIR/wordpress/wp-includes" ] || {
+        echo "Error: invalid WordPress archive layout"
+        exit 1
+    }
+
+    # Backup existing core dirs before removing anything.
+    if [ -d "$INSTALL_PATH/wp-admin" ]; then
+        mv "$INSTALL_PATH/wp-admin" "$BACKUP_DIR/wp-admin"
+    fi
+    if [ -d "$INSTALL_PATH/wp-includes" ]; then
+        mv "$INSTALL_PATH/wp-includes" "$BACKUP_DIR/wp-includes"
+    fi
+
+    # Copy new core in. If any copy fails, the trap restores from backup.
+    if ! cp -a "$STAGE_DIR/wordpress/wp-admin" "$INSTALL_PATH/wp-admin"; then
+        echo "Error: failed to copy wp-admin" >&2
+        exit 1
+    fi
+    if ! cp -a "$STAGE_DIR/wordpress/wp-includes" "$INSTALL_PATH/wp-includes"; then
+        echo "Error: failed to copy wp-includes" >&2
+        exit 1
+    fi
+    for file in index.php license.txt readme.html wp-activate.php wp-blog-header.php wp-comments-post.php wp-config-sample.php wp-cron.php wp-links-opml.php wp-load.php wp-login.php wp-mail.php wp-settings.php wp-signup.php wp-trackback.php xmlrpc.php; do
+        if [ -f "$STAGE_DIR/wordpress/$file" ]; then
+            if ! cp -a "$STAGE_DIR/wordpress/$file" "$INSTALL_PATH/$file"; then
+                echo "Error: failed to copy $file" >&2
+                exit 1
+            fi
+        fi
+    done
+    chown -R www-data:www-data "$INSTALL_PATH/wp-admin" "$INSTALL_PATH/wp-includes"
+    set_wp_update_perms
+
+    # Success — drop the backup so the trap does not restore.
+    RESTORE_NEEDED=0
+    rm -rf "$BACKUP_DIR"
+    rm -f "$MAINTENANCE_FILE"
+    echo "[helper] WordPress core updated for $INSTALL_PATH"
     exit 0
 fi
 
