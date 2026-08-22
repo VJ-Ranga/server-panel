@@ -709,6 +709,34 @@ def start_wordpress_core_update(paths):
     return {"success": True, "job_id": job_id}
 
 
+def start_wordpress_core_cache_refresh():
+    job_id = secrets.token_hex(8)
+    _jobs[job_id] = {"status": "running", "logs": [], "result": {}}
+    threading.Thread(target=refresh_wordpress_core_cache_job, args=(job_id,), daemon=True).start()
+    return {"success": True, "job_id": job_id}
+
+
+def refresh_wordpress_core_cache_job(job_id):
+    job = _jobs[job_id]
+
+    def log(message):
+        job["logs"].append(message)
+        print(message)
+
+    try:
+        log("Checking and refreshing the shared WordPress package…")
+        cache_info = _prepare_wp_cache(log_func=log, allow_download=True)
+        if not cache_info.get("success"):
+            raise RuntimeError("Could not download the WordPress package")
+        log(f"WordPress {cache_info['target_version']} package is ready.")
+        job["status"] = "done"
+        job["result"] = {"success": True, "refresh_only": True, **cache_info}
+    except Exception as exc:
+        log(f"Package refresh failed: {exc}")
+        job["status"] = "error"
+        job["result"] = {"success": False, "error": str(exc), "refresh_only": True}
+
+
 def update_wordpress_core_job(job_id, paths):
     """Background job that replaces WordPress core files for each given site.
 
@@ -2399,6 +2427,9 @@ class Handler(BaseHTTPRequestHandler):
             t = threading.Thread(target=install_wordpress_job, args=(job_id, data, cfg), daemon=True)
             t.start()
             self.send_json({"success": True, "job_id": job_id})
+
+        elif path == "/api/wordpress/core-update/refresh":
+            self.send_json(start_wordpress_core_cache_refresh())
 
         elif path == "/api/wordpress/core-update":
             paths = data.get("paths")

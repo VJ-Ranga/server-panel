@@ -28,6 +28,12 @@ class WordPressCoreUpdateBackendTests(unittest.TestCase):
         self.assertIn("Unknown WordPress site path", self.source)
         self.assertIn('path == "/api/wordpress/core-update"', self.source)
 
+    def test_refresh_endpoint_starts_a_cache_only_job(self):
+        self.assertIn("def start_wordpress_core_cache_refresh():", self.source)
+        self.assertIn("def refresh_wordpress_core_cache_job(job_id):", self.source)
+        self.assertIn('path == "/api/wordpress/core-update/refresh"', self.source)
+        self.assertIn("_prepare_wp_cache(log_func=log, allow_download=True)", self.source)
+
     def test_update_job_is_pollable_and_uses_the_privileged_helper(self):
         self.assertIn("def update_wordpress_core_job(job_id, paths):", self.source)
         self.assertIn("--core-update", self.source)

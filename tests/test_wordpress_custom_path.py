@@ -42,6 +42,14 @@ class WordpressCustomPathTests(unittest.TestCase):
         self.assertIn("setfacl -m u:www-data:--x", helper)
         self.assertIn("/home/\"$PANEL_USER\"", helper)
 
+    def test_wp_helper_normalizes_wp_content_for_plugin_updates(self):
+        with open(HELPER_PATH) as f:
+            helper = f.read()
+
+        self.assertIn("set_wp_update_perms", helper)
+        self.assertIn('chown -R www-data:www-data "$INSTALL_PATH/wp-content"', helper)
+        self.assertIn('find "$INSTALL_PATH/wp-content" -type d -exec chmod 2775 {} \\;', helper)
+
 
 if __name__ == "__main__":
     unittest.main()

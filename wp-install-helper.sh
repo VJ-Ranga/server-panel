@@ -46,6 +46,11 @@ set_wp_update_perms() {
         [ -f "$INSTALL_PATH/$file" ] && chown www-data:www-data "$INSTALL_PATH/$file"
         [ -f "$INSTALL_PATH/$file" ] && chmod 664 "$INSTALL_PATH/$file"
     done
+    if [ -d "$INSTALL_PATH/wp-content" ]; then
+        chown -R www-data:www-data "$INSTALL_PATH/wp-content"
+        find "$INSTALL_PATH/wp-content" -type d -exec chmod 2775 {} \;
+        find "$INSTALL_PATH/wp-content" -type f -exec chmod 664 {} \;
+    fi
 }
 
 if [ "$INSTALL_PATH" = "--fix-perms" ]; then
@@ -75,6 +80,7 @@ if [ "$INSTALL_PATH" = "--fix-site-perms" ]; then
     chown -R www-data:www-data "$INSTALL_PATH"
     find "$INSTALL_PATH" -type d -exec chmod 2775 {} \;
     find "$INSTALL_PATH" -type f -exec chmod 664 {} \;
+    set_wp_update_perms
     if [ -f "$INSTALL_PATH/wp-config.php" ]; then
         if [ -n "$PANEL_USER" ]; then
             chown www-data:"$PANEL_USER" "$INSTALL_PATH/wp-config.php"
@@ -227,6 +233,7 @@ echo "[helper] Setting permissions"
 chown -R www-data:www-data "$INSTALL_PATH"
 find "$INSTALL_PATH" -type d -exec chmod 2775 {} \;
 find "$INSTALL_PATH" -type f -exec chmod 664 {} \;
+set_wp_update_perms
 # Keep wp-config private
 if [ -n "$PANEL_USER" ]; then
     chown www-data:"$PANEL_USER" "$INSTALL_PATH/wp-config.php"

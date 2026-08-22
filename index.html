@@ -106,6 +106,7 @@ body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#12141c;col
 .empty-state{text-align:center;padding:40px;color:#585b70;}
 .empty-state .bi{font-size:2.5rem;display:block;margin-bottom:8px;}
 .wp-card{background:#1e2030;border:1px solid #2d3158;border-radius:12px;padding:18px 20px;}
+.wp-card.wp-update-selected{background:#1e2a45;border-color:#89b4fa;box-shadow:0 0 0 1px rgba(137,180,250,.2);}
 .wp-card .wp-title{font-size:.95rem;font-weight:600;margin-bottom:6px;}
 .wp-meta{font-size:.78rem;color:#6c7086;display:grid;grid-template-columns:1fr 1fr;gap:4px;}
 .wp-meta span b{color:#a6adc8;}
@@ -478,9 +479,14 @@ body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#12141c;col
                 <div class="section-title mb-1"><i class="bi bi-arrow-up-circle"></i> WordPress Core Updates</div>
                 <div id="wp-core-update-status" style="font-size:.8rem;color:#6c7086;">Checking available version…</div>
               </div>
-              <button id="wp-core-update-btn" class="btn btn-sm btn-primary" onclick="startWpCoreUpdate()" disabled>
-                <i class="bi bi-arrow-up-circle"></i> Update Selected
-              </button>
+              <div class="d-flex gap-2">
+                <button id="wp-core-refresh-btn" class="btn btn-sm btn-outline-secondary" onclick="refreshWpCorePackage()">
+                  <i class="bi bi-download"></i> Download Latest Package
+                </button>
+                <button id="wp-core-update-btn" class="btn btn-sm btn-primary" onclick="startWpCoreUpdate()" disabled>
+                  <i class="bi bi-arrow-up-circle"></i> Update Selected
+                </button>
+              </div>
             </div>
             <div id="wp-core-update-log" class="log-box mt-3" style="display:none;height:160px;color:#cdd6f4;"></div>
           </div>
@@ -1846,7 +1852,7 @@ async function loadWPSites() {
   loadWpCoreUpdateStatus();
 }
 
-let wpCoreUpdateState = { targetVersion: '', status: null, poll: null };
+let wpCoreUpdateState = { targetVersion: '', status: null, poll: null, selectedPaths: [] };
 
 // Compare two WordPress version strings. Returns -1, 0, or 1.
 // Mirrors compare_wp_versions() in panel.py — see that function for semantics.
@@ -1914,6 +1920,7 @@ async function startWpCoreUpdate() {
   button.disabled = true;
   log.style.display = 'block';
   log.textContent = 'Starting core update…\n';
+  wpCoreUpdateState.refreshOnly = false;
   const r = await api('/api/wordpress/core-update', 'POST', { paths });
   if (!r.success) {
     log.textContent += 'Error: ' + (r.error || 'Failed to start');
@@ -1923,10 +1930,34 @@ async function startWpCoreUpdate() {
   pollWpCoreUpdate(r.job_id);
 }
 
+function toggleWpCoreUpdateSelection(path, checked) {
+  const selected = new Set(wpCoreUpdateState.selectedPaths || []);
+  if (checked) selected.add(path); else selected.delete(path);
+  wpCoreUpdateState.selectedPaths = [...selected];
+  renderWordPressSites();
+}
+
+async function refreshWpCorePackage() {
+  const button = document.getElementById('wp-core-refresh-btn');
+  const log = document.getElementById('wp-core-update-log');
+  button.disabled = true;
+  log.style.display = 'block';
+  log.textContent = 'Downloading the latest WordPress package…\n';
+  const r = await api('/api/wordpress/core-update/refresh', 'POST');
+  if (!r.success) {
+    log.textContent += 'Error: ' + (r.error || 'Failed to start');
+    button.disabled = false;
+    return;
+  }
+  wpCoreUpdateState.refreshOnly = true;
+  pollWpCoreUpdate(r.job_id);
+}
+
 async function pollWpCoreUpdate(jobId) {
   if (wpCoreUpdateState.poll) clearInterval(wpCoreUpdateState.poll);
   const log = document.getElementById('wp-core-update-log');
   const button = document.getElementById('wp-core-update-btn');
+  const refreshButton = document.getElementById('wp-core-refresh-btn');
   let missingCount = 0;
   wpCoreUpdateState.poll = setInterval(async () => {
     const job = await api(`/api/wordpress/core-update/${jobId}`);
@@ -1938,6 +1969,7 @@ async function pollWpCoreUpdate(jobId) {
         log.textContent += '\n[update] Job response missing or invalid; stopping poll.';
         toast('WordPress core update: job lost', 'error');
         button.disabled = false;
+        refreshButton.disabled = false;
         return;
       }
       return;
@@ -1949,6 +1981,14 @@ async function pollWpCoreUpdate(jobId) {
       clearInterval(wpCoreUpdateState.poll);
       wpCoreUpdateState.poll = null;
       const result = job.result || {};
+      if (wpCoreUpdateState.refreshOnly) {
+        wpCoreUpdateState.refreshOnly = false;
+        toast(job.status === 'done' ? `WordPress ${result.target_version || ''} package is ready` : 'WordPress package download failed', job.status === 'done' ? 'success' : 'error');
+        button.disabled = false;
+        refreshButton.disabled = false;
+        await loadWPSites();
+        return;
+      }
       const sites = result.sites || [];
       const failed = sites.filter(s => s.status === 'failed').length;
       const updated = sites.filter(s => s.status === 'updated').length;
@@ -1965,6 +2005,7 @@ async function pollWpCoreUpdate(jobId) {
       }
       toast(msg, (job.status === 'done' && failed === 0) ? 'success' : 'error');
       button.disabled = false;
+      refreshButton.disabled = false;
       await loadWPSites();
       await loadWpCoreUpdateStatus();
     }
@@ -1996,13 +2037,15 @@ function renderWordPressSites() {
   const showUpdateCheckboxes = wpCoreUpdateState.targetVersion && wpCoreUpdateState.status && wpCoreUpdateState.status.success;
   container.innerHTML = `<div class="row g-3">${sites.map((s, i) => {
     const isOutdated = showUpdateCheckboxes && !!s.wp_version && !!wpCoreUpdateState.targetVersion && compareWpVersions(s.wp_version, wpCoreUpdateState.targetVersion) < 0;
+    const isSelected = isOutdated && wpCoreUpdateState.selectedPaths.includes(s.path);
     return `
     <div class="col-md-6">
-      <div class="wp-card">
+      <div class="wp-card${isSelected ? ' wp-update-selected' : ''}">
         <div class="d-flex align-items-start justify-content-between">
           <div class="wp-title">
-            ${isOutdated ? `<input type="checkbox" class="wp-core-update-choice" value="${esc(s.path)}" style="margin-right:6px;vertical-align:middle;">` : ''}
+            ${isOutdated ? `<input type="checkbox" class="wp-core-update-choice" value="${esc(s.path)}" ${isSelected ? 'checked' : ''} onchange="toggleWpCoreUpdateSelection(this.value, this.checked)" style="margin-right:6px;vertical-align:middle;">` : ''}
             <i class="bi bi-wordpress text-primary"></i> ${esc(s.name)}
+            ${isSelected ? `<span style="font-size:.68rem;color:#89b4fa;margin-left:6px;">Selected for update</span>` : ''}
           </div>
           <button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;font-size:.72rem;"
             onclick="deleteWPSite('${esc(s.name)}','${esc(s.path)}','${esc(s.db_name||'')}','${esc(s.db_user||'')}','${esc(s.nginx_site||s.name)}')">

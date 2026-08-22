@@ -24,6 +24,18 @@ class WordPressCoreUpdateFrontendTests(unittest.TestCase):
         self.assertIn("async function startWpCoreUpdate()", self.source)
         self.assertIn("'/api/wordpress/core-update', 'POST', { paths }", self.source)
 
+    def test_frontend_can_refresh_the_shared_update_package(self):
+        self.assertIn('id="wp-core-refresh-btn"', self.source)
+        self.assertIn("async function refreshWpCorePackage()", self.source)
+        self.assertIn("'/api/wordpress/core-update/refresh', 'POST'", self.source)
+        self.assertIn("wpCoreUpdateState.refreshOnly = true", self.source)
+        self.assertIn("pollWpCoreUpdate(r.job_id)", self.source)
+
+    def test_selected_update_sites_render_a_highlighted_card(self):
+        self.assertIn("wp-update-selected", self.source)
+        self.assertIn("function toggleWpCoreUpdateSelection(path, checked)", self.source)
+        self.assertIn("wpCoreUpdateState.selectedPaths", self.source)
+
     def test_frontend_polls_and_renders_update_results(self):
         self.assertIn("async function pollWpCoreUpdate(jobId)", self.source)
         self.assertIn('`/api/wordpress/core-update/${jobId}`', self.source)
@@ -64,8 +76,7 @@ class WordPressCoreUpdateFrontendTests(unittest.TestCase):
         # Toast type must depend on per-site failure count, not just job.status.
         poll_body = self.source.split("async function pollWpCoreUpdate(jobId)")[1].split("\n}\n")[0]
         self.assertIn("failed === 0", poll_body)
-        # Must not treat all 'done' jobs as success regardless of per-site failures.
-        self.assertNotIn("job.status === 'done' ? 'success' : 'error'", poll_body)
+        self.assertIn("toast(msg, (job.status === 'done' && failed === 0) ? 'success' : 'error')", poll_body)
 
     # ── UI polling fix: stop and report missing/error job response ────────
 
