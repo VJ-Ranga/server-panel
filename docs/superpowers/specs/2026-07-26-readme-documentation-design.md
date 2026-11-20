@@ -58,7 +58,7 @@ The README must include:
 - First-time sudo setup command:
 
 ```bash
-sudo bash ~/Documents/server-panel/setup-sudo.sh vjranga
+sudo bash ~/Documents/server-panel/setup-sudo.sh "$USER"
 ```
 
 - Start command:

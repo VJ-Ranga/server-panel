@@ -25,7 +25,7 @@ Recent Projects
 
 WordPress
 - globalnaturalherbal     :8100 · /var/www/globalnaturalherbal     Open | Manage
-- experilanka             :8099 · /var/www/experilanka             Open | Manage
+- demo-site               :8099 · /var/www/demo-site               Open | Manage
 - minoliecom              :8097 · /var/www/minoliecom              Open | Manage
 
 Laravel

@@ -1,299 +1,110 @@
-# Server Management Panel
+# CloudyCode Server Panel
 
-A local web panel for managing a localhost LEMP development environment. It is built with pure Python and vanilla HTML/JavaScript, with no external Python dependencies.
+CloudyCode Server Panel is a localhost dashboard for managing a Linux development stack and its web applications with a standard-library Python backend.
 
-The panel is designed to make local WordPress and PHP-based project management easier: create apps, manage ports, open folders, manage databases, edit Nginx configs, and control local services from one browser UI.
+![Dashboard in light mode](docs/screenshots/dashboard-light.png)
 
-## What It Manages
+![Dashboard in dark mode](docs/screenshots/dashboard-dark.png)
 
-- Local service status for Nginx, MySQL, and PHP-FPM.
-- Nginx virtual hosts and logs.
-- MySQL databases and SQL queries.
-- WordPress sites.
-- Laravel apps.
-- CodeIgniter 4 apps.
-- Plain PHP projects.
-- phpMyAdmin installation and config.
-- Basic Nginx/PHP-FPM/MySQL performance settings.
+## What it does
+
+- **Dashboard and services** show CPU, memory, disk and uptime, with controls for Nginx, MySQL and PHP-FPM.
+- **App Launcher** groups WordPress, Laravel, CodeIgniter 4 and plain PHP projects. Install wizards show live progress and attempt to roll back resources created by a failed installation.
+- **WordPress** can update selected sites with a shared cached official archive. Use **Update WordPress core** to apply the cached release to eligible sites. An optional per-site plugin generates one-use WordPress admin login links.
+- **Nginx** lists virtual hosts, enables or disables sites, edits and validates configuration, and shows access and error logs.
+- **MySQL** lists, creates and drops databases and runs SQL queries. **phpMyAdmin** has controls for installation, Nginx setup and configuration.
+- **Performance** edits selected settings for Nginx, PHP, PHP-FPM and MySQL.
+- **Settings** updates the panel username, password and MySQL connection credentials. The interface supports light and dark themes.
+- **MCP** exposes panel operations to Claude Code, Codex and OpenCode.
+
+[App Launcher](docs/screenshots/apps-light.png) · [WordPress](docs/screenshots/wordpress-light.png) · [Nginx](docs/screenshots/nginx-dark.png) · [Mobile dashboard](docs/screenshots/mobile-dashboard-light.png)
 
 ## Requirements
 
-This project is intended for a local Linux/Ubuntu-style LEMP stack.
+- Ubuntu, Debian or a compatible Linux distribution
+- Python 3.8 or later
+- Nginx, MySQL or MariaDB, and PHP-FPM for the managed stack
+- Optional tools include phpMyAdmin, Composer for Laravel and CodeIgniter installs, and WP-CLI for WordPress admin password changes
 
-- Python 3.
-- Nginx.
-- MySQL or MariaDB.
-- PHP-FPM.
-- PHP 8.3 in the current default configuration.
-- Composer for Laravel and CodeIgniter project creation.
-- `sudo` access for first-time setup.
+## Install
 
-## Installation
-
-Clone the repository or place it in your projects folder:
+Run as your normal Linux user.
 
 ```bash
-cd ~/Documents
 git clone https://github.com/VJ-Ranga/server-panel.git
 cd server-panel
+./install.sh
 ```
 
-If you already have the files locally, open the project folder:
+The installer checks for stack dependencies and prints installation hints. It prompts for a panel username, password and confirmation. Press Enter at all three prompts for `admin` / `admin`. If a panel login is already configured, you can keep it. The installer offers to set up sudo rules, add a desktop launcher and enable autostart at desktop login.
+
+Use `./install.sh --yes` to accept the defaults. It keeps an existing login or sets `admin` / `admin`, adds the desktop launcher and leaves autostart off. Sudo setup runs non-interactively and the installer prints the manual command if it needs to be completed later.
+
+Start the panel from the desktop launcher or run `./start-panel.sh`.
+
+For manual setup, run these commands from the repository directory. Stop a foreground panel with Ctrl+C.
 
 ```bash
-cd ~/Documents/server-panel
-```
-
-## First-Time Sudo Setup
-
-Run this once:
-
-```bash
-sudo bash ~/Documents/server-panel/setup-sudo.sh vjranga
-```
-
-This creates `/etc/sudoers.d/server-panel` with narrow passwordless sudo rules so the panel can safely perform required local server tasks without asking for your password every time.
-
-The sudo helper scripts are specific to this panel. They handle privileged operations such as restarting services, writing Nginx configs, creating webroot files, setting permissions, and saving performance config backups.
-
-## Start The Panel
-
-```bash
-cd ~/Documents/server-panel
+sudo bash setup-sudo.sh "$USER" "$PWD"
 python3 panel.py
 ```
 
-Open:
+## First login
 
-```text
-http://127.0.0.1:8765
-```
+Open [http://127.0.0.1:8765](http://127.0.0.1:8765) on the machine running the panel. Sign in with the credentials you set during installation. The defaults are username `admin` and password `admin`. Change them in **Settings**.
 
-Default login password:
+## Security model
 
-```text
-admin
-```
+The panel binds to `127.0.0.1` for use on a single-user development machine. Keep it on loopback and do not expose it to a network. Change the default credentials before use.
 
-Change the password from **Settings** after first login.
+Sudo access is defined in `/etc/sudoers.d/server-panel`. The rules cover specific project helper scripts and direct commands for service control, database operations, Nginx, and phpMyAdmin. Keep the generated local configuration private. Opening and closing the panel in the browser can start and stop services on the machine.
 
-## Stop The Panel
+## AI agents (MCP)
 
-```bash
-kill $(lsof -ti:8765)
-```
+The Python MCP bridge sends authenticated localhost HTTP requests to a running panel. Configure your client to request confirmation before invoking tools that modify services, sites or databases. Setup and tool details are in the [MCP guide](mcp/README.md).
 
-## Daily Usage
+## Project layout
 
-Use **App Launcher** as the main hub for application projects.
+| File or directory | Purpose |
+| --- | --- |
+| `panel.py` | Local HTTP server, authentication, JSON API and background jobs |
+| `index.html`, `assets/` | Single-file Bootstrap and vanilla JavaScript UI, plus local assets |
+| `install.sh`, `setup-sudo.sh` | Interactive setup and generation of sudo rules |
+| `start-panel.sh`, `panel-icon.svg` | Desktop launcher entry point and icon |
+| `wp-install-helper.sh`, `wp-delete-helper.sh` | Privileged WordPress install, core update, port change and deletion operations |
+| `wp-auto-login-plugin.php`, `wp-plugin-library/` | One-use WordPress auto-login plugin and local plugin ZIP library |
+| `laravel-helper.sh`, `codeigniter-helper.sh`, `php-project-helper.sh` | Privileged filesystem and Nginx operations for each app type |
+| `perf-helper.sh` | Applies supported performance configuration changes |
+| `panel_config.json` | Generated, Git-ignored settings and credentials |
+| `mcp/server_panel_mcp.py`, `mcp/README.md` | MCP bridge and client setup guide |
+| `scripts/demo_server.py` | Standalone localhost demo with fake data and disabled changes |
+| `scripts/make_screenshots.sh`, `docs/screenshots/` | Headless Chrome capture script and demo PNGs |
+| `tests/` | Automated regression tests |
 
-The sidebar stays short. App-specific pages are opened from App Launcher actions:
+## Development
 
-- **Create** opens the install form for that app type.
-- **View All** opens the hidden management page for that app type.
-- **Manage** from Recent Projects opens the matching app management page.
-- **Open** opens the detected local project URL when a port is available.
-
-App Launcher shows compact app cards with installed counts, then a grouped **Recent Projects** section below the cards.
-
-## App Workflows
-
-### WordPress
-
-WordPress support can:
-
-- Auto-detect installs in `/var/www` and `/opt`.
-- Create a new WordPress site.
-- Download WordPress.
-- Create a database and database user.
-- Generate `wp-config.php` with salts.
-- Create and enable an Nginx site on a chosen port.
-- Show a live install log.
-- Roll back files, database, user, and Nginx site on failed install.
-- Open frontend, WP Admin, phpMyAdmin, and the project folder.
-- Enable, disable, or remove per-site auto-login plugin using one-use native WordPress tokens.
-- Remove auto-login plugin before creating a backup or migrating a site.
-- Change Nginx listen port.
-- Change database user password and update `wp-config.php`.
-- Change WordPress admin password for user ID 1.
-- Delete a site with a live progress log.
-- Update WordPress core for selected local sites without changing plugins, themes, `wp-content`, or `wp-config.php`.
-- Reuse one cached official archive across updates, refreshing it only when WordPress releases a newer version.
-
-### Laravel
-
-Laravel support can:
-
-- Create a Laravel app with Composer.
-- Create database credentials.
-- Write environment configuration.
-- Configure Nginx with `public/` as the webroot.
-- Open the app, folder, and phpMyAdmin.
-- Change the Nginx listen port.
-- Run common Artisan actions such as migrate, cache clear, and storage link.
-- Delete the app files, database, database user, and Nginx site.
-
-Composer must be installed before creating Laravel apps.
-
-### CodeIgniter
-
-CodeIgniter support can:
-
-- Auto-detect CodeIgniter 4 apps by scanning for `spark`.
-- Create a CodeIgniter 4 app with Composer.
-- Create database credentials.
-- Write `.env` settings.
-- Configure Nginx with `public/` as the webroot.
-- Open the app, folder, and phpMyAdmin.
-- Change the Nginx listen port.
-- Delete the app files, database, database user, and Nginx site.
-
-Composer must be installed before creating CodeIgniter apps.
-
-### PHP Projects
-
-PHP Projects support can create and manage panel-created plain PHP projects.
-
-Templates:
-
-- Blank Folder.
-- PHP Only.
-- PHP + DB.
-
-PHP + DB projects create a MySQL database and database user. Panel-created PHP projects include `.server-panel-project.json` metadata so discovery and deletion stay safer.
-
-## Server Tools
-
-### Dashboard
-
-The dashboard shows CPU, memory, disk, uptime, and service cards for Nginx, MySQL, and PHP-FPM.
-
-### Nginx
-
-The Nginx page can list virtual hosts, enable or disable sites, edit site configs, edit `nginx.conf`, validate config, and view access/error logs.
-
-### MySQL
-
-The MySQL page can list databases, create/drop databases, and run SQL queries. It supports local root socket auth by falling back to `sudo mysql` when needed.
-
-### phpMyAdmin
-
-The phpMyAdmin page can install phpMyAdmin through apt, generate an Nginx config, edit `config.inc.php`, generate a blowfish secret, and manage PHP-FPM.
-
-Default phpMyAdmin URL:
-
-```text
-http://localhost:8081
-```
-
-### Performance
-
-The Performance page can read and save selected Nginx, PHP, PHP-FPM, and MySQL tuning settings through `perf-helper.sh`. Backups are created before config changes.
-
-## Important Files
-
-| File | Purpose |
-|---|---|
-| `panel.py` | Python backend, HTTP server, and API routes |
-| `index.html` | Frontend UI built with Bootstrap 5 and vanilla JavaScript |
-| `panel_config.json` | Auto-created config for password hash and MySQL credentials |
-| `setup-sudo.sh` | First-time sudoers setup |
-| `wp-install-helper.sh` | WordPress install helper |
-| `wp-delete-helper.sh` | WordPress delete helper |
-| `laravel-helper.sh` | Laravel create/delete/port helper |
-| `codeigniter-helper.sh` | CodeIgniter create/delete/port helper |
-| `php-project-helper.sh` | Plain PHP project create/delete/port helper |
-| `perf-helper.sh` | Performance config helper |
-| `start-panel.sh` | Desktop launcher helper |
-| `panel-icon.svg` | Desktop launcher icon |
-
-## Security Notes
-
-- This is a local development tool.
-- Do not expose it to the public internet.
-- Keep it bound to localhost unless you know exactly what you are doing.
-- Change the default `admin` password in Settings.
-- `panel_config.json` can contain sensitive local credentials. Do not commit it.
-- The helper scripts are designed to avoid broad sudo access. Review `setup-sudo.sh` before running it on a new machine.
-
-## Troubleshooting
-
-### Panel Port Already In Use
-
-If port `8765` is already used, stop the old panel process:
+Run the tests with pytest installed.
 
 ```bash
-kill $(lsof -ti:8765)
+python3 -m pytest -q
 ```
 
-Then start again:
+Preview the UI with fake data using the demo server.
 
 ```bash
-python3 panel.py
+python3 scripts/demo_server.py
 ```
 
-### Nginx Config Save Fails
+Open [the demo dashboard](http://127.0.0.1:8799/?theme=light#dashboard). Use `--port` to choose another loopback port and `?theme=dark` for dark mode. The UI loads Bootstrap and Bootstrap Icons from a CDN.
 
-Use the Nginx validation action before saving. If `nginx -t` fails, fix the config error shown in the panel before reloading Nginx.
-
-### MySQL Root Login Fails
-
-Many local MySQL installs use `auth_socket` for root. The panel tries normal root login first, then falls back to `sudo mysql` for socket auth.
-
-Make sure the first-time sudo setup has been run.
-
-### Laravel Or CodeIgniter Creation Fails
-
-Install Composer first:
+To regenerate the six screenshots with Google Chrome, run:
 
 ```bash
-composer --version
+./scripts/make_screenshots.sh
 ```
 
-If Composer is missing, install it and retry the app creation.
+Set `CHROME_BIN` if Chrome is installed under a different command. The script starts a demo on a temporary loopback port and stops it after capture.
 
-### phpMyAdmin Does Not Open
+## License
 
-Check the phpMyAdmin page in the panel:
-
-- Confirm phpMyAdmin is installed.
-- Confirm the Nginx site is generated and enabled.
-- Confirm PHP-FPM is running.
-- Open `http://localhost:8081`.
-
-### Project URL Does Not Open
-
-Check that Nginx is running and that the project port is not already used by another service. Use the app management page to change the port if needed.
-
-## Development And Verification
-
-Run backend syntax check:
-
-```bash
-python3 -m py_compile panel.py
-```
-
-Run tests:
-
-```bash
-python3 -m unittest discover -s tests -v
-```
-
-Check helper shell syntax:
-
-```bash
-bash -n setup-sudo.sh wp-install-helper.sh wp-delete-helper.sh laravel-helper.sh codeigniter-helper.sh php-project-helper.sh perf-helper.sh start-panel.sh
-```
-
-Check inline frontend JavaScript syntax:
-
-```bash
-python3 - <<'PY'
-from pathlib import Path
-html = Path('index.html').read_text()
-start = html.index('<script>') + len('<script>')
-end = html.rindex('</script>')
-Path('/tmp/opencode/server-panel-inline.js').write_text(html[start:end])
-PY
-node --check "/tmp/opencode/server-panel-inline.js"
-```
+License: not yet chosen.

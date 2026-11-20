@@ -14,7 +14,7 @@
 - Explain what the panel is, how to install it, how to run it, and how to use it to manage local WordPress and PHP-based projects.
 - Include default URL `http://127.0.0.1:8765`.
 - Include default password `admin`, with instruction to change it in Settings.
-- Include first-time sudo setup command: `sudo bash ~/Documents/server-panel/setup-sudo.sh vjranga`.
+- Include first-time sudo setup command: `sudo bash ~/Documents/server-panel/setup-sudo.sh "$USER"`.
 - Include start command: `cd ~/Documents/server-panel` then `python3 panel.py`.
 - Include stop command: `kill $(lsof -ti:8765)`.
 - Warn that the panel is intended for local use and should not be exposed publicly.
@@ -100,7 +100,7 @@ cd ~/Documents/server-panel
 Run this once:
 
 ```bash
-sudo bash ~/Documents/server-panel/setup-sudo.sh vjranga
+sudo bash ~/Documents/server-panel/setup-sudo.sh "$USER"
 ```
 
 This creates `/etc/sudoers.d/server-panel` with narrow passwordless sudo rules so the panel can safely perform required local server tasks without asking for your password every time.
@@ -357,7 +357,7 @@ readme = Path('README.md').read_text()
 required = [
     'http://127.0.0.1:8765',
     'admin',
-    'sudo bash ~/Documents/server-panel/setup-sudo.sh vjranga',
+    'sudo bash ~/Documents/server-panel/setup-sudo.sh "$USER"',
     'python3 panel.py',
     'kill $(lsof -ti:8765)',
     'Do not expose it to the public internet.',

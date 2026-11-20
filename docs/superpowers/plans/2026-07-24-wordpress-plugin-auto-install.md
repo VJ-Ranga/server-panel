@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Plugin folder is `wp-plugin-library/` under `/home/vjranga/Documents/server-panel`.
+- Plugin folder is `wp-plugin-library/` under `~/server-panel`.
 - Only `.zip` files from that folder can be selected.
 - Selected plugins are installed and activated automatically.
 - Invalid zip files are skipped and surfaced in API results.
@@ -67,7 +67,7 @@
 - [ ] Add validation that each requested plugin ID exists in `get_wp_plugin_library()`.
 - [ ] Add safe extraction helper that rejects absolute paths and `..` path traversal.
 - [ ] Extract selected plugin zips into `<install_path>/wp-content/plugins/` after WordPress is configured.
-- [ ] Run existing permission helper path after plugin extraction so `vjranga` and `www-data` can edit files.
+- [ ] Run existing permission helper path after plugin extraction so the panel user and `www-data` can edit files.
 - [ ] Add PHP activation script using `activate_plugin()` for each plugin main file.
 - [ ] Log `[plugin] Installed and activated: Name` on success.
 - [ ] Log `[plugin] Activation failed: Name - reason` on activation failure without failing the site install.

@@ -1,38 +1,40 @@
-# Server Management Panel
+# CloudyCode Server Panel
 
-A web-based local server management panel built with pure Python (no external dependencies).
-Manages Nginx, MySQL, WordPress, and phpMyAdmin on a local LEMP stack.
+A local LEMP development panel with a standard-library Python backend and a browser UI.
 
 ## Quick Start
 
+From the repository directory, run:
+
 ```bash
-cd ~/Documents/server-panel
 python3 panel.py
 ```
 
-Open: **http://127.0.0.1:8765**
-Password: **admin** (change in Settings page)
+Open **http://127.0.0.1:8765** and sign in with your configured panel credentials. The default username and password are both `admin`. Change both in Settings. Press Ctrl+C to stop a foreground panel.
 
-To stop:
-```bash
-kill $(lsof -ti:8765)
-```
+Use `python3 scripts/demo_server.py` to preview the same UI on `127.0.0.1:8799` with fake data and disabled mutations. Use `./scripts/make_screenshots.sh` for documentation captures. Work against the demo when real services should remain untouched.
 
 ## First Time Setup (run once)
 
+Run `./install.sh` as your regular user. It checks dependencies, configures the panel login, and offers sudo setup, a desktop launcher and desktop autostart. Use `--yes` to accept the defaults.
+
+The installer calls `python3 panel.py --set-login`, which reads the username and password from stdin on separate lines and exits. A blank line selects `admin`. A login change invalidates existing sessions. For manual sudo setup, run this command from the repository directory:
+
 ```bash
-sudo bash ~/Documents/server-panel/setup-sudo.sh vjranga
+sudo bash setup-sudo.sh "$USER" "$PWD"
 ```
 
-This creates `/etc/sudoers.d/server-panel` so the panel can control services, edit nginx configs, and manage WordPress files without a password prompt every time.
+This writes `/etc/sudoers.d/server-panel` with rules for project helpers and specific service, Nginx, database and phpMyAdmin commands. Use the panel on loopback only.
 
 ## Files
 
 | File | Purpose |
 |---|---|
 | `panel.py` | Python backend — HTTP server, all API routes |
-| `index.html` | Frontend — Bootstrap 5 dark theme, vanilla JS |
-| `panel_config.json` | Panel password hash + MySQL credentials (auto-created) |
+| `index.html` | Frontend — Bootstrap 5 and vanilla JS with CloudyCode light and dark themes |
+| `panel_config.json` | Git-ignored login, sessions and credentials (auto-created) |
+| `assets/` | Locally served CloudyCode brand artwork and Plus Jakarta Sans font |
+| `install.sh` | Installer and desktop integration |
 | `setup-sudo.sh` | Run once with sudo to grant passwordless sudo rules |
 | `wp-install-helper.sh` | Sudo helper — copies WP files, sets permissions, creates nginx site |
 | `wp-delete-helper.sh` | Sudo helper — removes WP files and nginx site |
@@ -42,6 +44,12 @@ This creates `/etc/sudoers.d/server-panel` so the panel can control services, ed
 | `perf-helper.sh` | Sudo helper — saves tuned Nginx/PHP-FPM/MySQL config files and restarts services |
 | `start-panel.sh` | Desktop launcher helper — starts the panel and opens the browser |
 | `panel-icon.svg` | Desktop launcher icon |
+| `wp-auto-login-plugin.php` | Source for the optional per-site WordPress auto-login plugin |
+| `wp-plugin-library/` | Local plugin ZIP library for the WordPress install wizard |
+| `mcp/server_panel_mcp.py` | Standard-library MCP bridge. See [client setup](mcp/README.md) |
+| `scripts/demo_server.py` | Standalone read-only demo using fixed fake data |
+| `scripts/make_screenshots.sh` | Generates demo screenshots with headless Chrome |
+| `tests/` | Regression tests. Run `python3 -m pytest -q` |
 
 ## Features
 
@@ -71,17 +79,16 @@ This creates `/etc/sudoers.d/server-panel` so the panel can control services, ed
 - Connects via `sudo mysql` fallback for auth_socket root
 
 ### WordPress
-- Auto-discovers all WP installs in `/var/www` and `/opt`
+- Discovers WordPress installs in supported paths under `/var/www`, `/opt` and `~/local`
 - **Install New Site** wizard:
   - Downloads latest WordPress
   - Creates database + user with mysql_native_password
   - Generates wp-config.php with unique salts
   - Creates and enables nginx site on chosen port
   - Live progress log in browser
-  - Full rollback on failure (removes files, DB, user, nginx site)
+  - Attempts rollback of newly created resources on failure (removes files, DB, user, nginx site)
 - **Delete Site** with live progress log:
-  - Drops database (skips if db_user is `root`)
-  - Drops MySQL user
+  - Drops the database and removes non-root MySQL users
   - Removes nginx site config
   - Deletes install directory
 - Installed Sites dashboard:
@@ -92,13 +99,18 @@ This creates `/etc/sudoers.d/server-panel` so the panel can control services, ed
   - Changes the Nginx listen port safely via helper script + `nginx -t`
   - Reads DB credentials from `wp-config.php` for phpMyAdmin quick access
   - Changes DB user password and updates `wp-config.php`
-  - Changes WP admin password for user ID 1 via WP-CLI or PHP fallback
+  - Changes the selected WordPress admin password via WP-CLI or PHP fallback
 - **Core Update** with shared cache:
   - Checks the installed core version of each local site against the latest version in a shared cached official archive
   - Reuses one cached archive across sites, refreshing it only when WordPress releases a newer version
   - Updates only core files, leaving plugins, themes, `wp-content`, and `wp-config.php` untouched
   - Uses maintenance mode per site during the update and always removes it
   - Skips already-current sites and continues after per-site errors
+
+### Laravel
+- Discovers apps by their `artisan` file in supported web roots
+- The install wizard uses Composer, provisions MySQL and Nginx, and attempts rollback on failure
+- Installed apps support port changes, deletion and a fixed set of Artisan and Composer actions
 
 ### CodeIgniter
 - Auto-discovers CodeIgniter 4 apps by scanning for `spark` in `/var/www`, `/opt`, and `/opt/*/*`
@@ -108,7 +120,7 @@ This creates `/etc/sudoers.d/server-panel` so the panel can control services, ed
   - Writes `.env` with app URL and database settings
   - Creates and enables nginx site on chosen port with `public/` as webroot
   - Live progress log in browser
-  - Full rollback on failure (removes files, DB, user, nginx site)
+  - Attempts rollback of newly created resources on failure (removes files, DB, user, nginx site)
 - Installed Apps dashboard:
   - Opens frontend, app folder, and phpMyAdmin for the selected app
   - Shows detected Nginx site and port
@@ -124,7 +136,7 @@ This creates `/etc/sudoers.d/server-panel` so the panel can control services, ed
   - Creates `.server-panel-project.json` metadata for safe discovery/deletion
   - Creates and enables nginx site on chosen port
   - Live progress log in browser
-  - Full rollback on failure
+  - Attempts rollback of newly created resources on failure
 - Installed Projects dashboard:
   - Lists only panel-created PHP projects with metadata
   - Opens frontend, app folder, and phpMyAdmin when a DB exists
@@ -139,99 +151,115 @@ This creates `/etc/sudoers.d/server-panel` so the panel can control services, ed
 - PHP-FPM start / stop / restart
 
 ### Settings
-- Change panel password
+- Change the panel username or password. Username changes require the current password
 - Set MySQL credentials (saved to panel_config.json)
 
 ### Performance
 - Read/tune selected Nginx, PHP, PHP-FPM, and MySQL settings
 - Save through `perf-helper.sh` with backups and service reload/restart
 
-## System Info
-
-| Item | Value |
-|---|---|
-| PHP version | 8.3 |
-| PHP-FPM socket | `/run/php/php8.3-fpm.sock` |
-| MySQL auth | root uses `auth_socket` (no password) |
-| phpMyAdmin login | user `admin` with mysql_native_password |
-| phpMyAdmin URL | http://localhost:8081 |
-| WordPress sites | `/opt/wp` (nginx site: `wordpress`), `/opt/leopardtrails_wp_build/leopard-trails` |
-| Nginx WP config | root `/opt`, serves `/wp` as subpath on port 80 |
+### MCP
+- The stdio bridge connects Claude Code, Codex and OpenCode to the localhost API
+- See [MCP setup and tool documentation](mcp/README.md)
 
 ## Architecture
 
-- **Backend**: Python `ThreadingHTTPServer` — handles GET, POST, DELETE
-- **Auth**: SHA-256 hashed password, bearer token stored in localStorage (24hr expiry)
-- **Long-running tasks**: WordPress install and delete run in background threads, frontend polls every 0.8–1.5s for live progress
-- **Sudo**: All privileged operations go through helper shell scripts with specific sudoers rules — no broad `ALL` access
+- **Backend** uses Python `ThreadingHTTPServer` bound to `127.0.0.1:8765`. The UI is served at `/` and `/index.html`. The `/assets/<path>` route restricts reads to supported files inside the assets directory.
+- **Authentication** checks the username and SHA-256 password hash. The browser stores the bearer token in localStorage. Tokens expire after 24 hours.
+- **Background jobs** handle installs, deletions and WordPress core updates. The frontend polls the associated job route for progress.
+- **Service lifecycle** uses the panel open and close endpoints to start and stop stack services.
+- **Sudo** uses the rules in `/etc/sudoers.d/server-panel` for helper scripts and direct commands.
+- **Frontend** uses CloudyCode paper and graphite surfaces, pen-blue accents, and a local Plus Jakarta Sans font. The theme preference is stored as `panel_theme` in localStorage.
+- **Demo** serves the UI with a fixed demo token and fake API payloads. It runs independently of the real panel and does not run system commands.
 
 ## API Routes
 
+API requests use a bearer token except login and panel close. Login issues the token, and panel close validates the token supplied in its JSON body. The handler also responds to OPTIONS.
+
 | Method | Path | Description |
-|---|---|---|
-| POST | `/api/login` | Authenticate, get token |
-| GET | `/api/status` | Nginx/MySQL status + system info |
-| POST | `/api/services/<svc>/<action>` | Control service (start/stop/restart/reload) |
-| GET | `/api/nginx/sites` | List virtual hosts |
-| GET/POST | `/api/nginx/site/<name>` | Read or save a site config |
-| GET/POST | `/api/nginx/config` | Read or save nginx.conf |
-| GET | `/api/nginx/logs/error` | Last 200 lines of error log |
-| GET | `/api/nginx/logs/access` | Last 200 lines of access log |
-| POST | `/api/nginx/validate` | Test nginx config |
+| --- | --- | --- |
+| GET | `/api/codeigniter/apps` | List CodeIgniter 4 apps |
+| DELETE | `/api/codeigniter/apps` | Start CodeIgniter delete job |
+| GET | `/api/codeigniter/delete/<job_id>` | Poll CodeIgniter delete progress |
+| POST | `/api/codeigniter/install` | Start CodeIgniter 4 install job |
+| GET | `/api/codeigniter/install/<job_id>` | Poll CodeIgniter install progress |
+| GET | `/api/codeigniter/next_port` | Find next available suggested CodeIgniter port |
+| POST | `/api/codeigniter/port` | Change a CodeIgniter Nginx site listen port |
+| GET | `/api/laravel/apps` | List Laravel apps |
+| DELETE | `/api/laravel/apps` | Start a Laravel delete job |
+| POST | `/api/laravel/artisan` | Run a supported Artisan or Composer action |
+| GET | `/api/laravel/delete/<job_id>` | Poll Laravel delete progress |
+| POST | `/api/laravel/install` | Start a Laravel install job |
+| GET | `/api/laravel/install/<job_id>` | Poll Laravel install progress |
+| GET | `/api/laravel/next_port` | Suggest a Laravel port |
+| POST | `/api/laravel/port` | Change a Laravel site's Nginx listen port |
+| POST | `/api/login` | Authenticate with username and password and return a bearer token |
 | GET | `/api/mysql/databases` | List databases |
 | POST | `/api/mysql/databases` | Create database |
 | DELETE | `/api/mysql/databases/<name>` | Drop database |
 | POST | `/api/mysql/query` | Run SQL query |
-| GET | `/api/wordpress/sites` | List WP installations |
-| GET | `/api/wordpress/next_port` | Find next available suggested WP port |
-| GET | `/api/wordpress/credentials?path=<path>` | Read DB credentials from a site's wp-config.php |
-| POST | `/api/wordpress/install` | Start install job → returns job_id |
-| GET | `/api/wordpress/install/<job_id>` | Poll install progress |
-| POST | `/api/wordpress/port` | Change a WP Nginx site listen port |
+| GET | `/api/nginx/config` | Read nginx.conf |
+| POST | `/api/nginx/config` | Validate and save nginx.conf |
+| GET | `/api/nginx/logs/access` | Last 200 lines of access log |
+| GET | `/api/nginx/logs/error` | Last 200 lines of error log |
+| GET | `/api/nginx/site/<name>` | Read a site config |
+| POST | `/api/nginx/site/<name>` | Save, enable or disable a site |
+| GET | `/api/nginx/sites` | List virtual hosts |
+| POST | `/api/nginx/validate` | Test nginx config |
+| POST | `/api/open_folder` | Open a directory in the desktop file manager |
+| POST | `/api/panel/close` | Stop stack services using the token in the request body |
+| POST | `/api/panel/open` | Start stack services |
+| GET | `/api/performance` | Read Nginx/PHP/FPM/MySQL performance settings |
+| POST | `/api/performance/fpm` | Save selected PHP-FPM pool settings |
+| POST | `/api/performance/mysql` | Save selected MySQL settings |
+| POST | `/api/performance/nginx` | Save selected Nginx performance settings |
+| POST | `/api/performance/php` | Save selected PHP settings |
+| GET | `/api/php-projects/apps` | List panel-created PHP projects |
+| DELETE | `/api/php-projects/apps` | Start PHP project delete job |
+| GET | `/api/php-projects/delete/<job_id>` | Poll PHP project delete progress |
+| POST | `/api/php-projects/install` | Start plain PHP project install job |
+| GET | `/api/php-projects/install/<job_id>` | Poll PHP project install progress |
+| GET | `/api/php-projects/next_port` | Find next available suggested PHP project port |
+| POST | `/api/php-projects/port` | Change a PHP project Nginx site listen port |
+| POST | `/api/phpmyadmin/blowfish` | Generate random blowfish secret |
+| GET | `/api/phpmyadmin/config` | Read config.inc.php |
+| POST | `/api/phpmyadmin/config` | Save config.inc.php |
+| POST | `/api/phpmyadmin/install` | apt install phpMyAdmin |
+| GET | `/api/phpmyadmin/nginx` | Read the saved configuration or a generated template |
+| POST | `/api/phpmyadmin/nginx` | Generate, save, enable or disable the site configuration |
+| GET | `/api/phpmyadmin/status` | phpMyAdmin install/nginx/fpm status |
+| POST | `/api/services/<svc>/<action>` | Control service (start/stop/restart/reload) |
+| GET | `/api/settings` | Return the current panel username |
+| POST | `/api/settings` | Update username with `new_username` and `current_password`, update password with `new_password`, or update MySQL credentials |
+| GET | `/api/status` | Nginx/MySQL status + system info |
+| GET | `/api/system/info` | Return system metrics and hostname |
 | POST | `/api/wordpress/auto-login` | Install, enable, disable, or remove per-site auto-login plugin |
 | POST | `/api/wordpress/auto-login/token` | Create one-use native WordPress admin login URL |
 | POST | `/api/wordpress/change_db_password` | Change site DB user password and update wp-config.php |
-| POST | `/api/wordpress/change_wp_admin` | Change WP admin password for user ID 1 |
-| DELETE | `/api/wordpress/sites` | Start delete job → returns job_id |
-| GET | `/api/wordpress/delete/<job_id>` | Poll delete progress |
-| GET | `/api/wordpress/core-update-status` | Latest known WP version + shared cache state |
+| POST | `/api/wordpress/change_wp_admin` | Change the selected WordPress admin password |
 | POST | `/api/wordpress/core-update` | Start bulk core update job → returns job_id |
-| GET | `/api/wordpress/core-update/<job_id>` | Poll core update progress |
-| GET | `/api/codeigniter/apps` | List CodeIgniter 4 apps |
-| GET | `/api/codeigniter/next_port` | Find next available suggested CodeIgniter port |
-| POST | `/api/codeigniter/install` | Start CodeIgniter 4 install job |
-| GET | `/api/codeigniter/install/<job_id>` | Poll CodeIgniter install progress |
-| POST | `/api/codeigniter/port` | Change a CodeIgniter Nginx site listen port |
-| DELETE | `/api/codeigniter/apps` | Start CodeIgniter delete job |
-| GET | `/api/codeigniter/delete/<job_id>` | Poll CodeIgniter delete progress |
-| GET | `/api/php-projects/apps` | List panel-created PHP projects |
-| GET | `/api/php-projects/next_port` | Find next available suggested PHP project port |
-| POST | `/api/php-projects/install` | Start plain PHP project install job |
-| GET | `/api/php-projects/install/<job_id>` | Poll PHP project install progress |
-| POST | `/api/php-projects/port` | Change a PHP project Nginx site listen port |
-| DELETE | `/api/php-projects/apps` | Start PHP project delete job |
-| GET | `/api/php-projects/delete/<job_id>` | Poll PHP project delete progress |
-| GET | `/api/performance` | Read Nginx/PHP/FPM/MySQL performance settings |
-| POST | `/api/performance/nginx` | Save selected Nginx performance settings |
-| POST | `/api/performance/php` | Save selected PHP settings |
-| POST | `/api/performance/fpm` | Save selected PHP-FPM pool settings |
-| POST | `/api/performance/mysql` | Save selected MySQL settings |
-| GET | `/api/phpmyadmin/status` | phpMyAdmin install/nginx/fpm status |
-| GET/POST | `/api/phpmyadmin/config` | Read or save config.inc.php |
-| GET/POST | `/api/phpmyadmin/nginx` | Read, generate, save, enable/disable nginx site |
-| POST | `/api/phpmyadmin/install` | apt install phpMyAdmin |
-| POST | `/api/phpmyadmin/blowfish` | Generate random blowfish secret |
-| POST | `/api/settings` | Update password or MySQL credentials |
+| GET | `/api/wordpress/core-update-status` | Latest known WP version + shared cache state |
+| GET | `/api/wordpress/core-update/<job_id>` | Poll a core update or cache refresh job |
+| POST | `/api/wordpress/core-update/refresh` | Start a shared core archive refresh job |
+| GET | `/api/wordpress/credentials?path=<path>` | Read DB credentials from a site's wp-config.php |
+| GET | `/api/wordpress/delete/<job_id>` | Poll delete progress |
+| POST | `/api/wordpress/install` | Start install job → returns job_id |
+| GET | `/api/wordpress/install/<job_id>` | Poll install progress |
+| GET | `/api/wordpress/next_port` | Find next available suggested WP port |
+| GET | `/api/wordpress/plugins` | List plugin ZIPs and validation errors |
+| POST | `/api/wordpress/port` | Change a WP Nginx site listen port |
+| GET | `/api/wordpress/sites` | List WP installations |
+| DELETE | `/api/wordpress/sites` | Start delete job → returns job_id |
 
 ## Known Bugs Fixed
 
 - **MySQL auth_socket**: `mysql_cmd` tries 3 fallbacks — `mysql -uroot`, `sudo mysql -uroot`, `sudo mysql` (socket auth). The last one works because sudo runs as root.
 - **WP delete was silent**: `do_DELETE` called `read_body()` twice — second call got empty body so all params were empty strings. Fixed by removing the duplicate call.
-- **Nginx site name mismatch on delete**: WP at `/opt/wp` has nginx site named `wordpress` not `wp`. Fixed with `find_nginx_site_for_path()` that scans nginx root directives to find the correct config file.
+- **Nginx site name mismatch on delete**: A site's Nginx config name can differ from its directory name. `find_nginx_site_for_path()` scans Nginx root directives to find the matching config.
 - **sudo password prompts**: `setup-sudo.sh` was not run + mysql rule was missing `*` for arguments. Fixed both.
 - **Browser blocking confirm/prompt dialogs**: Replaced native `confirm()`/`prompt()` with custom Bootstrap modal for delete confirmation.
 - **WP config permission denied**: New installs set `wp-config.php` to `www-data:<panel-user>` with `640`, so PHP and the panel can read it while keeping it private.
-- **WP port mismatch**: WordPress site discovery now matches the longest valid Nginx `root` path and ignores backup site files, avoiding `/var/www/test2` matching `/var/www/test`.
+- **WP port mismatch**: WordPress site discovery now matches the longest valid Nginx `root` path and ignores backup site files, so sibling directories with a shared name prefix are matched correctly.
 
 ## Possible Future Features
 

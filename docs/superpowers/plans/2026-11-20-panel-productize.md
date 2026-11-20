@@ -20,7 +20,7 @@ Anything that could affect a running site waits for the end and needs VJ's OK fi
 - [x] Remove unneeded CORS `*` header from `do_OPTIONS` (frontend is same-origin)
 - [x] `read_body()`: bad JSON returns `{}` instead of crashing the request thread
 - [x] Delete leftover `/tmp/_panel_*` files that hold passwords after use (change DB password, change WP admin, install password)
-- [x] Remove hardcoded `vjranga` from UI help text (sudo command shows `$USER`)
+- [x] Remove hardcoded username from UI help text (sudo command shows `$USER`)
 
 ## Phase 1 — Cleanup (needs one decision)
 
