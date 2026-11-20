@@ -14,13 +14,13 @@ Anything that could affect a running site waits for the end and needs VJ's OK fi
 - Fixes: Codex and Command Code (cheapest tier first). Claude reviews every diff and runs the tests.
 - Test baseline (2026-11-20): `python3 -m pytest -q` → 96 passed.
 
-## Phase 0 — Small safe fixes (now)
+## Phase 0 — Small safe fixes (done, commit f184d75)
 
-- [ ] `.gitignore`: `.playwright-mcp/`, `.pytest_cache/`, `.remember/`, `.superpowers/`
-- [ ] Remove unneeded CORS `*` header from `do_OPTIONS` (frontend is same-origin)
-- [ ] `read_body()`: bad JSON returns `{}` instead of crashing the request thread
-- [ ] Delete leftover `/tmp/_panel_*` files that hold passwords after use (change DB password, change WP admin, install password)
-- [ ] Remove hardcoded `vjranga` from UI help text (sudo command shows `$USER`)
+- [x] `.gitignore`: `.playwright-mcp/`, `.pytest_cache/`, `.remember/`, `.superpowers/`
+- [x] Remove unneeded CORS `*` header from `do_OPTIONS` (frontend is same-origin)
+- [x] `read_body()`: bad JSON returns `{}` instead of crashing the request thread
+- [x] Delete leftover `/tmp/_panel_*` files that hold passwords after use (change DB password, change WP admin, install password)
+- [x] Remove hardcoded `vjranga` from UI help text (sudo command shows `$USER`)
 
 ## Phase 1 — Cleanup (needs one decision)
 
@@ -28,16 +28,19 @@ One-click WordPress login exists twice:
 - A (older): panel stores WP admin password in `panel_config.json`, opens a popup and auto-submits the WP login form (`submitWpLogin`, index.html ~2145).
 - B (newer): `wp-auto-login-plugin.php` + one-use 60s token (`/api/wordpress/auto-login/token`).
 
-Proposal: keep B, remove A's popup form submit. Keep the saved-credentials store only if the "change WP admin password" screen still needs it.
+Decided (2026-11-20): keep B, remove A's popup form submit. Keep the saved-credentials store only if the "change WP admin password" screen still needs it.
 
 Also: remove dead code found while doing this; keep console job logs.
+
+Done (2026-11-20): A was already unwired — the "WP Admin Auto Login" button already used B. Removed the dead `wordpressLoginUrl()` / `submitWpLogin()` and the unused `password` field in `wpLoginCreds`. The "Saved WP Admin Login" box (shows saved password + Copy) is a separate feature and stays.
 
 ## Phase 2 — CloudyCode design system + redesign
 
 Source: `~/Documents/cc/cloudycode-redesign/brand/brand-guide.md` + `public/assets/css/site.css`.
 
 - Colour: paper `#F4F1EA`, sheet `#FAF8F3`, field `#FFFEFB`, graphite `#23252B` / `#50525A` / `#5F6068`, rules `rgba(35,37,43,.16/.42)`, one accent pen-blue `#2A4FD0` (hover `#1E3BA6`, focus wash `rgba(42,79,208,.16)`), error `#B3261E`.
-- Brand does not define success / warning or dark mode — a dashboard needs them. Proposal: muted green + amber status colours, and a graphite dark theme (graphite bg, paper text) behind a toggle.
+- Brand does not define success / warning or dark mode — a dashboard needs them. Muted green + amber status colours.
+- Decided (2026-11-20): paper light theme by default + graphite dark theme via toggle, following the system setting.
 - Type: Plus Jakarta Sans (self-hosted woff2, 400/700/800), mono for logs. No handwriting font in the UI except maybe the empty states.
 - Buttons: one system — primary (blue fill), secondary (blue outline 1.5px), ghost, danger. Pill radius for buttons, 6px inputs, 3px cards, hard "paper-cut" shadows, no gradients, no emoji.
 - Spacing: 8px base.
@@ -60,7 +63,7 @@ Source: `~/Documents/cc/cloudycode-redesign/brand/brand-guide.md` + `public/asse
 
 `mcp/server_panel_mcp.py`, pure Python stdio (no dependencies), talks to the panel API on 127.0.0.1 with a token.
 - Read tools: status, services, sites/apps list, nginx sites + logs, databases, performance settings.
-- Write tools (decision needed): service start/stop/restart, SQL query, create/delete sites.
+- Decided (2026-11-20): full control — every panel action incl. service control, any SQL, create/delete sites. Destructive tools still clearly named and described so the calling LLM asks its user first.
 - Setup snippets for Claude Code, Codex and OpenCode in the README.
 
 ## Phase 5 — Docs + publish

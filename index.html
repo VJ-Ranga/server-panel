@@ -2033,7 +2033,6 @@ function renderWordPressSites() {
     username: s.wp_saved_admin_user || s.wp_admin_user || '',
     savedUsername: s.wp_saved_admin_user || s.wp_admin_user || '',
     adminUsers: s.wp_admin_users || (s.wp_admin_user ? [s.wp_admin_user] : []),
-    password: s.wp_admin_pass || '',
   }));
   const showUpdateCheckboxes = wpCoreUpdateState.targetVersion && wpCoreUpdateState.status && wpCoreUpdateState.status.success;
   container.innerHTML = `<div class="row g-3">${sites.map((s, i) => {
@@ -2129,66 +2128,10 @@ async function setWpAutoLogin(path, action) {
   }
 }
 
-function wordpressLoginUrl(adminUrl) {
-  try {
-    const u = new URL(adminUrl);
-    u.pathname = u.pathname.replace(/\/wp-admin\/?$/, '/wp-login.php');
-    if (!u.pathname.endsWith('/wp-login.php')) u.pathname = '/wp-login.php';
-    u.search = '';
-    u.hash = '';
-    return u.toString();
-  } catch(e) {
-    return '';
-  }
-}
-
-function submitWpLogin(adminUrl, username, password) {
-  const loginUrl = wordpressLoginUrl(adminUrl);
-  if (!loginUrl || !username || !password) {
-    toast('Missing saved WP login credentials', 'error');
-    return;
-  }
-
-  const targetName = 'wp_auto_login_' + Math.random().toString(36).slice(2);
-  const loginWindow = window.open(loginUrl, targetName);
-  if (!loginWindow) {
-    toast('Popup blocked. Allow popups for this panel and try again.', 'error');
-    return;
-  }
-  toast('Preparing WordPress login…', 'info');
-
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = loginUrl;
-  form.target = targetName;
-  form.style.display = 'none';
-
-  const fields = {
-    log: username,
-    pwd: password,
-    'wp-submit': 'Log In',
-    redirect_to: adminUrl,
-    testcookie: '1',
-  };
-  Object.entries(fields).forEach(([name, value]) => {
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = name;
-    input.value = value;
-    form.appendChild(input);
-  });
-
-  document.body.appendChild(form);
-  setTimeout(() => {
-    form.submit();
-    form.remove();
-  }, 5000);
-}
-
 async function autoLoginWP(index) {
   const creds = wpLoginCreds[index];
   if (!creds) {
-    toast('Saved credentials not found. Refresh WordPress sites.', 'error');
+    toast('Site not found. Refresh WordPress sites.', 'error');
     return;
   }
   const selected = document.getElementById(`wp-admin-user-${index}`)?.value;
