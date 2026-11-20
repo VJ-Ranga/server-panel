@@ -70,6 +70,8 @@ Done (2026-11-20): `install.sh` (python check, tool report, login prompt via `pa
 - Decided (2026-11-20): full control — every panel action incl. service control, any SQL, create/delete sites. Destructive tools still clearly named and described so the calling LLM asks its user first.
 - Setup snippets for Claude Code, Codex and OpenCode in the README.
 
+Done (2026-11-20): `mcp/server_panel_mcp.py` (stdlib, stdio JSON-RPC, 37 tools, localhost-only, lazy login + re-login on 401, `wait_for_job`), `mcp/README.md` with Claude Code / Codex / OpenCode snippets. `/api/login`, `/api/panel/open`, `/api/panel/close` refused. Smoke-tested over stdio against a read-only preview.
+
 ## Phase 5 — Docs + publish
 
 README (install, MCP setup, screenshots), CLAUDE.md refresh, push to `github.com/VJ-Ranga/server-panel` after VJ's OK.
