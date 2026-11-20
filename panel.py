@@ -20,7 +20,7 @@ import string
 import shlex
 import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, unquote
 
 # ── background job registry ───────────────────────────────────────────────────
 _jobs = {}   # job_id -> {"status": "running"|"done"|"error", "logs": [], "result": {}}
@@ -33,6 +33,13 @@ WP_CACHE_DIR = os.path.join(SCRIPT_DIR, "cache", "wordpress")
 WP_CACHE_TAR = os.path.join(WP_CACHE_DIR, "latest.tar.gz")
 WP_CACHE_VERSION = os.path.join(WP_CACHE_DIR, "latest.version")
 WP_PLUGIN_LIBRARY_DIR = os.path.join(SCRIPT_DIR, "wp-plugin-library")
+ASSETS_DIR = os.path.join(SCRIPT_DIR, "assets")
+ASSET_TYPES = {
+    ".woff2": "font/woff2",
+    ".png": "image/png",
+    ".svg": "image/svg+xml",
+    ".ico": "image/x-icon",
+}
 
 DEFAULT_CONFIG = {
     "password_hash": hashlib.sha256("admin".encode()).hexdigest(),
@@ -77,6 +84,16 @@ server {{
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
+
+def resolve_asset(rel_path):
+    """Return (absolute path, mime) for a file inside ASSETS_DIR, or (None, None)."""
+    root = os.path.realpath(ASSETS_DIR)
+    full = os.path.realpath(os.path.join(root, rel_path))
+    mime = ASSET_TYPES.get(os.path.splitext(full)[1].lower())
+    if not mime or not full.startswith(root + os.sep) or not os.path.isfile(full):
+        return None, None
+    return full, mime
+
 
 def load_config():
     if os.path.exists(CONFIG_FILE):
@@ -2178,6 +2195,14 @@ class Handler(BaseHTTPRequestHandler):
 
         if path in ("/", "/index.html"):
             self.send_file(os.path.join(SCRIPT_DIR, "index.html"))
+            return
+
+        if path.startswith("/assets/"):
+            asset, mime = resolve_asset(unquote(path[len("/assets/"):]))
+            if asset:
+                self.send_file(asset, mime)
+            else:
+                self.send_json({"error": "Not found"}, 404)
             return
 
         if not self.authed():

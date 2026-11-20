@@ -49,6 +49,8 @@ Source: `~/Documents/cc/cloudycode-redesign/brand/brand-guide.md` + `public/asse
 - Needs a small backend route to serve `/assets/*` (fonts, logo) — panel only.
 - Same page ids and JS function names so all features keep working; frontend tests updated only where they check old colours/markup.
 
+Done (2026-11-20, not yet committed): new token-based style block, 224 inline colours mapped to tokens, `/assets/` route (`resolve_asset`, traversal-safe, tested), logo + self-hosted font, light/dark toggle (follows system until chosen), mobile slide-out sidebar, tables scroll on small screens. Checked all 11 pages in light, dark and 375px on a read-only preview copy. Running panel needs a restart to serve `/assets/`.
+
 ## Phase 3 — Installer
 
 `install.sh` for other laptops:
