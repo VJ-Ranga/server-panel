@@ -16,3 +16,9 @@ wp-plugin-library/*.zip
 # OS files
 .DS_Store
 Thumbs.db
+
+# Tool/session artifacts
+.playwright-mcp/
+.pytest_cache/
+.remember/
+.superpowers/

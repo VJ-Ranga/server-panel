@@ -1846,6 +1846,7 @@ def install_wordpress_job(job_id, params, cfg):
     # Track what was created so we can roll back on failure
     created = {"dir": False, "db": False, "db_user": False, "nginx": False}
     site_name = install_path = db_name = db_user = None
+    tmp_wp_pass = tmp_php = None
 
     try:
         site_name    = re.sub(r"[^\w\-]", "", params.get("site_name", "wordpress"))
@@ -2094,6 +2095,10 @@ echo 'ok';
 
         job["status"] = "error"
         job["result"] = {"success": False, "error": str(e)}
+    finally:
+        for tmp in (tmp_wp_pass, tmp_php):
+            if tmp and os.path.exists(tmp):
+                os.remove(tmp)
 
 
 # ── HTTP handler ──────────────────────────────────────────────────────────────
@@ -2121,8 +2126,15 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def read_body(self):
-        n = int(self.headers.get("Content-Length", 0))
-        return json.loads(self.rfile.read(n)) if n else {}
+        try:
+            n = int(self.headers.get("Content-Length", 0))
+        except ValueError:
+            n = 0
+        try:
+            data = json.loads(self.rfile.read(n)) if n else {}
+        except ValueError:
+            return {}
+        return data if isinstance(data, dict) else {}
 
     def authed(self):
         auth = self.headers.get("Authorization", "")
@@ -2157,9 +2169,6 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_OPTIONS(self):
         self.send_response(200)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type,Authorization")
         self.end_headers()
 
     # ── GET ──────────────────────────────────────────────────────────────────
@@ -2766,9 +2775,13 @@ class Handler(BaseHTTPRequestHandler):
                     content
                 )
                 tmp = "/tmp/_panel_wpconfig_dbpass.php"
-                with open(tmp, "w") as f:
-                    f.write(content)
-                r2 = run_cmd(f"sudo cp {tmp} {shell_quote(wp_cfg_path)}")
+                try:
+                    with open(tmp, "w") as f:
+                        f.write(content)
+                    r2 = run_cmd(f"sudo cp {tmp} {shell_quote(wp_cfg_path)}")
+                finally:
+                    if os.path.exists(tmp):
+                        os.remove(tmp)
                 self.send_json({"success": True, "config_updated": r2["success"]})
             except Exception as e:
                 self.send_json({"success": True, "config_updated": False, "config_error": str(e)})
@@ -2788,19 +2801,21 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json({"success": False, "error": "No WP admin user selected or detected"}); return
             # Write password to temp file to avoid shell injection
             tmp_pass = "/tmp/_panel_wp_adminpass"
-            with open(tmp_pass, "w") as f:
-                f.write(new_pass)
-            # Try wp-cli first
-            if os.path.exists("/usr/local/bin/wp"):
-                r = run_cmd(
-                    f"wp user update {shell_quote(wp_admin_user)} --user_pass={shell_quote(new_pass)} --path={shell_quote(install_path)} --allow-root",
-                    timeout=30
-                )
-                if r["success"]:
-                    save_wp_admin_credential(install_path, wp_admin_user, new_pass)
-                    self.send_json({"success": True, "method": "wp-cli"}); return
-            # Fallback: PHP script using WP's phpass library
-            php_script = f"""<?php
+            tmp_php = None
+            try:
+                with open(tmp_pass, "w") as f:
+                    f.write(new_pass)
+                # Try wp-cli first
+                if os.path.exists("/usr/local/bin/wp"):
+                    r = run_cmd(
+                        f"wp user update {shell_quote(wp_admin_user)} --user_pass={shell_quote(new_pass)} --path={shell_quote(install_path)} --allow-root",
+                        timeout=30
+                    )
+                    if r["success"]:
+                        save_wp_admin_credential(install_path, wp_admin_user, new_pass)
+                        self.send_json({"success": True, "method": "wp-cli"}); return
+                # Fallback: PHP script using WP's phpass library
+                php_script = f"""<?php
 $install_path = {repr(install_path)};
 $admin_user = {repr(wp_admin_user)};
 $new_pass = trim(file_get_contents('/tmp/_panel_wp_adminpass'));
@@ -2820,16 +2835,20 @@ $stmt->execute([$hash, $admin_user]);
 if ($stmt->rowCount() < 1) {{ echo 'error:user not found'; exit(1); }}
 echo 'ok';
 """
-            tmp_php = "/tmp/_panel_wp_setpass.php"
-            with open(tmp_php, "w") as f:
-                f.write(php_script)
-            r = run_cmd(f"php {tmp_php}", timeout=15)
-            run_cmd(f"rm -f {tmp_pass} {tmp_php}")
-            if r["success"] and "ok" in r["stdout"]:
-                save_wp_admin_credential(install_path, wp_admin_user, new_pass)
-                self.send_json({"success": True, "method": "php"})
-            else:
-                self.send_json({"success": False, "error": r["stderr"] or r["stdout"] or r.get("error", "Failed")})
+                tmp_php = "/tmp/_panel_wp_setpass.php"
+                with open(tmp_php, "w") as f:
+                    f.write(php_script)
+                r = run_cmd(f"php {tmp_php}", timeout=15)
+                run_cmd(f"rm -f {tmp_pass} {tmp_php}")
+                if r["success"] and "ok" in r["stdout"]:
+                    save_wp_admin_credential(install_path, wp_admin_user, new_pass)
+                    self.send_json({"success": True, "method": "php"})
+                else:
+                    self.send_json({"success": False, "error": r["stderr"] or r["stdout"] or r.get("error", "Failed")})
+            finally:
+                for tmp in (tmp_pass, tmp_php):
+                    if tmp and os.path.exists(tmp):
+                        os.remove(tmp)
 
         elif path == "/api/phpmyadmin/blowfish":
             import string, random

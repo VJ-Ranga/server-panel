@@ -520,7 +520,7 @@ body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#12141c;col
 
                 <div class="mb-3">
                   <label class="form-label-sm">Install Path <span style="color:#f38ba8;">*</span></label>
-                  <input id="wp-install-path" class="input-dark" placeholder="/home/vjranga/local/mysite">
+                  <input id="wp-install-path" class="input-dark" placeholder="~/local/mysite">
                   <div style="font-size:.73rem;color:#585b70;margin-top:3px;">You can still edit this path manually if needed</div>
                 </div>
 
@@ -638,7 +638,7 @@ body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#12141c;col
           <!-- Sudoers note -->
           <div class="mt-3 service-card" style="font-size:.82rem;color:#6c7086;">
             <b style="color:#a6adc8;"><i class="bi bi-shield-check"></i> Requires sudo</b> — run once if not done:
-            <code style="color:#cba6f7;margin-left:6px;">sudo bash ~/Documents/server-panel/setup-sudo.sh vjranga</code>
+            <code style="color:#cba6f7;margin-left:6px;">sudo bash ~/Documents/server-panel/setup-sudo.sh $USER</code>
           </div>
         </div>
       </div>
@@ -723,7 +723,7 @@ body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#12141c;col
           </div>
           <div class="mt-3 service-card" style="font-size:.82rem;color:#6c7086;">
             <b style="color:#a6adc8;"><i class="bi bi-shield-check"></i> Requires sudo + Composer</b> — if Laravel install fails, install Composer and rerun:
-            <code style="color:#cba6f7;margin-left:6px;">sudo bash ~/Documents/server-panel/setup-sudo.sh vjranga</code>
+            <code style="color:#cba6f7;margin-left:6px;">sudo bash ~/Documents/server-panel/setup-sudo.sh $USER</code>
           </div>
         </div>
       </div>
@@ -801,7 +801,7 @@ body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#12141c;col
           </div>
           <div class="mt-3 service-card" style="font-size:.82rem;color:#6c7086;">
             <b style="color:#a6adc8;"><i class="bi bi-shield-check"></i> Requires sudo + Composer</b> — if CodeIgniter install fails, install Composer and rerun:
-            <code style="color:#cba6f7;margin-left:6px;">sudo bash ~/Documents/server-panel/setup-sudo.sh vjranga</code>
+            <code style="color:#cba6f7;margin-left:6px;">sudo bash ~/Documents/server-panel/setup-sudo.sh $USER</code>
           </div>
         </div>
       </div>
@@ -878,7 +878,7 @@ body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#12141c;col
               </div>
             </div>
           </div>
-          <div class="mt-3 service-card" style="font-size:.82rem;color:#6c7086;"><b style="color:#a6adc8;"><i class="bi bi-shield-check"></i> Requires sudo</b> — run once after updating: <code style="color:#cba6f7;margin-left:6px;">sudo bash ~/Documents/server-panel/setup-sudo.sh vjranga</code></div>
+          <div class="mt-3 service-card" style="font-size:.82rem;color:#6c7086;"><b style="color:#a6adc8;"><i class="bi bi-shield-check"></i> Requires sudo</b> — run once after updating: <code style="color:#cba6f7;margin-left:6px;">sudo bash ~/Documents/server-panel/setup-sudo.sh $USER</code></div>
         </div>
       </div>
 
@@ -916,7 +916,7 @@ body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#12141c;col
           </div>
           <div class="mt-3 service-card" style="font-size:.82rem;color:#6c7086;">
             <b style="color:#a6adc8;">Also add to sudoers</b> if not done yet:<br>
-            <code style="color:#cba6f7;">sudo bash ~/Documents/server-panel/setup-sudo.sh vjranga</code>
+            <code style="color:#cba6f7;">sudo bash ~/Documents/server-panel/setup-sudo.sh $USER</code>
           </div>
         </div>
 
@@ -3478,7 +3478,7 @@ function initPanel() {
   if (statusInterval) clearInterval(statusInterval);
   statusInterval = setInterval(refreshStatus, 7000);
   document.querySelectorAll('#sudo-user-placeholder, .sudo-line').forEach(el => {
-    el.textContent = 'vjranga';
+    el.textContent = '$USER';
   });
   showPage(savedPage());
 }
