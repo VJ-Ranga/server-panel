@@ -87,6 +87,8 @@ This creates `/etc/sudoers.d/server-panel` so the panel can control services, ed
 - Installed Sites dashboard:
   - Shows detected Nginx site and port for each WordPress install
   - Opens frontend, WP Admin, and phpMyAdmin for the selected site
+  - Optional normal-plugin auto-login uses one-use native WordPress auth tokens
+  - Auto-login plugin can be enabled, disabled, or removed per site; remove it before backups
   - Changes the Nginx listen port safely via helper script + `nginx -t`
   - Reads DB credentials from `wp-config.php` for phpMyAdmin quick access
   - Changes DB user password and updates `wp-config.php`
@@ -186,6 +188,8 @@ This creates `/etc/sudoers.d/server-panel` so the panel can control services, ed
 | POST | `/api/wordpress/install` | Start install job → returns job_id |
 | GET | `/api/wordpress/install/<job_id>` | Poll install progress |
 | POST | `/api/wordpress/port` | Change a WP Nginx site listen port |
+| POST | `/api/wordpress/auto-login` | Install, enable, disable, or remove per-site auto-login plugin |
+| POST | `/api/wordpress/auto-login/token` | Create one-use native WordPress admin login URL |
 | POST | `/api/wordpress/change_db_password` | Change site DB user password and update wp-config.php |
 | POST | `/api/wordpress/change_wp_admin` | Change WP admin password for user ID 1 |
 | DELETE | `/api/wordpress/sites` | Start delete job → returns job_id |

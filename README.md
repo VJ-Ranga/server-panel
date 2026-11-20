@@ -111,6 +111,8 @@ WordPress support can:
 - Show a live install log.
 - Roll back files, database, user, and Nginx site on failed install.
 - Open frontend, WP Admin, phpMyAdmin, and the project folder.
+- Enable, disable, or remove per-site auto-login plugin using one-use native WordPress tokens.
+- Remove auto-login plugin before creating a backup or migrating a site.
 - Change Nginx listen port.
 - Change database user password and update `wp-config.php`.
 - Change WordPress admin password for user ID 1.

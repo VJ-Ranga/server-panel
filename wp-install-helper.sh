@@ -213,6 +213,29 @@ if [ "$INSTALL_PATH" = "--core-update" ]; then
     exit 0
 fi
 
+if [ "$INSTALL_PATH" = "--auto-login-install" ] || [ "$INSTALL_PATH" = "--auto-login-remove" ]; then
+    ACTION="$INSTALL_PATH"
+    INSTALL_PATH="$SITE_NAME"
+    PLUGIN_DIR="$INSTALL_PATH/wp-content/plugins/server-panel-auto-login"
+    PLUGIN_FILE="$PLUGIN_DIR/server-panel-auto-login.php"
+    if ! is_safe_wp_path "$INSTALL_PATH" || [ ! -f "$INSTALL_PATH/wp-config.php" ]; then
+        echo "Error: unsafe WordPress path or wp-config.php not found: $INSTALL_PATH"
+        exit 1
+    fi
+    if [ "$ACTION" = "--auto-login-install" ]; then
+        SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+        mkdir -p "$PLUGIN_DIR"
+        cp "$SCRIPT_DIR/wp-auto-login-plugin.php" "$PLUGIN_FILE"
+        chown -R www-data:www-data "$PLUGIN_DIR"
+        chmod 664 "$PLUGIN_FILE"
+        echo "[helper] Installed auto-login plugin for $INSTALL_PATH"
+    else
+        rm -rf "$PLUGIN_DIR"
+        echo "[helper] Removed auto-login plugin from $INSTALL_PATH"
+    fi
+    exit 0
+fi
+
 if ! is_safe_wp_path "$INSTALL_PATH"; then
     echo "Error: unsafe install path: $INSTALL_PATH"
     exit 1

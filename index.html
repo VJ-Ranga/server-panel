@@ -610,7 +610,7 @@ body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#12141c;col
                   <div style="font-size:.84rem;">
                     <div class="d-flex gap-2 mb-2">
                       <a id="wp-result-url" href="#" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-globe"></i> Visit Site</a>
-                      <button id="wp-result-admin" class="btn btn-sm btn-primary" onclick="autoLoginInstallResult()"><i class="bi bi-speedometer2"></i> WP Admin Auto Login</button>
+                      <button id="wp-result-admin" class="btn btn-sm btn-primary" onclick="autoLoginInstallResult()"><i class="bi bi-speedometer2"></i> Open WP Admin</button>
                     </div>
                     <div class="p-2 mb-2 rounded" style="background:#12141c;border:1px solid #2d3158;">
                       <div style="font-size:.72rem;color:#585b70;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">WordPress Admin</div>
@@ -2028,6 +2028,7 @@ function renderWordPressSites() {
     return;
   }
   wpLoginCreds = sites.map(s => ({
+    path: s.path,
     adminUrl: s.port ? `http://localhost:${s.port}/wp-admin/` : '',
     username: s.wp_saved_admin_user || s.wp_admin_user || '',
     savedUsername: s.wp_saved_admin_user || s.wp_admin_user || '',
@@ -2082,9 +2083,13 @@ function renderWordPressSites() {
         ${s.error ? `<div class="mt-2 text-danger" style="font-size:.78rem;">Error: ${esc(s.error)}</div>` : ''}
         <div class="mt-3 d-flex gap-2 flex-wrap">
           ${s.port ? `<a class="btn btn-sm btn-outline-secondary" href="http://localhost:${esc(s.port)}/" target="_blank"><i class="bi bi-globe"></i> Site</a>` : ''}
-          ${s.port && s.wp_admin_user && s.wp_admin_pass
+          ${s.port && s.auto_login?.active
             ? `<button class="btn btn-sm btn-success" onclick="autoLoginWP(${i})"><i class="bi bi-speedometer2"></i> WP Admin Auto Login</button>`
             : s.port ? `<a class="btn btn-sm btn-outline-primary" href="http://localhost:${esc(s.port)}/wp-admin/" target="_blank"><i class="bi bi-speedometer2"></i> WP Admin</a>` : ''}
+          ${s.auto_login?.installed
+            ? `<button class="btn btn-sm ${s.auto_login.active ? 'btn-outline-warning' : 'btn-outline-success'}" onclick="setWpAutoLogin('${esc(s.path)}','${s.auto_login.active ? 'disable' : 'enable'}')"><i class="bi bi-toggle-${s.auto_login.active ? 'on' : 'off'}"></i> ${s.auto_login.active ? 'Disable Auto Login' : 'Enable Auto Login'}</button>
+               <button class="btn btn-sm btn-outline-danger" onclick="setWpAutoLogin('${esc(s.path)}','remove')"><i class="bi bi-trash"></i> Remove Login Plugin</button>`
+             : `<button class="btn btn-sm btn-outline-success" onclick="setWpAutoLogin('${esc(s.path)}','enable')"><i class="bi bi-plug"></i> Enable Auto Login</button>`}
           <button class="btn btn-sm btn-outline-success" onclick="openWPPma('${esc(s.name)}','${esc(s.path)}','${esc(s.db_name||'')}')"><i class="bi bi-database-gear"></i> phpMyAdmin</button>
           <button class="btn btn-sm btn-outline-info" onclick="openSiteFolder('${esc(s.path)}')"><i class="bi bi-folder2-open"></i> Open Folder</button>
           <button class="btn btn-sm btn-outline-warning" onclick="showChangePassModal('${esc(s.name)}','${esc(s.path)}','${esc(s.db_user||'')}','${esc(s.db_name||'')}',${i})"><i class="bi bi-key"></i> Passwords</button>
@@ -2110,6 +2115,17 @@ async function changeWPPort(name, nginxSite, currentPort) {
     loadWPSites();
   } else {
     toast('Port change failed: ' + (r.stderr || r.error || 'unknown'), 'error');
+  }
+}
+
+async function setWpAutoLogin(path, action) {
+  if (action === 'remove' && !confirm('Remove auto-login plugin? Remove it before creating a site backup.')) return;
+  const r = await api('/api/wordpress/auto-login', 'POST', { install_path: path, action });
+  if (r.success) {
+    toast(action === 'remove' ? 'Auto-login plugin removed' : `Auto-login ${action}d`, 'success');
+    loadWPSites();
+  } else {
+    toast('Auto-login failed: ' + (r.stderr || r.error || 'unknown'), 'error');
   }
 }
 
@@ -2169,7 +2185,7 @@ function submitWpLogin(adminUrl, username, password) {
   }, 5000);
 }
 
-function autoLoginWP(index) {
+async function autoLoginWP(index) {
   const creds = wpLoginCreds[index];
   if (!creds) {
     toast('Saved credentials not found. Refresh WordPress sites.', 'error');
@@ -2177,11 +2193,27 @@ function autoLoginWP(index) {
   }
   const selected = document.getElementById(`wp-admin-user-${index}`)?.value;
   if (selected) creds.username = selected;
-  if (creds.password && creds.savedUsername && creds.username !== creds.savedUsername) {
-    toast(`Password is saved for ${creds.savedUsername}. Use Passwords to set one for ${creds.username} first.`, 'error');
+  if (!creds.username) {
+    toast('Select a WordPress administrator first.', 'error');
     return;
   }
-  submitWpLogin(creds.adminUrl, creds.username, creds.password);
+  const targetName = 'wp_auto_login_' + Math.random().toString(36).slice(2);
+  const loginWindow = window.open('about:blank', targetName);
+  if (!loginWindow) {
+    toast('Popup blocked. Allow popups for this panel and try again.', 'error');
+    return;
+  }
+  toast('Creating secure WordPress login…', 'info');
+  const r = await api('/api/wordpress/auto-login/token', 'POST', {
+    install_path: creds.path,
+    username: creds.username,
+  });
+  if (r.success && r.login_url) {
+    loginWindow.location = r.login_url;
+  } else {
+    loginWindow.close();
+    toast('Auto-login failed: ' + (r.error || 'unknown'), 'error');
+  }
 }
 
 function setWpLoginUser(index, username) {
@@ -2204,11 +2236,8 @@ async function openSiteFolder(path) {
 }
 
 function autoLoginInstallResult() {
-  submitWpLogin(
-    document.getElementById('wp-result-admin').dataset.adminUrl,
-    document.getElementById('wp-result-wpu').textContent,
-    document.getElementById('wp-result-wpp').textContent
-  );
+  const adminUrl = document.getElementById('wp-result-admin').dataset.adminUrl;
+  if (adminUrl) window.open(adminUrl, '_blank', 'noopener,noreferrer');
 }
 
 let _delPending = null;

@@ -249,6 +249,68 @@ echo 'ok';
         log(f"  [plugin] Permission refresh failed: {(r['stderr'] or r['stdout'] or r.get('error', 'Failed')).strip()}")
 
 
+def run_wp_auto_login_php(install_path, body, timeout=30):
+    tmp_php = f"/tmp/_panel_wp_auto_login_{secrets.token_hex(8)}.php"
+    script = "<?php\n" + body + "\n"
+    try:
+        with open(tmp_php, "w") as f:
+            f.write(script)
+        return run_cmd(f"php {shell_quote(tmp_php)}", timeout=timeout)
+    finally:
+        try:
+            os.remove(tmp_php)
+        except FileNotFoundError:
+            pass
+
+
+def get_wp_auto_login_status(install_path):
+    plugin_file = os.path.join(install_path, "wp-content", "plugins", "server-panel-auto-login", "server-panel-auto-login.php")
+    if not os.path.isfile(plugin_file):
+        return {"installed": False, "active": False}
+    body = f"""
+$server_panel_path = {repr(install_path)};
+require_once $server_panel_path . '/wp-load.php';
+require_once $server_panel_path . '/wp-admin/includes/plugin.php';
+echo is_plugin_active('server-panel-auto-login/server-panel-auto-login.php') ? 'active' : 'inactive';
+"""
+    result = run_wp_auto_login_php(install_path, body)
+    return {"installed": True, "active": result["success"] and result["stdout"].strip() == "active"}
+
+
+def run_wp_auto_login_action(install_path, action):
+    if action not in {"enable", "disable"}:
+        return {"success": False, "error": "Unknown auto-login action"}
+    plugin_file = "server-panel-auto-login/server-panel-auto-login.php"
+    php_action = "activate_plugin" if action == "enable" else "deactivate_plugins"
+    body = f"""
+$server_panel_path = {repr(install_path)};
+require_once $server_panel_path . '/wp-load.php';
+require_once $server_panel_path . '/wp-admin/includes/plugin.php';
+$result = {php_action}({repr(plugin_file)});
+if (is_wp_error($result)) {{ echo 'error:' . $result->get_error_message(); exit(1); }}
+echo 'ok';
+"""
+    return run_wp_auto_login_php(install_path, body)
+
+
+def create_wp_auto_login_token(install_path, username):
+    body = f"""
+$server_panel_path = {repr(install_path)};
+$server_panel_username = {repr(username)};
+require_once $server_panel_path . '/wp-load.php';
+$username = $server_panel_username;
+$token = server_panel_auto_login_create_token($username);
+if (is_wp_error($token)) {{ echo 'error:' . $token->get_error_message(); exit(1); }}
+echo $token;
+"""
+    result = run_wp_auto_login_php(install_path, body)
+    if result["success"]:
+        token = result["stdout"].strip()
+        if re.fullmatch(r"[a-f0-9]{64}", token):
+            return {"success": True, "token": token}
+    return {"success": False, "error": result["stderr"] or result["stdout"] or result.get("error", "Could not create login token")}
+
+
 def detect_wp_admin_users_for_path(install_path):
     try:
         creds = read_wp_config(install_path)
@@ -859,6 +921,7 @@ def get_wp_sites():
         entry["has_wpcli"]   = os.path.exists("/usr/local/bin/wp")
         entry["nginx_site"]  = find_nginx_site_for_path(site_path) or site_name
         entry["port"]        = get_nginx_site_port(entry["nginx_site"])
+        entry["auto_login"]  = get_wp_auto_login_status(site_path)
         admin_creds = get_wp_admin_credential(site_path)
         if admin_creds:
             saved_user = admin_creds.get("username") or ""
@@ -2436,6 +2499,55 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(paths, list) or len(paths) == 0 or not all(isinstance(p, str) for p in paths):
                 self.send_json({"success": False, "error": "paths must be a non-empty list of strings"}); return
             result = start_wordpress_core_update(paths)
+            self.send_json(result)
+
+        elif path == "/api/wordpress/auto-login":
+            install_path = data.get("install_path", "").strip()
+            action = data.get("action", "").strip()
+            try:
+                validate_install_path(install_path)
+            except ValueError as e:
+                self.send_json({"success": False, "error": str(e)}); return
+            if action == "enable":
+                helper = os.path.join(SCRIPT_DIR, "wp-install-helper.sh")
+                installed = run_cmd(
+                    f"sudo {shell_quote(helper)} --auto-login-install {shell_quote(install_path)}",
+                    timeout=30,
+                )
+                if not installed["success"]:
+                    self.send_json(installed); return
+                result = run_wp_auto_login_action(install_path, "enable")
+            elif action == "disable":
+                result = run_wp_auto_login_action(install_path, "disable")
+            elif action == "remove":
+                run_wp_auto_login_action(install_path, "disable")
+                helper = os.path.join(SCRIPT_DIR, "wp-install-helper.sh")
+                result = run_cmd(
+                    f"sudo {shell_quote(helper)} --auto-login-remove {shell_quote(install_path)}",
+                    timeout=30,
+                )
+            else:
+                result = {"success": False, "error": "Unknown auto-login action"}
+            self.send_json(result)
+
+        elif path == "/api/wordpress/auto-login/token":
+            install_path = data.get("install_path", "").strip()
+            username = data.get("username", "").strip()
+            try:
+                validate_install_path(install_path)
+            except ValueError as e:
+                self.send_json({"success": False, "error": str(e)}); return
+            if not re.fullmatch(r"[\w\-.@]+", username):
+                self.send_json({"success": False, "error": "Invalid WP admin username"}); return
+            status = get_wp_auto_login_status(install_path)
+            if not status["active"]:
+                self.send_json({"success": False, "error": "Auto-login plugin is not active"}); return
+            port = get_nginx_site_port(find_nginx_site_for_path(install_path) or os.path.basename(install_path))
+            if not port:
+                self.send_json({"success": False, "error": "WordPress site port not found"}); return
+            result = create_wp_auto_login_token(install_path, username)
+            if result["success"]:
+                result["login_url"] = f"http://localhost:{port}/?server_panel_auto_login={result.pop('token')}"
             self.send_json(result)
 
         elif path == "/api/wordpress/port":
