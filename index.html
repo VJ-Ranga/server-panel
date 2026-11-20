@@ -203,7 +203,8 @@ select.input-dark option{background:var(--field);color:var(--text);}
 .wp-card{padding:18px 20px;}
 .wp-card.wp-update-selected{border-color:var(--ink);box-shadow:4px 4px 0 -1px var(--paper),4px 4px 0 0 var(--ink);}
 .wp-card .wp-title{font-size:1rem;font-weight:700;margin-bottom:6px;}
-.wp-meta{font-size:.8rem;color:var(--text-muted);display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;}
+.wp-meta{font-size:.8rem;color:var(--text-muted);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4px 12px;}
+.wp-meta span{min-width:0;overflow-wrap:anywhere;}
 .wp-meta span b{color:var(--text-soft);}
 
 /* ── mobile: sidebar slides in ── */
@@ -226,6 +227,31 @@ select.input-dark option{background:var(--field);color:var(--text);}
   .topbar-meta{display:none!important;}
 }
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;}}
+
+/* Shared helper text, credentials, and compact controls. */
+.text-help{font-size:.82rem;color:var(--text-muted);}
+.text-meta{font-size:.75rem;color:var(--text-faint);}
+.text-soft{color:var(--text-soft);}
+.text-faint{color:var(--text-faint);}
+.text-main{color:var(--text);}
+.field-label{font-size:.82rem;font-weight:600;color:var(--text-soft);text-transform:none;letter-spacing:normal;margin-bottom:var(--sp-2);}
+.mono{font-family:var(--font-mono);}
+.inset-box{background:var(--inset);border:1px solid var(--line);}
+.flex-1{flex:1;}
+.type-small{font-size:.82rem;}
+.type-tiny{font-size:.75rem;}
+.btn-compact{padding:2px var(--sp-2);font-size:.75rem;}
+.section-rule{border-color:var(--line);margin:var(--sp-4) 0;}
+.app-summary{color:var(--text-soft);font-size:.86rem;min-height:58px;}
+.log-install{height:340px;color:var(--text);}
+.log-preview{height:200px;color:var(--text);}
+.dialog-overlay{position:fixed;inset:0;background:var(--overlay);z-index:9998;align-items:center;justify-content:center;}
+.status-icon{font-size:1.1rem;padding-top:6px;}
+.mb-help{margin-bottom:var(--sp-3);}
+.mt-meta{margin-top:var(--sp-1);}
+.ms-icon{margin-left:var(--sp-2);}
+.list-search{max-width:320px;}
+.list-sort{max-width:180px;}
 </style>
 </head>
 <body>
@@ -336,7 +362,7 @@ select.input-dark option{background:var(--field);color:var(--text);}
                 <div class="svc-name"><i class="bi bi-arrow-left-right text-primary"></i> Nginx</div>
                 <span id="d-nginx-badge" class="svc-status status-unknown">—</span>
               </div>
-              <div style="font-size:.8rem;color:var(--text-faint);margin-bottom:14px;">Web server &amp; reverse proxy</div>
+              <div class="text-faint type-small mb-help">Web server &amp; reverse proxy</div>
               <div class="action-btns" id="d-nginx-btns">
                 <button class="btn btn-success btn-sm" data-svc-action="start" onclick="svcAction('nginx','start')"><i class="bi bi-play-fill"></i> Start</button>
                 <button class="btn btn-danger btn-sm" data-svc-action="stop" onclick="svcAction('nginx','stop')"><i class="bi bi-stop-fill"></i> Stop</button>
@@ -353,7 +379,7 @@ select.input-dark option{background:var(--field);color:var(--text);}
                 <div class="svc-name"><i class="bi bi-database text-info"></i> MySQL</div>
                 <span id="d-mysql-badge" class="svc-status status-unknown">—</span>
               </div>
-              <div style="font-size:.8rem;color:var(--text-faint);margin-bottom:14px;">Database server</div>
+              <div class="text-faint type-small mb-help">Database server</div>
               <div class="action-btns" id="d-mysql-btns">
                 <button class="btn btn-success btn-sm" data-svc-action="start" onclick="svcAction('mysql','start')"><i class="bi bi-play-fill"></i> Start</button>
                 <button class="btn btn-danger btn-sm" data-svc-action="stop" onclick="svcAction('mysql','stop')"><i class="bi bi-stop-fill"></i> Stop</button>
@@ -366,10 +392,10 @@ select.input-dark option{background:var(--field);color:var(--text);}
           <div class="col-md-6">
             <div class="service-card">
               <div class="d-flex align-items-center justify-content-between mb-1">
-                <div class="svc-name"><i class="bi bi-database-gear" style="color:var(--warn);"></i> phpMyAdmin</div>
+                <div class="svc-name"><i class="bi bi-database-gear text-warning"></i> phpMyAdmin</div>
                 <span id="d-pma-badge" class="svc-status status-unknown">—</span>
               </div>
-              <div style="font-size:.8rem;color:var(--text-faint);margin-bottom:10px;">Web-based MySQL admin · <span id="d-pma-ver" style="color:var(--text-muted);"></span></div>
+              <div class="text-faint type-small mb-help">Web-based MySQL admin · <span class="text-muted" id="d-pma-ver"></span></div>
               <div class="action-btns">
                 <a id="d-pma-link" href="#" target="_blank" class="btn btn-sm btn-outline-warning" style="display:none;"><i class="bi bi-box-arrow-up-right"></i> Open phpMyAdmin</a>
                 <button class="btn btn-sm btn-outline-secondary" onclick="showPage('phpmyadmin', document.querySelector('.sidebar-nav a[href=&quot;#phpmyadmin&quot;]'))"><i class="bi bi-gear"></i> Manage</button>
@@ -384,7 +410,7 @@ select.input-dark option{background:var(--field);color:var(--text);}
                 <div class="svc-name"><i class="bi bi-cpu text-success"></i> PHP-FPM</div>
                 <span id="d-phpfpm-badge" class="svc-status status-unknown">—</span>
               </div>
-              <div style="font-size:.8rem;color:var(--text-faint);margin-bottom:14px;">FastCGI process manager · PHP <span id="d-php-ver">—</span></div>
+              <div class="text-faint type-small mb-help">FastCGI process manager · PHP <span id="d-php-ver">—</span></div>
               <div class="action-btns" id="d-phpfpm-btns"></div>
             </div>
           </div>
@@ -395,16 +421,16 @@ select.input-dark option{background:var(--field);color:var(--text);}
       <div id="page-app-launcher" class="page">
         <div class="d-flex align-items-center justify-content-between mb-4">
           <div>
-            <div class="section-title mb-1"><i class="bi bi-rocket-takeoff"></i> App Launcher</div>
-            <div style="font-size:.86rem;color:var(--text-muted);">Create a new local site or app from one place.</div>
+            <div class="section-title mb-1"><i class="bi bi-rocket-takeoff"></i></div>
+            <div class="text-help">Create a new local site or app from one place.</div>
           </div>
         </div>
         <div class="row g-3">
           <div class="col-md-6 col-xl-3">
             <div id="launcher-wordpress" class="service-card h-100">
               <div class="section-title"><i class="bi bi-wordpress"></i> WordPress</div>
-              <p style="color:var(--text-soft);font-size:.86rem;min-height:58px;">Create a WordPress site with database, admin user, Nginx site, and optional plugins.</p>
-              <div style="font-size:.76rem;color:var(--text-muted);margin-bottom:14px;">Starts near 8090 · MySQL required</div>
+              <p class="app-summary">Create a WordPress site with database, admin user, Nginx site, and optional plugins.</p>
+              <div class="text-help mb-help">Starts near 8090 · MySQL required</div>
               <div class="d-flex align-items-center justify-content-between mb-3">
                 <span id="launcher-wordpress-count" class="svc-status status-unknown">Loading sites...</span>
               </div>
@@ -414,8 +440,8 @@ select.input-dark option{background:var(--field);color:var(--text);}
           <div class="col-md-6 col-xl-3">
             <div id="launcher-laravel" class="service-card h-100">
               <div class="section-title"><i class="bi bi-code-square"></i> Laravel</div>
-              <p style="color:var(--text-soft);font-size:.86rem;min-height:58px;">Create a Laravel app with Composer, database credentials, and an Nginx public webroot.</p>
-              <div style="font-size:.76rem;color:var(--text-muted);margin-bottom:14px;">Starts near 8100 · Composer required</div>
+              <p class="app-summary">Create a Laravel app with Composer, database credentials, and an Nginx public webroot.</p>
+              <div class="text-help mb-help">Starts near 8100 · Composer required</div>
               <div class="d-flex align-items-center justify-content-between mb-3">
                 <span id="launcher-laravel-count" class="svc-status status-unknown">Loading apps...</span>
               </div>
@@ -425,8 +451,8 @@ select.input-dark option{background:var(--field);color:var(--text);}
           <div class="col-md-6 col-xl-3">
             <div id="launcher-codeigniter" class="service-card h-100">
               <div class="section-title"><i class="bi bi-braces"></i> CodeIgniter</div>
-              <p style="color:var(--text-soft);font-size:.86rem;min-height:58px;">Create a CodeIgniter 4 app with Composer, `.env`, database, and Nginx public webroot.</p>
-              <div style="font-size:.76rem;color:var(--text-muted);margin-bottom:14px;">Starts near 8200 · Composer required</div>
+              <p class="app-summary">Create a CodeIgniter 4 app with Composer, `.env`, database, and Nginx public webroot.</p>
+              <div class="text-help mb-help">Starts near 8200 · Composer required</div>
               <div class="d-flex align-items-center justify-content-between mb-3">
                 <span id="launcher-codeigniter-count" class="svc-status status-unknown">Loading apps...</span>
               </div>
@@ -436,8 +462,8 @@ select.input-dark option{background:var(--field);color:var(--text);}
           <div class="col-md-6 col-xl-3">
             <div id="launcher-php-projects" class="service-card h-100">
               <div class="section-title"><i class="bi bi-filetype-php"></i> PHP Project</div>
-              <p style="color:var(--text-soft);font-size:.86rem;min-height:58px;">Create a plain PHP project from Blank, PHP Only, or PHP + DB templates.</p>
-              <div style="font-size:.76rem;color:var(--text-muted);margin-bottom:14px;">Starts near 8300 · DB optional</div>
+              <p class="app-summary">Create a plain PHP project from Blank, PHP Only, or PHP + DB templates.</p>
+              <div class="text-help mb-help">Starts near 8300 · DB optional</div>
               <div class="d-flex align-items-center justify-content-between mb-3">
                 <span id="launcher-php-projects-count" class="svc-status status-unknown">Loading projects...</span>
               </div>
@@ -449,7 +475,7 @@ select.input-dark option{background:var(--field);color:var(--text);}
           <div class="d-flex align-items-center justify-content-between mb-3">
             <div>
               <div class="section-title mb-1"><i class="bi bi-clock-history"></i> Recent Projects</div>
-              <div style="font-size:.8rem;color:var(--text-muted);">Recent detected projects are grouped by app type. Full controls stay in each app's management page.</div>
+              <div class="text-muted type-small">Recent detected projects are grouped by app type. Full controls stay in each app's management page.</div>
             </div>
           </div>
           <div class="row g-3">
@@ -500,9 +526,9 @@ select.input-dark option{background:var(--field);color:var(--text);}
           </div>
 
           <!-- Site config editor -->
-          <div id="site-editor" style="display:none;margin-top:24px;">
+          <div class="mt-4" id="site-editor" style="display:none;">
             <div class="d-flex align-items-center justify-content-between mb-2">
-              <div class="section-title mb-0"><i class="bi bi-pencil"></i> Editing: <span id="site-editor-name" style="color:var(--accent);"></span></div>
+              <div class="section-title mb-0"><i class="bi bi-pencil"></i> Editing: <span class="text-primary" id="site-editor-name"></span></div>
               <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('site-editor').style.display='none'">Close</button>
             </div>
             <textarea id="site-editor-content" class="code-editor" rows="22"></textarea>
@@ -518,11 +544,11 @@ select.input-dark option{background:var(--field);color:var(--text);}
           <div class="d-flex align-items-center justify-content-between mb-3">
             <div class="section-title mb-0"><i class="bi bi-file-text"></i> /etc/nginx/nginx.conf</div>
             <div class="d-flex gap-2">
-              <button class="btn btn-sm btn-outline-secondary" onclick="validateNginx()"><i class="bi bi-check-circle"></i> Test Config</button>
+              <button class="btn btn-sm btn-outline-secondary" onclick="validateNginx()"><i class="bi bi-check-circle"></i> Test config</button>
               <button class="btn btn-sm btn-primary" onclick="saveNginxConfig()"><i class="bi bi-floppy"></i> Save</button>
             </div>
           </div>
-          <div id="nginx-config-status" class="mb-2" style="font-size:.82rem;display:none;"></div>
+          <div id="nginx-config-status" class="mb-2 type-small" style="display:none;"></div>
           <textarea id="nginx-config-editor" class="code-editor" rows="30" placeholder="Loading..."></textarea>
         </div>
 
@@ -530,8 +556,8 @@ select.input-dark option{background:var(--field);color:var(--text);}
         <div id="nginx-tab-logs" class="tab-pane">
           <div class="d-flex align-items-center gap-2 mb-3">
             <div class="section-title mb-0"><i class="bi bi-journal-text"></i> Logs</div>
-            <button class="btn btn-sm btn-outline-secondary" onclick="loadLogs('error')" id="btn-error-log">Error Log</button>
-            <button class="btn btn-sm btn-outline-secondary" onclick="loadLogs('access')">Access Log</button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="loadLogs('error')" id="btn-error-log">Error log</button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="loadLogs('access')">Access log</button>
             <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="loadLogs(currentLog)"><i class="bi bi-arrow-clockwise"></i></button>
           </div>
           <div id="log-box" class="log-box">Select a log above…</div>
@@ -542,7 +568,7 @@ select.input-dark option{background:var(--field);color:var(--text);}
       <div id="page-mysql" class="page">
         <div class="custom-tabs">
           <button class="active" onclick="switchTab('mysql','databases',this)">Databases</button>
-          <button onclick="switchTab('mysql','query',this)">Query Runner</button>
+          <button onclick="switchTab('mysql','query',this)">Query runner</button>
         </div>
 
         <!-- Databases tab -->
@@ -560,7 +586,7 @@ select.input-dark option{background:var(--field);color:var(--text);}
 
         <!-- Query runner tab -->
         <div id="mysql-tab-query" class="tab-pane">
-          <div class="section-title"><i class="bi bi-terminal"></i> SQL Query Runner</div>
+          <div class="section-title"><i class="bi bi-terminal"></i> SQL Query runner</div>
           <div class="d-flex gap-2 mb-2">
             <select id="query-db" class="input-dark" style="width:200px;">
               <option value="_none_">(no database)</option>
@@ -569,8 +595,8 @@ select.input-dark option{background:var(--field);color:var(--text);}
           </div>
           <textarea id="query-input" class="code-editor" rows="8" placeholder="SELECT * FROM wp_users LIMIT 10;"></textarea>
           <div class="mt-3">
-            <div class="section-title" style="font-size:.85rem;"><i class="bi bi-table"></i> Result</div>
-            <div id="query-result" class="log-box" style="height:200px;color:var(--text);">Output will appear here…</div>
+            <div class="section-title type-small"><i class="bi bi-table"></i> Result</div>
+            <div id="query-result" class="log-box log-preview">Output will appear here…</div>
           </div>
         </div>
       </div>
@@ -578,8 +604,8 @@ select.input-dark option{background:var(--field);color:var(--text);}
       <!-- ── WORDPRESS ───────────────────────────────────────────────────── -->
       <div id="page-wordpress" class="page">
         <div class="custom-tabs">
-          <button class="active" onclick="switchTab('wordpress','sites',this)">Installed Sites</button>
-          <button onclick="switchTab('wordpress','install',this); loadNextPort()">Install New Site</button>
+          <button class="active" onclick="switchTab('wordpress','sites',this)">Installed sites</button>
+          <button onclick="switchTab('wordpress','install',this); loadNextPort()">Install new site</button>
         </div>
 
         <!-- Sites tab -->
@@ -589,8 +615,8 @@ select.input-dark option{background:var(--field);color:var(--text);}
             <button class="btn btn-sm btn-outline-secondary" onclick="loadWPSites()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
           </div>
           <div class="d-flex gap-2 flex-wrap align-items-center mb-3">
-            <input id="wordpress-list-search" class="input-dark" style="max-width:320px;" placeholder="Search sites..." oninput="renderCurrentAppList('wordpress')">
-            <select id="wordpress-list-sort" class="input-dark" style="max-width:180px;" onchange="renderCurrentAppList('wordpress')">
+            <input id="wordpress-list-search" class="input-dark list-search" placeholder="Search sites..." oninput="renderCurrentAppList('wordpress')">
+            <select id="wordpress-list-sort" class="input-dark list-sort" onchange="renderCurrentAppList('wordpress')">
               <option value="newest" selected>Newest first</option>
               <option value="oldest">Oldest first</option>
               <option value="name_asc">Name A-Z</option>
@@ -599,24 +625,24 @@ select.input-dark option{background:var(--field);color:var(--text);}
               <option value="port_desc">Port high-low</option>
             </select>
             <button class="btn btn-sm btn-outline-secondary" onclick="clearAppListSearch('wordpress')">Clear</button>
-            <span id="wordpress-list-count" style="color:var(--text-muted);font-size:.82rem;"></span>
+            <span class="text-help" id="wordpress-list-count"></span>
           </div>
           <div class="service-card mb-3">
             <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
               <div>
                 <div class="section-title mb-1"><i class="bi bi-arrow-up-circle"></i> WordPress Core Updates</div>
-                <div id="wp-core-update-status" style="font-size:.8rem;color:var(--text-muted);">Checking available version…</div>
+                <div class="text-muted type-small" id="wp-core-update-status">Checking available version…</div>
               </div>
               <div class="d-flex gap-2">
                 <button id="wp-core-refresh-btn" class="btn btn-sm btn-outline-secondary" onclick="refreshWpCorePackage()">
-                  <i class="bi bi-download"></i> Download Latest Package
+                  <i class="bi bi-download"></i> Download latest package
                 </button>
                 <button id="wp-core-update-btn" class="btn btn-sm btn-primary" onclick="startWpCoreUpdate()" disabled>
-                  <i class="bi bi-arrow-up-circle"></i> Update Selected
+                  <i class="bi bi-arrow-up-circle"></i> Update selected
                 </button>
               </div>
             </div>
-            <div id="wp-core-update-log" class="log-box mt-3" style="display:none;height:160px;color:var(--text);"></div>
+            <div id="wp-core-update-log" class="log-box mt-3 text-main" style="display:none;height:160px;"></div>
           </div>
           <div id="wp-sites-container">
             <div class="empty-state"><div class="spinner-sm mx-auto"></div></div>
@@ -631,95 +657,95 @@ select.input-dark option{background:var(--field);color:var(--text);}
                 <div class="section-title"><i class="bi bi-download"></i> New WordPress Site</div>
 
                 <div class="mb-3">
-                  <label class="form-label-sm">Site Name <span style="color:var(--error);">*</span></label>
+                  <label class="form-label-sm">Site Name <span class="text-danger">*</span></label>
                   <input id="wp-site-name" class="input-dark" placeholder="mysite" oninput="wpAutoFill()">
-                  <div style="font-size:.73rem;color:var(--text-faint);margin-top:3px;">Used as folder name and nginx site name</div>
+                  <div class="text-meta mt-meta">Used as folder name and nginx site name</div>
                 </div>
 
                 <div class="mb-3">
-                  <label class="form-label-sm">Install Location <span style="color:var(--error);">*</span></label>
+                  <label class="form-label-sm">Install Location <span class="text-danger">*</span></label>
                   <select id="wp-install-location" class="input-dark" onchange="wpAutoFill(true)">
                     <option value="/var/www">/var/www</option>
                     <option value="/opt">/opt</option>
                     <option value="home-local" selected>~/local</option>
                   </select>
-                  <div style="font-size:.73rem;color:var(--text-faint);margin-top:3px;">Choose the base folder; the site name is appended automatically</div>
+                  <div class="text-meta mt-meta">Choose the base folder; the site name is appended automatically</div>
                 </div>
 
                 <div class="mb-3">
-                  <label class="form-label-sm">Install Path <span style="color:var(--error);">*</span></label>
+                  <label class="form-label-sm">Install Path <span class="text-danger">*</span></label>
                   <input id="wp-install-path" class="input-dark" placeholder="~/local/mysite">
-                  <div style="font-size:.73rem;color:var(--text-faint);margin-top:3px;">You can still edit this path manually if needed</div>
+                  <div class="text-meta mt-meta">You can still edit this path manually if needed</div>
                 </div>
 
                 <div class="mb-3">
-                  <label class="form-label-sm">Port <span style="color:var(--error);">*</span></label>
+                  <label class="form-label-sm">Port <span class="text-danger">*</span></label>
                   <div class="d-flex gap-2">
-                    <input id="wp-port" class="input-dark" placeholder="8090" value="8090" type="number" style="flex:1;">
+                    <input id="wp-port" class="input-dark flex-1" placeholder="8090" value="8090" type="number">
                     <button class="btn btn-sm btn-outline-secondary" onclick="loadNextPort()" title="Auto-detect next free port"><i class="bi bi-arrow-repeat"></i></button>
                   </div>
-                  <div style="font-size:.73rem;color:var(--text-faint);margin-top:3px;">Access site at http://localhost:<span id="wp-port-preview">8090</span></div>
+                  <div class="text-meta mt-meta">Access site at http://localhost:<span id="wp-port-preview">8090</span></div>
                 </div>
 
-                <hr style="border-color:var(--line);margin:16px 0;">
-                <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:12px;"><i class="bi bi-database"></i> Database Settings</div>
+                <hr class="section-rule">
+                <div class="text-muted mb-3 type-small"><i class="bi bi-database"></i> Database Settings</div>
 
                 <div class="mb-3">
-                  <label class="form-label-sm">Database Name <span style="color:var(--error);">*</span></label>
+                  <label class="form-label-sm">Database Name <span class="text-danger">*</span></label>
                   <input id="wp-db-name" class="input-dark" placeholder="mysite_db">
                 </div>
 
                 <div class="mb-3">
-                  <label class="form-label-sm">Database User <span style="color:var(--error);">*</span></label>
+                  <label class="form-label-sm">Database User <span class="text-danger">*</span></label>
                   <input id="wp-db-user" class="input-dark" placeholder="mysite_user">
                 </div>
 
                 <div class="mb-3">
-                  <label class="form-label-sm">Database Password <span style="color:var(--error);">*</span></label>
+                  <label class="form-label-sm">Database Password <span class="text-danger">*</span></label>
                   <div class="d-flex gap-2">
-                    <input id="wp-db-pass" class="input-dark" placeholder="auto-generated if blank" style="flex:1;">
+                    <input id="wp-db-pass" class="input-dark flex-1" placeholder="auto-generated if blank">
                     <button class="btn btn-sm btn-outline-secondary" onclick="genWpPass()"><i class="bi bi-arrow-repeat"></i></button>
                   </div>
                 </div>
 
-                <hr style="border-color:var(--line);margin:16px 0;">
-                <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:12px;"><i class="bi bi-person-circle"></i> WordPress Admin Account</div>
+                <hr class="section-rule">
+                <div class="text-muted mb-3 type-small"><i class="bi bi-person-circle"></i> WordPress Admin Account</div>
 
                 <div class="mb-3">
-                  <label class="form-label-sm">Site Title</label>
+                  <label class="form-label-sm">Site title</label>
                   <input id="wp-site-title" class="input-dark" placeholder="My WordPress Site">
                 </div>
 
                 <div class="mb-3">
-                  <label class="form-label-sm">Admin Username</label>
+                  <label class="form-label-sm">Admin username</label>
                   <div class="d-flex gap-2">
-                    <input id="wp-admin-user" class="input-dark" placeholder="auto-generated if blank" style="flex:1;">
+                    <input id="wp-admin-user" class="input-dark flex-1" placeholder="auto-generated if blank">
                     <button class="btn btn-sm btn-outline-secondary" onclick="genWpAdminUser()" title="Generate username"><i class="bi bi-arrow-repeat"></i></button>
                   </div>
                 </div>
 
                 <div class="mb-3">
-                  <label class="form-label-sm">Admin Password</label>
+                  <label class="form-label-sm">Admin password</label>
                   <div class="d-flex gap-2">
-                    <input id="wp-admin-pass" class="input-dark" placeholder="auto-generated if blank" style="flex:1;">
+                    <input id="wp-admin-pass" class="input-dark flex-1" placeholder="auto-generated if blank">
                     <button class="btn btn-sm btn-outline-secondary" onclick="genWpAdminPass()"><i class="bi bi-arrow-repeat"></i></button>
                   </div>
                 </div>
 
                 <div class="mb-3">
-                  <label class="form-label-sm">Admin Email</label>
+                  <label class="form-label-sm">Admin email</label>
                   <input id="wp-admin-email" class="input-dark" placeholder="admin@example.com" value="admin@localhost.local">
                 </div>
 
-                <hr style="border-color:var(--line);margin:16px 0;">
+                <hr class="section-rule">
                 <div class="d-flex align-items-center justify-content-between mb-2">
-                  <div style="font-size:.8rem;color:var(--text-muted);"><i class="bi bi-plug"></i> Auto Install Plugins</div>
+                  <div class="text-muted type-small"><i class="bi bi-plug"></i> Auto Install Plugins</div>
                   <button class="btn btn-sm btn-outline-secondary" onclick="loadWpPluginLibrary()" title="Rescan wp-plugin-library"><i class="bi bi-arrow-clockwise"></i></button>
                 </div>
-                <div id="wp-plugin-list" class="p-2 rounded" style="background:var(--inset);border:1px solid var(--line);font-size:.8rem;color:var(--text-muted);">
+                <div id="wp-plugin-list" class="p-2 rounded inset-box text-muted type-small">
                   Scanning plugin library…
                 </div>
-                <div style="font-size:.72rem;color:var(--text-faint);margin-top:4px;">Put plugin zip files in <code>wp-plugin-library/</code>.</div>
+                <div class="text-meta mt-1">Put plugin zip files in <code>wp-plugin-library/</code>.</div>
 
                 <button class="btn btn-primary w-100 mt-2" onclick="startWpInstall()" id="wp-install-btn">
                   <i class="bi bi-download"></i> Install WordPress
@@ -728,34 +754,34 @@ select.input-dark option{background:var(--field);color:var(--text);}
             </div>
 
             <div class="col-lg-6">
-              <div class="service-card" style="height:100%;">
+              <div class="service-card h-100">
                 <div class="section-title"><i class="bi bi-terminal"></i> Installation Log</div>
-                <div id="wp-install-log" class="log-box" style="height:340px;color:var(--text);">
+                <div id="wp-install-log" class="log-box log-install">
                   Fill in the form and click Install…
                 </div>
                 <div id="wp-install-result" style="display:none;" class="mt-3 p-3 rounded" style="background:var(--success-wash);border-radius:8px;">
-                  <div style="color:var(--success);font-weight:600;margin-bottom:10px;"><i class="bi bi-check-circle-fill"></i> Installation complete!</div>
-                  <div style="font-size:.84rem;">
+                  <div class="text-success fw-semibold mb-help"><i class="bi bi-check-circle-fill"></i> Installation complete!</div>
+                  <div class="type-small">
                     <div class="d-flex gap-2 mb-2">
                       <a id="wp-result-url" href="#" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-globe"></i> Visit Site</a>
                       <button id="wp-result-admin" class="btn btn-sm btn-primary" onclick="autoLoginInstallResult()"><i class="bi bi-speedometer2"></i> Open WP Admin</button>
                     </div>
-                    <div class="p-2 mb-2 rounded" style="background:var(--inset);border:1px solid var(--line);">
-                      <div style="font-size:.72rem;color:var(--text-faint);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">WordPress Admin</div>
+                    <div class="p-2 mb-2 rounded inset-box">
+                      <div class="field-label mb-2">WordPress admin</div>
                       <div class="d-flex align-items-center gap-2 flex-wrap">
-                        <b style="color:var(--text-soft);">Username:</b> <code id="wp-result-wpu" style="color:var(--success);"></code>
+                        <b class="text-soft">Username:</b> <code class="text-success" id="wp-result-wpu"></code>
                         <button class="btn btn-sm btn-outline-secondary" onclick="copyText('wp-result-wpu')"><i class="bi bi-clipboard"></i></button>
                       </div>
                       <div class="mt-1 d-flex align-items-center gap-2 flex-wrap">
-                        <b style="color:var(--text-soft);">Password:</b> <code id="wp-result-wpp" style="color:var(--warn);word-break:break-all;"></code>
+                        <b class="text-soft">Password:</b> <code class="text-warning text-break" id="wp-result-wpp"></code>
                         <button class="btn btn-sm btn-outline-secondary" onclick="copyText('wp-result-wpp')"><i class="bi bi-clipboard"></i></button>
                       </div>
                     </div>
-                    <div class="p-2 rounded" style="background:var(--inset);border:1px solid var(--line);">
-                      <div style="font-size:.72rem;color:var(--text-faint);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">Database</div>
-                      <div><b style="color:var(--text-soft);">Name:</b> <code id="wp-result-db"></code></div>
-                      <div class="mt-1"><b style="color:var(--text-soft);">User:</b> <code id="wp-result-dbu"></code></div>
-                      <div class="mt-1"><b style="color:var(--text-soft);">Pass:</b> <code id="wp-result-dbp" style="word-break:break-all;"></code></div>
+                    <div class="p-2 rounded inset-box">
+                      <div class="field-label mb-2">Database</div>
+                      <div><b class="text-soft">Name:</b> <code id="wp-result-db"></code></div>
+                      <div class="mt-1"><b class="text-soft">User:</b> <code id="wp-result-dbu"></code></div>
+                      <div class="mt-1"><b class="text-soft">Pass:</b> <code class="text-break" id="wp-result-dbp"></code></div>
                     </div>
                   </div>
                 </div>
@@ -764,9 +790,9 @@ select.input-dark option{background:var(--field);color:var(--text);}
           </div>
 
           <!-- Sudoers note -->
-          <div class="mt-3 service-card" style="font-size:.82rem;color:var(--text-muted);">
-            <b style="color:var(--text-soft);"><i class="bi bi-shield-check"></i> Requires sudo</b> — run once if not done:
-            <code style="color:var(--ink);margin-left:6px;">sudo bash ~/Documents/server-panel/setup-sudo.sh $USER</code>
+          <div class="mt-3 service-card text-help">
+            <b class="text-soft"><i class="bi bi-shield-check"></i> Requires sudo</b> — run once if not done:
+            <code class="text-primary ms-icon">sudo bash ~/Documents/server-panel/setup-sudo.sh $USER</code>
           </div>
         </div>
       </div>
@@ -774,8 +800,8 @@ select.input-dark option{background:var(--field);color:var(--text);}
       <!-- ── LARAVEL ──────────────────────────────────────────────────────── -->
       <div id="page-laravel" class="page">
         <div class="custom-tabs">
-          <button class="active" onclick="switchTab('laravel','apps',this)">Installed Apps</button>
-          <button onclick="switchTab('laravel','install',this); loadLaravelNextPort()">Create New App</button>
+          <button class="active" onclick="switchTab('laravel','apps',this)">Installed apps</button>
+          <button onclick="switchTab('laravel','install',this); loadLaravelNextPort()">Create new app</button>
         </div>
 
         <div id="laravel-tab-apps" class="tab-pane active">
@@ -784,8 +810,8 @@ select.input-dark option{background:var(--field);color:var(--text);}
             <button class="btn btn-sm btn-outline-secondary" onclick="loadLaravelApps()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
           </div>
           <div class="d-flex gap-2 flex-wrap align-items-center mb-3">
-            <input id="laravel-list-search" class="input-dark" style="max-width:320px;" placeholder="Search apps..." oninput="renderCurrentAppList('laravel')">
-            <select id="laravel-list-sort" class="input-dark" style="max-width:180px;" onchange="renderCurrentAppList('laravel')">
+            <input id="laravel-list-search" class="input-dark list-search" placeholder="Search apps..." oninput="renderCurrentAppList('laravel')">
+            <select id="laravel-list-sort" class="input-dark list-sort" onchange="renderCurrentAppList('laravel')">
               <option value="newest" selected>Newest first</option>
               <option value="oldest">Oldest first</option>
               <option value="name_asc">Name A-Z</option>
@@ -794,7 +820,7 @@ select.input-dark option{background:var(--field);color:var(--text);}
               <option value="port_desc">Port high-low</option>
             </select>
             <button class="btn btn-sm btn-outline-secondary" onclick="clearAppListSearch('laravel')">Clear</button>
-            <span id="laravel-list-count" style="color:var(--text-muted);font-size:.82rem;"></span>
+            <span class="text-help" id="laravel-list-count"></span>
           </div>
           <div id="laravel-apps-container"><div class="empty-state"><div class="spinner-sm mx-auto"></div></div></div>
         </div>
@@ -805,53 +831,53 @@ select.input-dark option{background:var(--field);color:var(--text);}
               <div class="service-card">
                 <div class="section-title"><i class="bi bi-download"></i> New Laravel App</div>
                 <div class="mb-3">
-                  <label class="form-label-sm">App Name <span style="color:var(--error);">*</span></label>
+                  <label class="form-label-sm">App Name <span class="text-danger">*</span></label>
                   <input id="lv-site-name" class="input-dark" placeholder="myapp" oninput="laravelAutoFill()">
                 </div>
                 <div class="mb-3">
-                  <label class="form-label-sm">Install Path <span style="color:var(--error);">*</span></label>
+                  <label class="form-label-sm">Install Path <span class="text-danger">*</span></label>
                   <input id="lv-install-path" class="input-dark" placeholder="/var/www/myapp">
                 </div>
                 <div class="mb-3">
-                  <label class="form-label-sm">Laravel Version</label>
+                  <label class="form-label-sm">Laravel version</label>
                   <select id="lv-version" class="input-dark">
                     <option value="latest">Latest stable</option>
                     <option value="12">Laravel 12</option>
                   </select>
                 </div>
                 <div class="mb-3">
-                  <label class="form-label-sm">Port <span style="color:var(--error);">*</span></label>
+                  <label class="form-label-sm">Port <span class="text-danger">*</span></label>
                   <div class="d-flex gap-2">
-                    <input id="lv-port" class="input-dark" placeholder="8100" value="8100" type="number" style="flex:1;">
+                    <input id="lv-port" class="input-dark flex-1" placeholder="8100" value="8100" type="number">
                     <button class="btn btn-sm btn-outline-secondary" onclick="loadLaravelNextPort()"><i class="bi bi-arrow-repeat"></i></button>
                   </div>
-                  <div style="font-size:.73rem;color:var(--text-faint);margin-top:3px;">Access at http://localhost:<span id="lv-port-preview">8100</span></div>
+                  <div class="text-meta mt-meta">Access at http://localhost:<span id="lv-port-preview">8100</span></div>
                 </div>
-                <hr style="border-color:var(--line);margin:16px 0;">
-                <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:12px;"><i class="bi bi-database"></i> Database Settings</div>
-                <div class="mb-3"><label class="form-label-sm">Database Name <span style="color:var(--error);">*</span></label><input id="lv-db-name" class="input-dark" placeholder="myapp_db"></div>
-                <div class="mb-3"><label class="form-label-sm">Database User <span style="color:var(--error);">*</span></label><input id="lv-db-user" class="input-dark" placeholder="myapp_user"></div>
+                <hr class="section-rule">
+                <div class="text-muted mb-3 type-small"><i class="bi bi-database"></i> Database Settings</div>
+                <div class="mb-3"><label class="form-label-sm">Database Name <span class="text-danger">*</span></label><input id="lv-db-name" class="input-dark" placeholder="myapp_db"></div>
+                <div class="mb-3"><label class="form-label-sm">Database User <span class="text-danger">*</span></label><input id="lv-db-user" class="input-dark" placeholder="myapp_user"></div>
                 <div class="mb-3">
-                  <label class="form-label-sm">Database Password</label>
-                  <div class="d-flex gap-2"><input id="lv-db-pass" class="input-dark" placeholder="auto-generated if blank" style="flex:1;"><button class="btn btn-sm btn-outline-secondary" onclick="genLaravelDbPass()"><i class="bi bi-arrow-repeat"></i></button></div>
+                  <label class="form-label-sm">Database password</label>
+                  <div class="d-flex gap-2"><input id="lv-db-pass" class="input-dark flex-1" placeholder="auto-generated if blank"><button class="btn btn-sm btn-outline-secondary" onclick="genLaravelDbPass()"><i class="bi bi-arrow-repeat"></i></button></div>
                 </div>
-                <button class="btn btn-primary w-100 mt-2" onclick="startLaravelInstall()" id="lv-install-btn"><i class="bi bi-download"></i> Create Laravel App</button>
+                <button class="btn btn-primary w-100 mt-2" onclick="startLaravelInstall()" id="lv-install-btn"><i class="bi bi-download"></i> Create Laravel app</button>
               </div>
             </div>
             <div class="col-lg-6">
-              <div class="service-card" style="height:100%;">
+              <div class="service-card h-100">
                 <div class="section-title"><i class="bi bi-terminal"></i> Installation Log</div>
-                <div id="lv-install-log" class="log-box" style="height:340px;color:var(--text);">Fill in the form and click Create…</div>
+                <div id="lv-install-log" class="log-box log-install">Fill in the form and click Create…</div>
                 <div id="lv-install-result" style="display:none;" class="mt-3 p-3 rounded">
-                  <div style="color:var(--success);font-weight:600;margin-bottom:10px;"><i class="bi bi-check-circle-fill"></i> Laravel app created!</div>
+                  <div class="text-success fw-semibold mb-help"><i class="bi bi-check-circle-fill"></i> Laravel app created!</div>
                   <a id="lv-result-url" href="#" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-globe"></i> Open App</a>
                 </div>
               </div>
             </div>
           </div>
-          <div class="mt-3 service-card" style="font-size:.82rem;color:var(--text-muted);">
-            <b style="color:var(--text-soft);"><i class="bi bi-shield-check"></i> Requires sudo + Composer</b> — if Laravel install fails, install Composer and rerun:
-            <code style="color:var(--ink);margin-left:6px;">sudo bash ~/Documents/server-panel/setup-sudo.sh $USER</code>
+          <div class="mt-3 service-card text-help">
+            <b class="text-soft"><i class="bi bi-shield-check"></i> Requires sudo + Composer</b> — if Laravel install fails, install Composer and rerun:
+            <code class="text-primary ms-icon">sudo bash ~/Documents/server-panel/setup-sudo.sh $USER</code>
           </div>
         </div>
       </div>
@@ -859,8 +885,8 @@ select.input-dark option{background:var(--field);color:var(--text);}
       <!-- ── CODEIGNITER ──────────────────────────────────────────────────── -->
       <div id="page-codeigniter" class="page">
         <div class="custom-tabs">
-          <button class="active" onclick="switchTab('codeigniter','apps',this)">Installed Apps</button>
-          <button onclick="switchTab('codeigniter','install',this); loadCodeIgniterNextPort()">Create New App</button>
+          <button class="active" onclick="switchTab('codeigniter','apps',this)">Installed apps</button>
+          <button onclick="switchTab('codeigniter','install',this); loadCodeIgniterNextPort()">Create new app</button>
         </div>
 
         <div id="codeigniter-tab-apps" class="tab-pane active">
@@ -869,8 +895,8 @@ select.input-dark option{background:var(--field);color:var(--text);}
             <button class="btn btn-sm btn-outline-secondary" onclick="loadCodeIgniterApps()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
           </div>
           <div class="d-flex gap-2 flex-wrap align-items-center mb-3">
-            <input id="codeigniter-list-search" class="input-dark" style="max-width:320px;" placeholder="Search apps..." oninput="renderCurrentAppList('codeigniter')">
-            <select id="codeigniter-list-sort" class="input-dark" style="max-width:180px;" onchange="renderCurrentAppList('codeigniter')">
+            <input id="codeigniter-list-search" class="input-dark list-search" placeholder="Search apps..." oninput="renderCurrentAppList('codeigniter')">
+            <select id="codeigniter-list-sort" class="input-dark list-sort" onchange="renderCurrentAppList('codeigniter')">
               <option value="newest" selected>Newest first</option>
               <option value="oldest">Oldest first</option>
               <option value="name_asc">Name A-Z</option>
@@ -879,7 +905,7 @@ select.input-dark option{background:var(--field);color:var(--text);}
               <option value="port_desc">Port high-low</option>
             </select>
             <button class="btn btn-sm btn-outline-secondary" onclick="clearAppListSearch('codeigniter')">Clear</button>
-            <span id="codeigniter-list-count" style="color:var(--text-muted);font-size:.82rem;"></span>
+            <span class="text-help" id="codeigniter-list-count"></span>
           </div>
           <div id="codeigniter-apps-container"><div class="empty-state"><div class="spinner-sm mx-auto"></div></div></div>
         </div>
@@ -890,46 +916,46 @@ select.input-dark option{background:var(--field);color:var(--text);}
               <div class="service-card">
                 <div class="section-title"><i class="bi bi-download"></i> New CodeIgniter 4 App</div>
                 <div class="mb-3">
-                  <label class="form-label-sm">App Name <span style="color:var(--error);">*</span></label>
+                  <label class="form-label-sm">App Name <span class="text-danger">*</span></label>
                   <input id="ci-site-name" class="input-dark" placeholder="myciapp" oninput="codeIgniterAutoFill()">
                 </div>
                 <div class="mb-3">
-                  <label class="form-label-sm">Install Path <span style="color:var(--error);">*</span></label>
+                  <label class="form-label-sm">Install Path <span class="text-danger">*</span></label>
                   <input id="ci-install-path" class="input-dark" placeholder="/var/www/myciapp">
                 </div>
                 <div class="mb-3">
-                  <label class="form-label-sm">Port <span style="color:var(--error);">*</span></label>
+                  <label class="form-label-sm">Port <span class="text-danger">*</span></label>
                   <div class="d-flex gap-2">
-                    <input id="ci-port" class="input-dark" placeholder="8200" value="8200" type="number" style="flex:1;" oninput="document.getElementById('ci-port-preview').textContent=this.value||'8200'">
+                    <input id="ci-port" class="input-dark flex-1" placeholder="8200" value="8200" type="number" oninput="document.getElementById('ci-port-preview').textContent=this.value||'8200'">
                     <button class="btn btn-sm btn-outline-secondary" onclick="loadCodeIgniterNextPort()"><i class="bi bi-arrow-repeat"></i></button>
                   </div>
-                  <div style="font-size:.73rem;color:var(--text-faint);margin-top:3px;">Access at http://localhost:<span id="ci-port-preview">8200</span></div>
+                  <div class="text-meta mt-meta">Access at http://localhost:<span id="ci-port-preview">8200</span></div>
                 </div>
-                <hr style="border-color:var(--line);margin:16px 0;">
-                <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:12px;"><i class="bi bi-database"></i> Database Settings</div>
-                <div class="mb-3"><label class="form-label-sm">Database Name <span style="color:var(--error);">*</span></label><input id="ci-db-name" class="input-dark" placeholder="myciapp_db"></div>
-                <div class="mb-3"><label class="form-label-sm">Database User <span style="color:var(--error);">*</span></label><input id="ci-db-user" class="input-dark" placeholder="myciapp_user"></div>
+                <hr class="section-rule">
+                <div class="text-muted mb-3 type-small"><i class="bi bi-database"></i> Database Settings</div>
+                <div class="mb-3"><label class="form-label-sm">Database Name <span class="text-danger">*</span></label><input id="ci-db-name" class="input-dark" placeholder="myciapp_db"></div>
+                <div class="mb-3"><label class="form-label-sm">Database User <span class="text-danger">*</span></label><input id="ci-db-user" class="input-dark" placeholder="myciapp_user"></div>
                 <div class="mb-3">
-                  <label class="form-label-sm">Database Password</label>
-                  <div class="d-flex gap-2"><input id="ci-db-pass" class="input-dark" placeholder="auto-generated if blank" style="flex:1;"><button class="btn btn-sm btn-outline-secondary" onclick="genCodeIgniterDbPass()"><i class="bi bi-arrow-repeat"></i></button></div>
+                  <label class="form-label-sm">Database password</label>
+                  <div class="d-flex gap-2"><input id="ci-db-pass" class="input-dark flex-1" placeholder="auto-generated if blank"><button class="btn btn-sm btn-outline-secondary" onclick="genCodeIgniterDbPass()"><i class="bi bi-arrow-repeat"></i></button></div>
                 </div>
-                <button class="btn btn-primary w-100 mt-2" onclick="startCodeIgniterInstall()" id="ci-install-btn"><i class="bi bi-download"></i> Create CodeIgniter App</button>
+                <button class="btn btn-primary w-100 mt-2" onclick="startCodeIgniterInstall()" id="ci-install-btn"><i class="bi bi-download"></i> Create CodeIgniter app</button>
               </div>
             </div>
             <div class="col-lg-6">
-              <div class="service-card" style="height:100%;">
+              <div class="service-card h-100">
                 <div class="section-title"><i class="bi bi-terminal"></i> Installation Log</div>
-                <div id="ci-install-log" class="log-box" style="height:340px;color:var(--text);">Fill in the form and click Create…</div>
+                <div id="ci-install-log" class="log-box log-install">Fill in the form and click Create…</div>
                 <div id="ci-install-result" style="display:none;" class="mt-3 p-3 rounded">
-                  <div style="color:var(--success);font-weight:600;margin-bottom:10px;"><i class="bi bi-check-circle-fill"></i> CodeIgniter app created!</div>
+                  <div class="text-success fw-semibold mb-help"><i class="bi bi-check-circle-fill"></i> CodeIgniter app created!</div>
                   <a id="ci-result-url" href="#" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-globe"></i> Open App</a>
                 </div>
               </div>
             </div>
           </div>
-          <div class="mt-3 service-card" style="font-size:.82rem;color:var(--text-muted);">
-            <b style="color:var(--text-soft);"><i class="bi bi-shield-check"></i> Requires sudo + Composer</b> — if CodeIgniter install fails, install Composer and rerun:
-            <code style="color:var(--ink);margin-left:6px;">sudo bash ~/Documents/server-panel/setup-sudo.sh $USER</code>
+          <div class="mt-3 service-card text-help">
+            <b class="text-soft"><i class="bi bi-shield-check"></i> Requires sudo + Composer</b> — if CodeIgniter install fails, install Composer and rerun:
+            <code class="text-primary ms-icon">sudo bash ~/Documents/server-panel/setup-sudo.sh $USER</code>
           </div>
         </div>
       </div>
@@ -937,18 +963,18 @@ select.input-dark option{background:var(--field);color:var(--text);}
       <!-- ── PHP PROJECTS ─────────────────────────────────────────────────── -->
       <div id="page-php-projects" class="page">
         <div class="custom-tabs">
-          <button class="active" onclick="switchTab('php-projects','apps',this)">Installed Projects</button>
-          <button onclick="switchTab('php-projects','install',this); loadPhpProjectNextPort()">Create New Project</button>
+          <button class="active" onclick="switchTab('php-projects','apps',this)">Installed projects</button>
+          <button onclick="switchTab('php-projects','install',this); loadPhpProjectNextPort()">Create new project</button>
         </div>
 
         <div id="php-projects-tab-apps" class="tab-pane active">
           <div class="d-flex align-items-center justify-content-between mb-3">
-            <div class="section-title mb-0"><i class="bi bi-filetype-php"></i> PHP Projects</div>
+            <div class="section-title mb-0"><i class="bi bi-filetype-php"></i></div>
             <button class="btn btn-sm btn-outline-secondary" onclick="loadPhpProjects()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
           </div>
           <div class="d-flex gap-2 flex-wrap align-items-center mb-3">
-            <input id="php-projects-list-search" class="input-dark" style="max-width:320px;" placeholder="Search projects..." oninput="renderCurrentAppList('php-projects')">
-            <select id="php-projects-list-sort" class="input-dark" style="max-width:180px;" onchange="renderCurrentAppList('php-projects')">
+            <input id="php-projects-list-search" class="input-dark list-search" placeholder="Search projects..." oninput="renderCurrentAppList('php-projects')">
+            <select id="php-projects-list-sort" class="input-dark list-sort" onchange="renderCurrentAppList('php-projects')">
               <option value="newest" selected>Newest first</option>
               <option value="oldest">Oldest first</option>
               <option value="name_asc">Name A-Z</option>
@@ -957,7 +983,7 @@ select.input-dark option{background:var(--field);color:var(--text);}
               <option value="port_desc">Port high-low</option>
             </select>
             <button class="btn btn-sm btn-outline-secondary" onclick="clearAppListSearch('php-projects')">Clear</button>
-            <span id="php-projects-list-count" style="color:var(--text-muted);font-size:.82rem;"></span>
+            <span class="text-help" id="php-projects-list-count"></span>
           </div>
           <div id="php-projects-container"><div class="empty-state"><div class="spinner-sm mx-auto"></div></div></div>
         </div>
@@ -967,8 +993,8 @@ select.input-dark option{background:var(--field);color:var(--text);}
             <div class="col-lg-6">
               <div class="service-card">
                 <div class="section-title"><i class="bi bi-download"></i> New PHP Project</div>
-                <div class="mb-3"><label class="form-label-sm">Project Name <span style="color:var(--error);">*</span></label><input id="php-site-name" class="input-dark" placeholder="myphpapp" oninput="phpProjectAutoFill()"></div>
-                <div class="mb-3"><label class="form-label-sm">Install Path <span style="color:var(--error);">*</span></label><input id="php-install-path" class="input-dark" placeholder="/var/www/myphpapp"></div>
+                <div class="mb-3"><label class="form-label-sm">Project Name <span class="text-danger">*</span></label><input id="php-site-name" class="input-dark" placeholder="myphpapp" oninput="phpProjectAutoFill()"></div>
+                <div class="mb-3"><label class="form-label-sm">Install Path <span class="text-danger">*</span></label><input id="php-install-path" class="input-dark" placeholder="/var/www/myphpapp"></div>
                 <div class="mb-3">
                   <label class="form-label-sm">Template</label>
                   <select id="php-template" class="input-dark" onchange="togglePhpProjectDbFields()">
@@ -978,35 +1004,35 @@ select.input-dark option{background:var(--field);color:var(--text);}
                   </select>
                 </div>
                 <div class="mb-3">
-                  <label class="form-label-sm">Port <span style="color:var(--error);">*</span></label>
+                  <label class="form-label-sm">Port <span class="text-danger">*</span></label>
                   <div class="d-flex gap-2">
-                    <input id="php-port" class="input-dark" placeholder="8300" value="8300" type="number" style="flex:1;" oninput="document.getElementById('php-port-preview').textContent=this.value||'8300'">
+                    <input id="php-port" class="input-dark flex-1" placeholder="8300" value="8300" type="number" oninput="document.getElementById('php-port-preview').textContent=this.value||'8300'">
                     <button class="btn btn-sm btn-outline-secondary" onclick="loadPhpProjectNextPort()"><i class="bi bi-arrow-repeat"></i></button>
                   </div>
-                  <div style="font-size:.73rem;color:var(--text-faint);margin-top:3px;">Access at http://localhost:<span id="php-port-preview">8300</span></div>
+                  <div class="text-meta mt-meta">Access at http://localhost:<span id="php-port-preview">8300</span></div>
                 </div>
                 <div id="php-db-fields" style="display:none;">
-                  <hr style="border-color:var(--line);margin:16px 0;">
-                  <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:12px;"><i class="bi bi-database"></i> Database Settings</div>
-                  <div class="mb-3"><label class="form-label-sm">Database Name <span style="color:var(--error);">*</span></label><input id="php-db-name" class="input-dark" placeholder="myphpapp_db"></div>
-                  <div class="mb-3"><label class="form-label-sm">Database User <span style="color:var(--error);">*</span></label><input id="php-db-user" class="input-dark" placeholder="myphpapp_user"></div>
-                  <div class="mb-3"><label class="form-label-sm">Database Password</label><div class="d-flex gap-2"><input id="php-db-pass" class="input-dark" placeholder="auto-generated if blank" style="flex:1;"><button class="btn btn-sm btn-outline-secondary" onclick="genPhpProjectDbPass()"><i class="bi bi-arrow-repeat"></i></button></div></div>
+                  <hr class="section-rule">
+                  <div class="text-muted mb-3 type-small"><i class="bi bi-database"></i> Database Settings</div>
+                  <div class="mb-3"><label class="form-label-sm">Database Name <span class="text-danger">*</span></label><input id="php-db-name" class="input-dark" placeholder="myphpapp_db"></div>
+                  <div class="mb-3"><label class="form-label-sm">Database User <span class="text-danger">*</span></label><input id="php-db-user" class="input-dark" placeholder="myphpapp_user"></div>
+                  <div class="mb-3"><label class="form-label-sm">Database password</label><div class="d-flex gap-2"><input id="php-db-pass" class="input-dark flex-1" placeholder="auto-generated if blank"><button class="btn btn-sm btn-outline-secondary" onclick="genPhpProjectDbPass()"><i class="bi bi-arrow-repeat"></i></button></div></div>
                 </div>
-                <button class="btn btn-primary w-100 mt-2" onclick="startPhpProjectInstall()" id="php-install-btn"><i class="bi bi-download"></i> Create PHP Project</button>
+                <button class="btn btn-primary w-100 mt-2" onclick="startPhpProjectInstall()" id="php-install-btn"><i class="bi bi-download"></i> Create PHP project</button>
               </div>
             </div>
             <div class="col-lg-6">
-              <div class="service-card" style="height:100%;">
+              <div class="service-card h-100">
                 <div class="section-title"><i class="bi bi-terminal"></i> Installation Log</div>
-                <div id="php-install-log" class="log-box" style="height:340px;color:var(--text);">Fill in the form and click Create...</div>
+                <div id="php-install-log" class="log-box log-install">Fill in the form and click Create...</div>
                 <div id="php-install-result" style="display:none;" class="mt-3 p-3 rounded">
-                  <div style="color:var(--success);font-weight:600;margin-bottom:10px;"><i class="bi bi-check-circle-fill"></i> PHP project created!</div>
+                  <div class="text-success fw-semibold mb-help"><i class="bi bi-check-circle-fill"></i> PHP project created!</div>
                   <a id="php-result-url" href="#" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-globe"></i> Open Project</a>
                 </div>
               </div>
             </div>
           </div>
-          <div class="mt-3 service-card" style="font-size:.82rem;color:var(--text-muted);"><b style="color:var(--text-soft);"><i class="bi bi-shield-check"></i> Requires sudo</b> — run once after updating: <code style="color:var(--ink);margin-left:6px;">sudo bash ~/Documents/server-panel/setup-sudo.sh $USER</code></div>
+          <div class="mt-3 service-card text-help"><b class="text-soft"><i class="bi bi-shield-check"></i> Requires sudo</b> — run once after updating: <code class="text-primary ms-icon">sudo bash ~/Documents/server-panel/setup-sudo.sh $USER</code></div>
         </div>
       </div>
 
@@ -1014,8 +1040,8 @@ select.input-dark option{background:var(--field);color:var(--text);}
       <div id="page-phpmyadmin" class="page">
         <div class="custom-tabs">
           <button class="active" onclick="switchTab('phpmyadmin','overview',this)">Overview</button>
-          <button onclick="switchTab('phpmyadmin','nginx',this)">Nginx Setup</button>
-          <button onclick="switchTab('phpmyadmin','phpconfig',this)">PHP Config</button>
+          <button onclick="switchTab('phpmyadmin','nginx',this)">Nginx setup</button>
+          <button onclick="switchTab('phpmyadmin','phpconfig',this)">PHP config</button>
         </div>
 
         <!-- Overview tab -->
@@ -1025,46 +1051,46 @@ select.input-dark option{background:var(--field);color:var(--text);}
           </div>
         </div>
 
-        <!-- Nginx Setup tab -->
+        <!-- Nginx setup tab -->
         <div id="phpmyadmin-tab-nginx" class="tab-pane">
           <div class="d-flex align-items-center justify-content-between mb-3">
             <div class="section-title mb-0"><i class="bi bi-arrow-left-right"></i> Nginx Site for phpMyAdmin</div>
             <div class="d-flex gap-2 align-items-center">
-              <label style="font-size:.8rem;color:var(--text-muted);">Port</label>
+              <label class="text-muted type-small">Port</label>
               <input id="pma-port-input" class="input-dark" style="width:80px;" value="8081">
               <button class="btn btn-sm btn-outline-secondary" onclick="generatePmaConfig()"><i class="bi bi-magic"></i> Generate</button>
             </div>
           </div>
-          <div id="pma-nginx-status" class="mb-2" style="font-size:.82rem;display:none;"></div>
+          <div id="pma-nginx-status" class="mb-2 type-small" style="display:none;"></div>
           <textarea id="pma-nginx-editor" class="code-editor" rows="26" placeholder="Loading…"></textarea>
           <div class="mt-2 d-flex gap-2 flex-wrap">
-            <button class="btn btn-primary btn-sm" onclick="savePmaConfig()"><i class="bi bi-floppy"></i> Save Site Config</button>
-            <button class="btn btn-success btn-sm" onclick="pmaAction('enable')"><i class="bi bi-check-circle"></i> Enable &amp; Reload</button>
+            <button class="btn btn-primary btn-sm" onclick="savePmaConfig()"><i class="bi bi-floppy"></i> Save site config</button>
+            <button class="btn btn-success btn-sm" onclick="pmaAction('enable')"><i class="bi bi-check-circle"></i> Enable &amp; reload</button>
             <button class="btn btn-outline-danger btn-sm" onclick="pmaAction('disable')"><i class="bi bi-x-circle"></i> Disable</button>
           </div>
-          <div class="mt-3 service-card" style="font-size:.82rem;color:var(--text-muted);">
-            <b style="color:var(--text-soft);">Also add to sudoers</b> if not done yet:<br>
-            <code style="color:var(--ink);">sudo bash ~/Documents/server-panel/setup-sudo.sh $USER</code>
+          <div class="mt-3 service-card text-help">
+            <b class="text-soft">Also add to sudoers</b> if not done yet:<br>
+            <code class="text-primary">sudo bash ~/Documents/server-panel/setup-sudo.sh $USER</code>
           </div>
         </div>
 
-        <!-- PHP Config tab -->
+        <!-- PHP config tab -->
         <div id="phpmyadmin-tab-phpconfig" class="tab-pane">
           <div class="d-flex align-items-center justify-content-between mb-3">
             <div class="section-title mb-0"><i class="bi bi-file-code"></i> config.inc.php</div>
             <div class="d-flex gap-2">
-              <button class="btn btn-sm btn-outline-secondary" onclick="genBlowfish()"><i class="bi bi-key"></i> New Secret</button>
+              <button class="btn btn-sm btn-outline-secondary" onclick="genBlowfish()"><i class="bi bi-key"></i> New secret</button>
               <button class="btn btn-sm btn-primary" onclick="savePmaPhpConfig()"><i class="bi bi-floppy"></i> Save</button>
             </div>
           </div>
           <div id="pma-blowfish-bar" style="display:none;" class="mb-2 p-2" style="background:var(--sheet);border-radius:6px;">
-            <span style="font-size:.8rem;color:var(--text-muted);">New blowfish secret — copy into <code>\$cfg['blowfish_secret']</code>:</span><br>
-            <code id="pma-blowfish-val" style="color:var(--success);font-size:.85rem;word-break:break-all;"></code>
+            <span class="text-muted type-small">New blowfish secret — copy into <code>\$cfg['blowfish_secret']</code>:</span><br>
+            <code class="type-small text-success text-break" id="pma-blowfish-val"></code>
           </div>
-          <div id="pma-phpconfig-msg" class="mb-2" style="font-size:.82rem;display:none;"></div>
+          <div id="pma-phpconfig-msg" class="mb-2 type-small" style="display:none;"></div>
           <textarea id="pma-phpconfig-editor" class="code-editor" rows="28" placeholder="Install phpMyAdmin first to view config.inc.php"></textarea>
           <div class="mt-2">
-            <button class="btn btn-primary btn-sm" onclick="savePmaPhpConfig()"><i class="bi bi-floppy"></i> Save Config</button>
+            <button class="btn btn-primary btn-sm" onclick="savePmaPhpConfig()"><i class="bi bi-floppy"></i> Save config</button>
           </div>
         </div>
       </div>
@@ -1087,13 +1113,13 @@ select.input-dark option{background:var(--field);color:var(--text);}
                 <div id="perf-nginx-form"></div>
                 <div id="perf-nginx-out" class="log-box mt-3" style="height:80px;display:none;"></div>
                 <div class="mt-3">
-                  <button class="btn btn-primary btn-sm" onclick="savePerf('nginx')"><i class="bi bi-floppy"></i> Save & Reload Nginx</button>
+                  <button class="btn btn-primary btn-sm" onclick="savePerf('nginx')"><i class="bi bi-floppy"></i> Save & reload Nginx</button>
                 </div>
               </div>
             </div>
             <div class="col-lg-5">
-              <div class="service-card" style="font-size:.82rem;color:var(--text-muted);">
-                <div style="color:var(--text-soft);font-weight:600;margin-bottom:8px;"><i class="bi bi-info-circle"></i> Tips</div>
+              <div class="service-card text-help">
+                <div class="text-soft fw-semibold mb-2"><i class="bi bi-info-circle"></i> Tips</div>
                 <b>worker_processes:</b> Set to <code>auto</code> to match CPU cores<br><br>
                 <b>worker_connections:</b> Max simultaneous connections per worker. 1024–4096 for busy servers<br><br>
                 <b>keepalive_timeout:</b> How long to keep idle connections open. 15–65 sec is typical<br><br>
@@ -1110,17 +1136,17 @@ select.input-dark option{background:var(--field);color:var(--text);}
           <div class="row g-3">
             <div class="col-lg-7">
               <div class="service-card">
-                <div class="section-title"><i class="bi bi-filetype-php"></i> PHP Settings <span id="perf-php-path" style="font-size:.72rem;color:var(--text-faint);font-weight:400;"></span></div>
+                <div class="section-title"><i class="bi bi-filetype-php"></i> PHP Settings <span class="text-meta fw-normal" id="perf-php-path"></span></div>
                 <div id="perf-php-form"></div>
                 <div id="perf-php-out" class="log-box mt-3" style="height:80px;display:none;"></div>
                 <div class="mt-3">
-                  <button class="btn btn-primary btn-sm" onclick="savePerf('php')"><i class="bi bi-floppy"></i> Save & Restart PHP-FPM</button>
+                  <button class="btn btn-primary btn-sm" onclick="savePerf('php')"><i class="bi bi-floppy"></i> Save & restart PHP-FPM</button>
                 </div>
               </div>
             </div>
             <div class="col-lg-5">
-              <div class="service-card" style="font-size:.82rem;color:var(--text-muted);">
-                <div style="color:var(--text-soft);font-weight:600;margin-bottom:8px;"><i class="bi bi-info-circle"></i> Tips</div>
+              <div class="service-card text-help">
+                <div class="text-soft fw-semibold mb-2"><i class="bi bi-info-circle"></i> Tips</div>
                 <b>memory_limit:</b> Max RAM per PHP script. WordPress needs at least <code>128M</code>, heavy sites <code>256M</code>+<br><br>
                 <b>max_execution_time:</b> Max seconds a script can run. Increase for slow imports/exports<br><br>
                 <b>upload_max_filesize:</b> Must be ≤ post_max_size and Nginx client_max_body_size<br><br>
@@ -1136,17 +1162,17 @@ select.input-dark option{background:var(--field);color:var(--text);}
           <div class="row g-3">
             <div class="col-lg-7">
               <div class="service-card">
-                <div class="section-title"><i class="bi bi-cpu"></i> PHP-FPM Pool <span id="perf-fpm-path" style="font-size:.72rem;color:var(--text-faint);font-weight:400;"></span></div>
+                <div class="section-title"><i class="bi bi-cpu"></i> PHP-FPM Pool <span class="text-meta fw-normal" id="perf-fpm-path"></span></div>
                 <div id="perf-fpm-form"></div>
                 <div id="perf-fpm-out" class="log-box mt-3" style="height:80px;display:none;"></div>
                 <div class="mt-3">
-                  <button class="btn btn-primary btn-sm" onclick="savePerf('fpm')"><i class="bi bi-floppy"></i> Save & Restart PHP-FPM</button>
+                  <button class="btn btn-primary btn-sm" onclick="savePerf('fpm')"><i class="bi bi-floppy"></i> Save & restart PHP-FPM</button>
                 </div>
               </div>
             </div>
             <div class="col-lg-5">
-              <div class="service-card" style="font-size:.82rem;color:var(--text-muted);">
-                <div style="color:var(--text-soft);font-weight:600;margin-bottom:8px;"><i class="bi bi-info-circle"></i> Tips</div>
+              <div class="service-card text-help">
+                <div class="text-soft fw-semibold mb-2"><i class="bi bi-info-circle"></i> Tips</div>
                 <b>pm = dynamic:</b> Spawns workers on demand (best for most sites)<br><br>
                 <b>max_children:</b> Max PHP workers. Each uses ~30–50MB RAM. Don't exceed available RAM<br><br>
                 <b>start_servers:</b> Workers spawned at startup<br><br>
@@ -1163,18 +1189,18 @@ select.input-dark option{background:var(--field);color:var(--text);}
           <div class="row g-3">
             <div class="col-lg-7">
               <div class="service-card">
-                <div class="section-title"><i class="bi bi-database"></i> MySQL Settings <span id="perf-mysql-path" style="font-size:.72rem;color:var(--text-faint);font-weight:400;"></span></div>
+                <div class="section-title"><i class="bi bi-database"></i> MySQL Settings <span class="text-meta fw-normal" id="perf-mysql-path"></span></div>
                 <div id="perf-mysql-form"></div>
                 <div id="perf-mysql-out" class="log-box mt-3" style="height:80px;display:none;"></div>
                 <div class="mt-3 d-flex gap-2 align-items-center">
-                  <button class="btn btn-primary btn-sm" onclick="savePerf('mysql')"><i class="bi bi-floppy"></i> Save & Restart MySQL</button>
-                  <span style="font-size:.75rem;color:var(--warn);"><i class="bi bi-exclamation-triangle"></i> MySQL will restart briefly</span>
+                  <button class="btn btn-primary btn-sm" onclick="savePerf('mysql')"><i class="bi bi-floppy"></i> Save & restart MySQL</button>
+                  <span class="type-tiny text-warning"><i class="bi bi-exclamation-triangle"></i> MySQL will restart briefly</span>
                 </div>
               </div>
             </div>
             <div class="col-lg-5">
-              <div class="service-card" style="font-size:.82rem;color:var(--text-muted);">
-                <div style="color:var(--text-soft);font-weight:600;margin-bottom:8px;"><i class="bi bi-info-circle"></i> Tips</div>
+              <div class="service-card text-help">
+                <div class="text-soft fw-semibold mb-2"><i class="bi bi-info-circle"></i> Tips</div>
                 <b>max_connections:</b> Max simultaneous DB connections. Default 151 is fine for local<br><br>
                 <b>innodb_buffer_pool_size:</b> Most important MySQL setting — cache for InnoDB data. Set to 50–70% of available RAM for DB servers (e.g. <code>512M</code>, <code>1G</code>)<br><br>
                 <b>slow_query_log:</b> Set to <code>1</code> to log slow queries for debugging<br><br>
@@ -1193,35 +1219,35 @@ select.input-dark option{background:var(--field);color:var(--text);}
             <div class="service-card">
               <div class="section-title"><i class="bi bi-lock"></i> Change Password</div>
               <div class="mb-3">
-                <label style="font-size:.82rem;color:var(--text-muted);">New Password</label>
+                <label class="text-help">New password</label>
                 <input id="new-pw" type="password" class="input-dark mt-1">
               </div>
               <div class="mb-3">
-                <label style="font-size:.82rem;color:var(--text-muted);">Confirm Password</label>
+                <label class="text-help">Confirm password</label>
                 <input id="new-pw2" type="password" class="input-dark mt-1">
               </div>
-              <button class="btn btn-primary btn-sm" onclick="changePassword()">Save Password</button>
+              <button class="btn btn-primary btn-sm" onclick="changePassword()">Save password</button>
             </div>
           </div>
           <div class="col-md-5">
             <div class="service-card">
               <div class="section-title"><i class="bi bi-database-gear"></i> MySQL Credentials</div>
               <div class="mb-3">
-                <label style="font-size:.82rem;color:var(--text-muted);">MySQL User</label>
+                <label class="text-help">MySQL user</label>
                 <input id="mysql-user" class="input-dark mt-1" placeholder="root">
               </div>
               <div class="mb-3">
-                <label style="font-size:.82rem;color:var(--text-muted);">MySQL Password</label>
+                <label class="text-help">MySQL password</label>
                 <input id="mysql-pw" type="password" class="input-dark mt-1" placeholder="(blank for socket auth)">
               </div>
-              <button class="btn btn-primary btn-sm" onclick="saveMySQL()">Save Credentials</button>
+              <button class="btn btn-primary btn-sm" onclick="saveMySQL()">Save credentials</button>
             </div>
           </div>
           <div class="col-12">
             <div class="service-card">
               <div class="section-title"><i class="bi bi-info-circle"></i> Sudo Permissions</div>
-              <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:12px;">This panel runs system commands with <code>sudo</code>. Add this file to allow passwordless access:</p>
-              <pre class="code-editor" style="height:auto;padding:14px;font-size:.78rem;">sudo tee /etc/sudoers.d/server-panel &lt;&lt;'EOF'
+              <p class="text-help mb-3">This panel runs system commands with <code>sudo</code>. Add this file to allow passwordless access:</p>
+              <pre class="code-editor type-tiny" style="height:auto;padding:14px;">sudo tee /etc/sudoers.d/server-panel &lt;&lt;'EOF'
 # Allow server-panel to control services and edit nginx configs
 <span id="sudo-user-placeholder">YOUR_USER</span> ALL=(ALL) NOPASSWD: /usr/bin/systemctl start nginx
 <span class="sudo-line">YOUR_USER</span> ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop nginx
@@ -1248,15 +1274,15 @@ EOF</pre>
 </div><!-- /panel -->
 
 <!-- Delete modal -->
-<div id="delete-modal" style="display:none;position:fixed;inset:0;background:var(--overlay);z-index:9998;align-items:center;justify-content:center;">
+<div class="dialog-overlay" id="delete-modal" style="display:none;">
   <div style="background:var(--sheet);border:1px solid var(--line);border-radius:14px;padding:26px;width:480px;max-width:95vw;">
 
     <!-- Confirm step -->
     <div id="del-step-confirm">
-      <div style="font-size:1.05rem;font-weight:700;margin-bottom:10px;color:var(--error);"><i class="bi bi-trash"></i> Delete WordPress Site</div>
-      <div id="del-modal-body" style="font-size:.84rem;color:var(--text-soft);margin-bottom:14px;line-height:1.7;"></div>
-      <div style="font-size:.8rem;color:var(--text-faint);margin-bottom:5px;">Type <b id="del-confirm-hint" style="color:var(--error);"></b> to confirm:</div>
-      <input id="del-confirm-input" class="input-dark" placeholder="type site name here" style="margin-bottom:14px;" oninput="checkDelConfirm()">
+      <div class="text-danger mb-help" style="font-size:1.05rem;font-weight:700;"><i class="bi bi-trash"></i> Delete WordPress Site</div>
+      <div class="type-small text-soft mb-help" id="del-modal-body" style="line-height:1.7;"></div>
+      <div class="text-faint type-small" style="margin-bottom:5px;">Type <b class="text-danger" id="del-confirm-hint"></b> to confirm:</div>
+      <input id="del-confirm-input" class="input-dark mb-help" placeholder="type site name here" oninput="checkDelConfirm()">
       <div class="d-flex gap-2 justify-content-end">
         <button class="btn btn-sm btn-outline-secondary" onclick="closeDeleteModal()">Cancel</button>
         <button id="del-confirm-btn" class="btn btn-sm btn-danger" disabled onclick="confirmDelete()"><i class="bi bi-trash"></i> Delete</button>
@@ -1265,8 +1291,8 @@ EOF</pre>
 
     <!-- Progress step -->
     <div id="del-step-progress" style="display:none;">
-      <div style="font-size:1.05rem;font-weight:700;margin-bottom:10px;color:var(--error);"><i class="bi bi-trash"></i> Deleting…</div>
-      <div id="del-progress-log" class="log-box" style="height:200px;color:var(--text);"></div>
+      <div class="text-danger mb-help" style="font-size:1.05rem;font-weight:700;"><i class="bi bi-trash"></i> Deleting…</div>
+      <div id="del-progress-log" class="log-box log-preview"></div>
       <div id="del-done-row" style="display:none;" class="d-flex justify-content-end mt-3">
         <button class="btn btn-sm btn-outline-secondary" onclick="closeDeleteModal()">Close</button>
       </div>
@@ -1279,27 +1305,27 @@ EOF</pre>
 <div id="toast-container"></div>
 
 <!-- Credentials / phpMyAdmin modal -->
-<div id="cred-modal" style="display:none;position:fixed;inset:0;background:var(--overlay);z-index:9998;align-items:center;justify-content:center;">
+<div class="dialog-overlay" id="cred-modal" style="display:none;">
   <div style="background:var(--sheet);border:1px solid var(--line);border-radius:14px;padding:26px;width:440px;max-width:95vw;">
-    <div style="font-size:1.05rem;font-weight:700;margin-bottom:14px;"><i class="bi bi-database-gear" style="color:var(--warn);"></i> phpMyAdmin — <span id="cred-site-name" style="color:var(--accent);"></span></div>
-    <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:14px;">Use these credentials to log in. Click "Open phpMyAdmin" — it will open with the correct database pre-selected.</div>
+    <div class="mb-help" style="font-size:1.05rem;font-weight:700;"><i class="bi bi-database-gear text-warning"></i> phpMyAdmin — <span class="text-primary" id="cred-site-name"></span></div>
+    <div class="text-help mb-help">Use these credentials to log in. Click "Open phpMyAdmin" — it will open with the correct database pre-selected.</div>
     <div class="mb-3">
-      <div style="font-size:.75rem;color:var(--text-faint);margin-bottom:4px;">DATABASE</div>
+      <div class="text-meta mb-1">DATABASE</div>
       <div class="d-flex align-items-center gap-2">
-        <code id="cred-db-name" style="color:var(--success);flex:1;word-break:break-all;"></code>
+        <code class="text-success flex-1 text-break" id="cred-db-name"></code>
       </div>
     </div>
     <div class="mb-3">
-      <div style="font-size:.75rem;color:var(--text-faint);margin-bottom:4px;">USERNAME</div>
+      <div class="text-meta mb-1">USERNAME</div>
       <div class="d-flex align-items-center gap-2">
-        <code id="cred-db-user" style="color:var(--text);flex:1;"></code>
+        <code class="text-main flex-1" id="cred-db-user"></code>
         <button class="btn btn-sm btn-outline-secondary" onclick="copyText('cred-db-user')"><i class="bi bi-clipboard"></i></button>
       </div>
     </div>
     <div class="mb-4">
-      <div style="font-size:.75rem;color:var(--text-faint);margin-bottom:4px;">PASSWORD</div>
+      <div class="text-meta mb-1">PASSWORD</div>
       <div class="d-flex align-items-center gap-2">
-        <code id="cred-db-pass" style="color:var(--warn);flex:1;word-break:break-all;"></code>
+        <code class="text-warning flex-1 text-break" id="cred-db-pass"></code>
         <button class="btn btn-sm btn-outline-secondary" onclick="copyText('cred-db-pass')"><i class="bi bi-clipboard"></i></button>
       </div>
     </div>
@@ -1311,37 +1337,37 @@ EOF</pre>
 </div>
 
 <!-- Change Passwords modal -->
-<div id="chpass-modal" style="display:none;position:fixed;inset:0;background:var(--overlay);z-index:9998;align-items:center;justify-content:center;">
+<div class="dialog-overlay" id="chpass-modal" style="display:none;">
   <div style="background:var(--sheet);border:1px solid var(--line);border-radius:14px;padding:26px;width:460px;max-width:95vw;">
-    <div style="font-size:1.05rem;font-weight:700;margin-bottom:4px;"><i class="bi bi-key" style="color:var(--warn);"></i> Change Passwords — <span id="chpass-site-name" style="color:var(--accent);"></span></div>
-    <div style="font-size:.78rem;color:var(--text-faint);margin-bottom:18px;">DB User: <code id="chpass-db-user" style="color:var(--text-soft);"></code></div>
+    <div class="mb-1" style="font-size:1.05rem;font-weight:700;"><i class="bi bi-key text-warning"></i> Change Passwords — <span class="text-primary" id="chpass-site-name"></span></div>
+    <div class="text-meta" style="margin-bottom:18px;">DB User: <code class="text-soft" id="chpass-db-user"></code></div>
 
     <!-- DB password section -->
     <div class="mb-4 p-3" style="background:var(--inset);border-radius:8px;border:1px solid var(--line);">
-      <div style="font-size:.85rem;font-weight:600;margin-bottom:10px;"><i class="bi bi-database text-info"></i> Database User Password</div>
-      <div style="font-size:.75rem;color:var(--text-faint);margin-bottom:8px;">Updates MySQL user password and wp-config.php.</div>
+      <div class="type-small fw-semibold mb-help"><i class="bi bi-database text-info"></i> Database User Password</div>
+      <div class="text-meta mb-2">Updates MySQL user password and wp-config.php.</div>
       <div class="d-flex gap-2 mb-2">
-        <input id="chpass-db-new" type="password" class="input-dark" placeholder="New DB password" style="flex:1;">
+        <input id="chpass-db-new" type="password" class="input-dark flex-1" placeholder="New DB password">
         <button class="btn btn-sm btn-outline-secondary" onclick="genPassInto('chpass-db-new')"><i class="bi bi-arrow-repeat"></i></button>
       </div>
-      <button class="btn btn-sm btn-primary w-100" onclick="doChangeDbPass()" id="chpass-db-btn"><i class="bi bi-floppy"></i> Update DB Password</button>
-      <div id="chpass-db-msg" style="font-size:.78rem;margin-top:6px;display:none;"></div>
+      <button class="btn btn-sm btn-primary w-100" onclick="doChangeDbPass()" id="chpass-db-btn"><i class="bi bi-floppy"></i> Update DB password</button>
+      <div class="type-tiny" id="chpass-db-msg" style="margin-top:6px;display:none;"></div>
     </div>
 
     <!-- WP admin password section -->
     <div class="mb-3 p-3" style="background:var(--inset);border-radius:8px;border:1px solid var(--line);">
-      <div style="font-size:.85rem;font-weight:600;margin-bottom:10px;"><i class="bi bi-wordpress text-primary"></i> WP Admin Password</div>
-      <div style="font-size:.75rem;color:var(--text-faint);margin-bottom:8px;">Updates the selected WordPress administrator account.</div>
+      <div class="type-small fw-semibold mb-help"><i class="bi bi-wordpress text-primary"></i> WP Admin Password</div>
+      <div class="text-meta mb-2">Updates the selected WordPress administrator account.</div>
       <div class="mb-2">
-        <label style="font-size:.75rem;color:var(--text-soft);margin-bottom:4px;">Admin Username</label>
+        <label class="type-tiny text-soft mb-1">Admin username</label>
         <select id="chpass-wp-user" class="input-dark"></select>
       </div>
       <div class="d-flex gap-2 mb-2">
-        <input id="chpass-wp-new" type="password" class="input-dark" placeholder="New WP admin password" style="flex:1;">
+        <input id="chpass-wp-new" type="password" class="input-dark flex-1" placeholder="New WP admin password">
         <button class="btn btn-sm btn-outline-secondary" onclick="genPassInto('chpass-wp-new')"><i class="bi bi-arrow-repeat"></i></button>
       </div>
-      <button class="btn btn-sm btn-primary w-100" onclick="doChangeWpPass()" id="chpass-wp-btn"><i class="bi bi-floppy"></i> Update WP Admin Password</button>
-      <div id="chpass-wp-msg" style="font-size:.78rem;margin-top:6px;display:none;"></div>
+      <button class="btn btn-sm btn-primary w-100" onclick="doChangeWpPass()" id="chpass-wp-btn"><i class="bi bi-floppy"></i> Update WP admin password</button>
+      <div class="type-tiny" id="chpass-wp-msg" style="margin-top:6px;display:none;"></div>
     </div>
 
     <div class="d-flex justify-content-end">
@@ -1401,7 +1427,7 @@ async function autoStartPanelServices() {
     toast('Services started', 'success');
     refreshStatus();
   } else {
-    toast('Auto-start failed: ' + (r.error || 'unknown'), 'error');
+    toast('Services could not start. Check service status and retry: ' + (r.error || 'unknown'), 'error');
   }
 }
 
@@ -1427,9 +1453,19 @@ async function api(path, method='GET', body=null) {
   try {
     const r = await fetch(path, opts);
     if (r.status === 401) { doLogout(); return {}; }
-    return await r.json();
+    const text = await r.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch(e) {
+      return { success: false, error: `Server returned an unexpected response (HTTP ${r.status}).` };
+    }
+    if (!r.ok && !data?.error) {
+      return { success: false, error: `Request failed (HTTP ${r.status}). Please try again.` };
+    }
+    return data;
   } catch(e) {
-    return { success: false, error: e.message };
+    return { success: false, error: 'Cannot reach the panel server. Is it running?' };
   }
 }
 
@@ -1439,9 +1475,19 @@ async function apiDelete(path, body=null) {
   try {
     const r = await fetch(path, opts);
     if (r.status === 401) { doLogout(); return {}; }
-    return await r.json();
+    const text = await r.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch(e) {
+      return { success: false, error: `Server returned an unexpected response (HTTP ${r.status}).` };
+    }
+    if (!r.ok && !data?.error) {
+      return { success: false, error: `Request failed (HTTP ${r.status}). Please try again.` };
+    }
+    return data;
   } catch(e) {
-    return { success: false, error: e.message };
+    return { success: false, error: 'Cannot reach the panel server. Is it running?' };
   }
 }
 
@@ -1503,7 +1549,7 @@ async function svcAction(svc, action) {
   if (r.success || r.status) {
     toast(`${svc} ${action}: ${r.status || 'done'}`, r.success ? 'success' : 'error');
   } else {
-    toast(`Error: ${r.stderr || r.error || 'unknown'}`, 'error');
+    toast(`Service action failed. Check service status and retry: ${r.stderr || r.error || 'unknown'}`, 'error');
   }
   busyServices.delete(svc);
   refreshStatus();
@@ -1626,10 +1672,10 @@ function appLauncherLink() {
 }
 
 function openAppLauncherTarget(appType, tabName) {
-  if (!validPage(appType)) { toast('Target page not found', 'error'); return; }
+  if (!validPage(appType)) { toast('Cannot open this page. Refresh the panel and try again.', 'error'); return; }
   showPage(appType, appLauncherLink());
   const btn = document.querySelector(`#page-${appType} .custom-tabs button[onclick*="'${tabName}'"]`);
-  if (!btn) { toast('Target tab not found', 'error'); return; }
+  if (!btn) { toast('Cannot open this tab. Refresh the panel and try again.', 'error'); return; }
   switchTab(appType, tabName, btn);
 }
 
@@ -1641,7 +1687,7 @@ function appLauncherCreate(type) {
     'php-projects': 'install',
   };
   const target = targets[type];
-  if (!target) { toast('Unknown app type', 'error'); return; }
+  if (!target) { toast('Cannot open this app type. Refresh the panel and try again.', 'error'); return; }
   openAppLauncherTarget(type, target);
 }
 
@@ -1653,7 +1699,7 @@ function appLauncherManage(type) {
     'php-projects': 'apps',
   };
   const target = targets[type];
-  if (!target) { toast('Unknown app type', 'error'); return; }
+  if (!target) { toast('Cannot open this app type. Refresh the panel and try again.', 'error'); return; }
   openAppLauncherTarget(type, target);
 }
 
@@ -1674,7 +1720,7 @@ async function loadAppLauncherSummary() {
       const countEl = document.getElementById(`launcher-${type}-count`);
       const recentEl = document.getElementById(`launcher-${type}-recent`);
       if (countEl) { countEl.className = 'svc-status status-stopped'; countEl.textContent = 'Load failed'; }
-      if (recentEl) recentEl.innerHTML = `<div class="empty-state" style="padding:10px;font-size:.78rem;"><i class="bi bi-exclamation-circle"></i>${esc(err.message || 'Failed to load')}</div>`;
+      if (recentEl) recentEl.innerHTML = `<div class="empty-state type-tiny" style="padding:10px;"><i class="bi bi-exclamation-circle"></i>${esc(err.message || 'Failed to load')}</div>`;
     }
   }));
 }
@@ -1689,19 +1735,19 @@ function renderAppLauncherCardSummary(type, items) {
   countEl.className = items.length ? 'svc-status status-running' : 'svc-status status-unknown';
   countEl.textContent = `${items.length} ${noun}`;
   if (!items.length) {
-    recentEl.innerHTML = `<div style="color:var(--text-muted);font-size:.8rem;line-height:1.35;">${esc(config.empty)}</div>`;
+    recentEl.innerHTML = `<div class="text-muted type-small" style="line-height:1.35;">${esc(config.empty)}</div>`;
     return;
   }
   recentEl.innerHTML = items.slice(0, 3).map(item => {
     const url = launcherItemUrl(item);
     return `<div class="d-flex align-items-center justify-content-between gap-2 py-1" style="border-top:1px solid var(--line);">
       <div style="min-width:0;">
-        <div style="color:var(--text);font-size:.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(item.name || 'Untitled')}</div>
-        <div style="color:var(--text-muted);font-size:.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${launcherItemMeta(item)}</div>
+        <div class="type-small text-main fw-semibold text-nowrap" style="overflow:hidden;text-overflow:ellipsis;">${esc(item.name || 'Untitled')}</div>
+        <div class="text-help text-nowrap" style="overflow:hidden;text-overflow:ellipsis;">${launcherItemMeta(item)}</div>
       </div>
       <div class="d-flex gap-1 flex-shrink-0">
-        ${url ? `<a class="btn btn-sm btn-outline-secondary" style="padding:2px 7px;font-size:.72rem;" href="${url}" target="_blank" rel="noopener noreferrer">Open</a>` : ''}
-        <button class="btn btn-sm btn-outline-primary" style="padding:2px 7px;font-size:.72rem;" data-launcher-manage>Manage</button>
+        ${url ? `<a class="btn btn-sm btn-outline-secondary btn-compact" href="${url}" target="_blank" rel="noopener noreferrer">Open</a>` : ''}
+        <button class="btn btn-sm btn-outline-primary btn-compact" data-launcher-manage>Manage</button>
       </div>
     </div>`;
   }).join('');
@@ -1788,13 +1834,13 @@ async function saveSiteConfig() {
   const content = document.getElementById('site-editor-content').value;
   const r = await api(`/api/nginx/site/${editingSite}`, 'POST', { action: 'save', content });
   if (r.success) { toast('Site config saved', 'success'); document.getElementById('site-editor').style.display = 'none'; }
-  else toast('Save failed: ' + (r.stderr || r.error), 'error');
+  else toast('Site config could not be saved. Check the output and retry: ' + (r.stderr || r.error), 'error');
 }
 
 async function toggleSite(name, action) {
   const r = await api(`/api/nginx/site/${name}`, 'POST', { action });
   if (r.success) { toast(`Site ${name} ${action}d`, 'success'); loadNginxSites(); }
-  else toast(`Failed: ${r.stderr || r.error}`, 'error');
+  else toast(`Site action failed. Check Nginx logs and retry: ${r.stderr || r.error}`, 'error');
 }
 
 async function loadNginxConfig() {
@@ -1808,13 +1854,13 @@ async function saveNginxConfig() {
   const r = await api('/api/nginx/config', 'POST', { content });
   const st = document.getElementById('nginx-config-status');
   if (r.success) {
-    st.textContent = 'Saved successfully. Consider reloading nginx.';
+    st.textContent = 'Changes saved. Reload Nginx to apply them.';
     st.style.color = 'var(--success)'; st.style.display = 'block';
     toast('nginx.conf saved', 'success');
   } else {
     st.textContent = 'Error: ' + (r.details || r.error || r.stderr);
     st.style.color = 'var(--error)'; st.style.display = 'block';
-    toast('Config test failed', 'error');
+    toast('Configuration test failed. Check the output before saving again.', 'error');
   }
 }
 
@@ -1837,7 +1883,7 @@ async function loadDatabases() {
   const container = document.getElementById('mysql-db-table');
   const r = await api('/api/mysql/databases');
   if (!r.success) {
-    container.innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-circle"></i>${esc(r.error || 'Could not connect')}<br><small style="color:var(--text-faint)">Check MySQL credentials in Settings</small></div>`;
+    container.innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-circle"></i>${esc(r.error || 'Could not connect')}<br><small class="text-faint">Check MySQL credentials in Settings</small></div>`;
     return;
   }
   const dbs = r.databases || [];
@@ -1854,8 +1900,8 @@ async function loadDatabases() {
   const rows = dbs.map(db => {
     const sys = systemDbs.has(db);
     return `<tr>
-      <td><i class="bi bi-database" style="color:var(--ink);margin-right:6px;"></i><b>${esc(db)}</b></td>
-      <td><span style="font-size:.75rem;color:var(--text-faint);">${sys ? 'system' : 'user'}</span></td>
+      <td><i class="bi bi-database text-primary" style="margin-right:6px;"></i><b>${esc(db)}</b></td>
+      <td><span class="text-meta">${sys ? 'system' : 'user'}</span></td>
       <td>
         <button class="btn btn-sm btn-outline-secondary" onclick="queryDB('${esc(db)}')"><i class="bi bi-terminal"></i> Query</button>
         ${!sys ? `<button class="btn btn-sm btn-outline-danger ms-1" onclick="dropDB('${esc(db)}')"><i class="bi bi-trash"></i> Drop</button>` : ''}
@@ -1870,14 +1916,14 @@ async function createDB() {
   if (!name) { toast('Enter a database name', 'error'); return; }
   const r = await api('/api/mysql/databases', 'POST', { name });
   if (r.success) { toast(`Database "${name}" created`, 'success'); document.getElementById('new-db-name').value = ''; loadDatabases(); }
-  else toast('Error: ' + (r.stderr || r.error), 'error');
+  else toast('Database creation failed. Check MySQL credentials and retry: ' + (r.stderr || r.error), 'error');
 }
 
 async function dropDB(name) {
   if (!confirm(`Drop database "${name}"? This CANNOT be undone.`)) return;
   const r = await apiDelete(`/api/mysql/databases/${name}`);
   if (r.success) { toast(`Database "${name}" dropped`, 'success'); loadDatabases(); }
-  else toast('Error: ' + (r.stderr || r.error), 'error');
+  else toast('Database deletion failed. Check MySQL permissions and retry: ' + (r.stderr || r.error), 'error');
 }
 
 function queryDB(db) {
@@ -2095,7 +2141,7 @@ async function pollWpCoreUpdate(jobId) {
         clearInterval(wpCoreUpdateState.poll);
         wpCoreUpdateState.poll = null;
         log.textContent += '\n[update] Job response missing or invalid; stopping poll.';
-        toast('WordPress core update: job lost', 'error');
+        toast('WordPress core update status is unavailable. Refresh sites to check their versions.', 'error');
         button.disabled = false;
         refreshButton.disabled = false;
         return;
@@ -2111,7 +2157,7 @@ async function pollWpCoreUpdate(jobId) {
       const result = job.result || {};
       if (wpCoreUpdateState.refreshOnly) {
         wpCoreUpdateState.refreshOnly = false;
-        toast(job.status === 'done' ? `WordPress ${result.target_version || ''} package is ready` : 'WordPress package download failed', job.status === 'done' ? 'success' : 'error');
+        toast(job.status === 'done' ? `WordPress ${result.target_version || ''} package is ready` : 'WordPress package download failed. Check the update log and retry.', job.status === 'done' ? 'success' : 'error');
         button.disabled = false;
         refreshButton.disabled = false;
         await loadWPSites();
@@ -2147,7 +2193,7 @@ function renderWordPressSites() {
   renderAppListControls('wordpress', sites.length, total);
   if (!total) {
     wpLoginCreds = [];
-    container.innerHTML = `<div class="empty-state"><i class="bi bi-wordpress"></i>No WordPress installations found<br><small style="color:var(--text-faint)">Searched in /var/www, /opt, and ~/local</small></div>`;
+    container.innerHTML = `<div class="empty-state"><i class="bi bi-wordpress"></i>No WordPress installations found<br><small class="text-faint">Searched in /var/www, /opt, and ~/local</small></div>`;
     return;
   }
   if (!sites.length) {
@@ -2173,9 +2219,9 @@ function renderWordPressSites() {
           <div class="wp-title">
             ${isOutdated ? `<input type="checkbox" class="wp-core-update-choice" value="${esc(s.path)}" ${isSelected ? 'checked' : ''} onchange="toggleWpCoreUpdateSelection(this.value, this.checked)" style="margin-right:6px;vertical-align:middle;">` : ''}
             <i class="bi bi-wordpress text-primary"></i> ${esc(s.name)}
-            ${isSelected ? `<span style="font-size:.68rem;color:var(--ink);margin-left:6px;">Selected for update</span>` : ''}
+            ${isSelected ? `<span class="text-primary ms-icon" style="font-size:.68rem;">Selected for update</span>` : ''}
           </div>
-          <button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;font-size:.72rem;"
+          <button class="btn btn-sm btn-outline-danger btn-compact"
             onclick="deleteWPSite('${esc(s.name)}','${esc(s.path)}','${esc(s.db_name||'')}','${esc(s.db_user||'')}','${esc(s.nginx_site||s.name)}')">
             <i class="bi bi-trash"></i> Delete
           </button>
@@ -2189,25 +2235,25 @@ function renderWordPressSites() {
           <span><b>Nginx site:</b> ${esc(s.nginx_site || '—')}</span>
           <span><b>Version:</b> ${esc(s.wp_version || 'unknown')}</span>
         </div>
-        <div class="mt-3 p-2 rounded" style="background:var(--inset);border:1px solid var(--line);font-size:.8rem;">
-          <div style="font-size:.7rem;color:var(--text-faint);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">Saved WP Admin Login</div>
+        <div class="mt-3 p-2 rounded inset-box type-small">
+          <div class="field-label mb-2">Saved WP admin login</div>
           ${(s.wp_admin_users && s.wp_admin_users.length) || s.wp_admin_user ? `
             <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
-              <b style="color:var(--text-soft);">User:</b>
-              <select id="wp-admin-user-${i}" class="input-dark" style="width:auto;min-width:150px;padding:3px 8px;font-size:.78rem;" onchange="setWpLoginUser(${i}, this.value)">
+              <b class="text-soft">User:</b>
+              <select id="wp-admin-user-${i}" class="input-dark type-tiny" style="width:auto;min-width:150px;padding:3px 8px;" onchange="setWpLoginUser(${i}, this.value)">
                 ${wpAdminUserOptions(s.wp_admin_users || [s.wp_admin_user], s.wp_saved_admin_user || s.wp_admin_user)}
               </select>
-              <button class="btn btn-sm btn-outline-secondary" style="padding:2px 8px;font-size:.72rem;" onclick="copySelectedWpAdminUser(${i})"><i class="bi bi-clipboard"></i> Copy</button>
+              <button class="btn btn-sm btn-outline-secondary btn-compact" onclick="copySelectedWpAdminUser(${i})"><i class="bi bi-clipboard"></i> Copy</button>
             </div>` : ''}
           ${s.wp_admin_pass ? `
             <div class="d-flex align-items-center gap-2 flex-wrap">
-              <b style="color:var(--text-soft);">Pass${s.wp_saved_admin_user ? ` (${esc(s.wp_saved_admin_user)})` : ''}:</b>
-              <code id="wp-admin-pass-${i}" style="color:var(--warn);word-break:break-all;">${esc(s.wp_admin_pass)}</code>
-              <button class="btn btn-sm btn-outline-secondary" style="padding:2px 8px;font-size:.72rem;" onclick="copyText('wp-admin-pass-${i}')"><i class="bi bi-clipboard"></i> Copy</button>
+              <b class="text-soft">Pass${s.wp_saved_admin_user ? ` (${esc(s.wp_saved_admin_user)})` : ''}:</b>
+              <code class="text-warning text-break" id="wp-admin-pass-${i}">${esc(s.wp_admin_pass)}</code>
+              <button class="btn btn-sm btn-outline-secondary btn-compact" onclick="copyText('wp-admin-pass-${i}')"><i class="bi bi-clipboard"></i> Copy</button>
             </div>` : `
-            <div style="color:var(--text-muted);">${s.wp_admin_user ? 'Password is not saved.' : 'Admin user not detected.'} Use <b>Passwords</b> to set a new password for the selected admin, then it will be saved here.</div>`}
+            <div class="text-muted">${s.wp_admin_user ? 'Password is not saved.' : 'Admin user not detected.'} Use <b>Passwords</b> to set a new password for the selected admin, then it will be saved here.</div>`}
         </div>
-        ${s.error ? `<div class="mt-2 text-danger" style="font-size:.78rem;">Error: ${esc(s.error)}</div>` : ''}
+        ${s.error ? `<div class="mt-2 text-danger type-tiny">Error: ${esc(s.error)}</div>` : ''}
         <div class="mt-3 d-flex gap-2 flex-wrap">
           ${s.port ? `<a class="btn btn-sm btn-outline-secondary" href="http://localhost:${esc(s.port)}/" target="_blank"><i class="bi bi-globe"></i> Site</a>` : ''}
           ${s.port && s.auto_login?.active
@@ -2218,7 +2264,7 @@ function renderWordPressSites() {
                <button class="btn btn-sm btn-outline-danger" onclick="setWpAutoLogin('${esc(s.path)}','remove')"><i class="bi bi-trash"></i> Remove Login Plugin</button>`
              : `<button class="btn btn-sm btn-outline-success" onclick="setWpAutoLogin('${esc(s.path)}','enable')"><i class="bi bi-plug"></i> Enable Auto Login</button>`}
           <button class="btn btn-sm btn-outline-success" onclick="openWPPma('${esc(s.name)}','${esc(s.path)}','${esc(s.db_name||'')}')"><i class="bi bi-database-gear"></i> phpMyAdmin</button>
-          <button class="btn btn-sm btn-outline-info" onclick="openSiteFolder('${esc(s.path)}')"><i class="bi bi-folder2-open"></i> Open Folder</button>
+          <button class="btn btn-sm btn-outline-info" onclick="openSiteFolder('${esc(s.path)}')"><i class="bi bi-folder2-open"></i> Open folder</button>
           <button class="btn btn-sm btn-outline-warning" onclick="showChangePassModal('${esc(s.name)}','${esc(s.path)}','${esc(s.db_user||'')}','${esc(s.db_name||'')}',${i})"><i class="bi bi-key"></i> Passwords</button>
           <button class="btn btn-sm btn-outline-secondary" onclick="changeWPPort('${esc(s.name)}','${esc(s.nginx_site||s.name)}','${esc(s.port||'')}')"><i class="bi bi-router"></i> Port</button>
         </div>
@@ -2241,7 +2287,7 @@ async function changeWPPort(name, nginxSite, currentPort) {
     toast(`${name} is now on port ${n}`, 'success');
     loadWPSites();
   } else {
-    toast('Port change failed: ' + (r.stderr || r.error || 'unknown'), 'error');
+    toast('Port change failed. Check that the port is free and retry: ' + (r.stderr || r.error || 'unknown'), 'error');
   }
 }
 
@@ -2252,7 +2298,7 @@ async function setWpAutoLogin(path, action) {
     toast(action === 'remove' ? 'Auto-login plugin removed' : `Auto-login ${action}d`, 'success');
     loadWPSites();
   } else {
-    toast('Auto-login failed: ' + (r.stderr || r.error || 'unknown'), 'error');
+    toast('Auto-login failed. Refresh WordPress sites and retry: ' + (r.stderr || r.error || 'unknown'), 'error');
   }
 }
 
@@ -2283,7 +2329,7 @@ async function autoLoginWP(index) {
     loginWindow.location = r.login_url;
   } else {
     loginWindow.close();
-    toast('Auto-login failed: ' + (r.error || 'unknown'), 'error');
+    toast('Auto-login failed. Refresh WordPress sites and retry: ' + (r.error || 'unknown'), 'error');
   }
 }
 
@@ -2294,10 +2340,10 @@ function setWpLoginUser(index, username) {
 function copySelectedWpAdminUser(index) {
   const val = document.getElementById(`wp-admin-user-${index}`)?.value || '';
   if (!val) {
-    toast('No admin user selected', 'error');
+    toast('Select a WordPress administrator and try again.', 'error');
     return;
   }
-  navigator.clipboard.writeText(val).then(() => toast('Copied!', 'success'));
+  navigator.clipboard.writeText(val).then(() => toast('Copied', 'success'));
 }
 
 async function openSiteFolder(path) {
@@ -2323,7 +2369,7 @@ function deleteWPSite(name, path, dbName, dbUser, nginxSite) {
      <b>Database:</b> <code>${esc(dbName)}</code><br>
      <b>DB User:</b> <code>${esc(dbUser)}</code><br>
      <b>Nginx site:</b> <code>${esc(nginxSite)}</code><br><br>
-     <span style="color:var(--error);font-weight:600;">This CANNOT be undone.</span>`;
+     <span class="text-danger fw-semibold">This CANNOT be undone.</span>`;
 
   document.getElementById('del-confirm-hint').textContent = name;
   document.getElementById('del-confirm-input').value = '';
@@ -2381,7 +2427,7 @@ async function confirmDelete() {
         toast(`"${name}" deleted`, 'success');
         loadWPSites();
       } else {
-        toast('Delete failed', 'error');
+        toast('Deletion failed. Check the deletion log and try again.', 'error');
       }
     }
   }, 800);
@@ -2394,16 +2440,16 @@ async function changePassword() {
   if (!p1) { toast('Password cannot be empty', 'error'); return; }
   if (p1 !== p2) { toast('Passwords do not match', 'error'); return; }
   const r = await api('/api/settings', 'POST', { new_password: p1 });
-  if (r.success) { toast('Password changed. Please log in again.', 'success'); setTimeout(doLogout, 1500); }
-  else toast('Failed: ' + r.error, 'error');
+  if (r.success) { toast('Password saved. Sign in again.', 'success'); setTimeout(doLogout, 1500); }
+  else toast('Password could not be saved. Try again: ' + r.error, 'error');
 }
 
 async function saveMySQL() {
   const user = document.getElementById('mysql-user').value.trim() || 'root';
   const pw   = document.getElementById('mysql-pw').value;
   const r = await api('/api/settings', 'POST', { mysql_user: user, mysql_password: pw });
-  if (r.success) toast('MySQL credentials saved', 'success');
-  else toast('Failed: ' + r.error, 'error');
+  if (r.success) toast('Credentials saved', 'success');
+  else toast('Credentials could not be saved. Check the values and retry: ' + r.error, 'error');
 }
 
 // ══ WordPress Install ═════════════════════════════════════════════════════════
@@ -2464,7 +2510,7 @@ async function loadWpPluginLibrary() {
   container.innerHTML = '<span class="spinner-sm"></span> Scanning plugins…';
   const r = await api('/api/wordpress/plugins');
   if (!r.success) {
-    container.innerHTML = `<span style="color:var(--error);">Could not scan plugins: ${esc(r.error || 'unknown')}</span>`;
+    container.innerHTML = `<span class="text-danger">Could not scan plugins: ${esc(r.error || 'unknown')}</span>`;
     return;
   }
   wpPluginLibrary = r.plugins || [];
@@ -2477,12 +2523,12 @@ async function loadWpPluginLibrary() {
     <label class="d-flex align-items-start gap-2 mb-2" style="cursor:pointer;">
       <input type="checkbox" class="form-check-input mt-1 wp-plugin-choice" value="${esc(p.id)}">
       <span>
-        <b style="color:var(--text);">${esc(p.name)}</b>
-        <span style="color:var(--text-muted);">v${esc(p.version || '—')}</span><br>
-        <small style="color:var(--text-faint);">${esc(p.zip)} · ${esc(p.slug)}</small>
+        <b class="text-main">${esc(p.name)}</b>
+        <span class="text-muted">v${esc(p.version || '—')}</span><br>
+        <small class="text-faint">${esc(p.zip)} · ${esc(p.slug)}</small>
       </span>
     </label>`).join('');
-  const invalidHtml = invalid.map(i => `<div style="color:var(--error);font-size:.75rem;">Skipped ${esc(i.zip)}: ${esc(i.error)}</div>`).join('');
+  const invalidHtml = invalid.map(i => `<div class="type-tiny text-danger">Skipped ${esc(i.zip)}: ${esc(i.error)}</div>`).join('');
   container.innerHTML = `${pluginsHtml || '<div>No valid plugin zips found.</div>'}${invalidHtml ? `<hr style="border-color:var(--line);margin:8px 0;">${invalidHtml}` : ''}`;
 }
 
@@ -2529,7 +2575,7 @@ async function startWpInstall() {
   log.textContent = 'Starting installation…\n';
   result.style.display = 'none';
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner-sm"></span> Installing…';
+  btn.innerHTML = '<span class="spinner-sm"></span> Installing';
 
   let wpAdminUser = document.getElementById('wp-admin-user').value.trim();
   if (!wpAdminUser) {
@@ -2567,10 +2613,10 @@ async function startWpInstall() {
     if (job.status === 'done') {
       clearInterval(wpPollInterval);
       btn.disabled = false;
-      btn.innerHTML = '<i class="bi bi-download"></i> Install Another';
+      btn.innerHTML = '<i class="bi bi-download"></i> Install another';
       const res = job.result;
       if (res.success) {
-        toast('WordPress installed!', 'success');
+        toast('WordPress installed', 'success');
         result.style.display = 'block';
         document.getElementById('wp-result-url').href   = res.url;
         document.getElementById('wp-result-admin').dataset.adminUrl = res.admin_url;
@@ -2589,7 +2635,7 @@ async function startWpInstall() {
       clearInterval(wpPollInterval);
       btn.disabled = false;
       btn.innerHTML = '<i class="bi bi-download"></i> Retry';
-      toast('Installation failed', 'error');
+      toast('WordPress installation failed. Check the installation log and try again.', 'error');
     }
   }, 1500);
 }
@@ -2635,7 +2681,7 @@ function renderLaravelApps() {
   const apps = filterAndSortApps('laravel', appListState.laravel.items);
   renderAppListControls('laravel', apps.length, total);
   if (!total) {
-    container.innerHTML = `<div class="empty-state"><i class="bi bi-code-square"></i>No Laravel apps found<br><small style="color:var(--text-faint)">Searched in /var/www and /opt</small></div>`;
+    container.innerHTML = `<div class="empty-state"><i class="bi bi-code-square"></i>No Laravel apps found<br><small class="text-faint">Searched in /var/www and /opt</small></div>`;
     return;
   }
   if (!apps.length) {
@@ -2647,7 +2693,7 @@ function renderLaravelApps() {
       <div class="wp-card">
         <div class="d-flex align-items-start justify-content-between">
           <div class="wp-title"><i class="bi bi-code-square text-danger"></i> ${esc(app.name)}</div>
-          <button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;font-size:.72rem;" onclick="deleteLaravelApp('${esc(app.name)}','${esc(app.path)}','${esc(app.db_name||'')}','${esc(app.db_user||'')}','${esc(app.nginx_site||app.name)}')"><i class="bi bi-trash"></i> Delete</button>
+          <button class="btn btn-sm btn-outline-danger btn-compact" onclick="deleteLaravelApp('${esc(app.name)}','${esc(app.path)}','${esc(app.db_name||'')}','${esc(app.db_user||'')}','${esc(app.nginx_site||app.name)}')"><i class="bi bi-trash"></i> Delete</button>
         </div>
         <div class="wp-meta mt-1">
           <span><b>Path:</b> ${esc(app.path)}</span>
@@ -2657,31 +2703,31 @@ function renderLaravelApps() {
           <span><b>Nginx site:</b> ${esc(app.nginx_site || '—')}</span>
           <span><b>Version:</b> ${esc(app.version || '—')}</span>
         </div>
-        <div class="mt-3 p-2 rounded" style="background:var(--inset);border:1px solid var(--line);font-size:.8rem;">
-          <div style="font-size:.7rem;color:var(--text-faint);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">Database Login</div>
+        <div class="mt-3 p-2 rounded inset-box type-small">
+          <div class="field-label mb-2">Database login</div>
           <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
-            <b style="color:var(--text-soft);">DB:</b>
-            <code id="lv-db-name-${i}" style="color:var(--success);">${esc(app.db_name || '')}</code>
-            <button class="btn btn-sm btn-outline-secondary" style="padding:2px 8px;font-size:.72rem;" onclick="copyText('lv-db-name-${i}')"><i class="bi bi-clipboard"></i> Copy</button>
+            <b class="text-soft">DB:</b>
+            <code class="text-success" id="lv-db-name-${i}">${esc(app.db_name || '')}</code>
+            <button class="btn btn-sm btn-outline-secondary btn-compact" onclick="copyText('lv-db-name-${i}')"><i class="bi bi-clipboard"></i> Copy</button>
           </div>
           <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
-            <b style="color:var(--text-soft);">User:</b>
-            <code id="lv-db-user-${i}" style="color:var(--success);">${esc(app.db_user || '')}</code>
-            <button class="btn btn-sm btn-outline-secondary" style="padding:2px 8px;font-size:.72rem;" onclick="copyText('lv-db-user-${i}')"><i class="bi bi-clipboard"></i> Copy</button>
+            <b class="text-soft">User:</b>
+            <code class="text-success" id="lv-db-user-${i}">${esc(app.db_user || '')}</code>
+            <button class="btn btn-sm btn-outline-secondary btn-compact" onclick="copyText('lv-db-user-${i}')"><i class="bi bi-clipboard"></i> Copy</button>
           </div>
           <div class="d-flex align-items-center gap-2 flex-wrap">
-            <b style="color:var(--text-soft);">Pass:</b>
-            <code id="lv-db-pass-${i}" style="color:var(--warn);word-break:break-all;">${esc(app.db_pass || '')}</code>
-            <button class="btn btn-sm btn-outline-secondary" style="padding:2px 8px;font-size:.72rem;" onclick="copyText('lv-db-pass-${i}')"><i class="bi bi-clipboard"></i> Copy</button>
+            <b class="text-soft">Pass:</b>
+            <code class="text-warning text-break" id="lv-db-pass-${i}">${esc(app.db_pass || '')}</code>
+            <button class="btn btn-sm btn-outline-secondary btn-compact" onclick="copyText('lv-db-pass-${i}')"><i class="bi bi-clipboard"></i> Copy</button>
           </div>
         </div>
         <div class="mt-3 d-flex gap-2 flex-wrap">
           ${app.port ? `<a class="btn btn-sm btn-outline-secondary" href="http://localhost:${esc(app.port)}/" target="_blank"><i class="bi bi-globe"></i> Site</a>` : ''}
-          <button class="btn btn-sm btn-outline-info" onclick="openSiteFolder('${esc(app.path)}')"><i class="bi bi-folder2-open"></i> Open Folder</button>
+          <button class="btn btn-sm btn-outline-info" onclick="openSiteFolder('${esc(app.path)}')"><i class="bi bi-folder2-open"></i> Open folder</button>
           <button class="btn btn-sm btn-outline-secondary" onclick="changeLaravelPort('${esc(app.name)}','${esc(app.nginx_site||app.name)}','${esc(app.port||'')}')"><i class="bi bi-router"></i> Port</button>
           <button class="btn btn-sm btn-outline-primary" onclick="runLaravelTool('${esc(app.path)}','migrate')"><i class="bi bi-database-check"></i> Migrate</button>
-          <button class="btn btn-sm btn-outline-warning" onclick="runLaravelTool('${esc(app.path)}','cache_clear')"><i class="bi bi-broom"></i> Clear Cache</button>
-          <button class="btn btn-sm btn-outline-success" onclick="runLaravelTool('${esc(app.path)}','storage_link')"><i class="bi bi-link-45deg"></i> Storage Link</button>
+          <button class="btn btn-sm btn-outline-warning" onclick="runLaravelTool('${esc(app.path)}','cache_clear')"><i class="bi bi-broom"></i> Clear cache</button>
+          <button class="btn btn-sm btn-outline-success" onclick="runLaravelTool('${esc(app.path)}','storage_link')"><i class="bi bi-link-45deg"></i> Storage link</button>
         </div>
       </div>
     </div>`).join('')}</div>`;
@@ -2704,13 +2750,13 @@ async function startLaravelInstall() {
   log.textContent = 'Starting Laravel installation…\n';
   result.style.display = 'none';
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner-sm"></span> Creating…';
+  btn.innerHTML = '<span class="spinner-sm"></span> Creating';
 
   const r = await api('/api/laravel/install', 'POST', { site_name: siteName, install_path: installPath, port, db_name: dbName, db_user: dbUser, db_pass: dbPass || undefined, app_name: siteName, laravel_version: laravelVersion });
   if (!r.success) {
     log.textContent = 'Error: ' + (r.error || 'Failed to start');
     btn.disabled = false;
-    btn.innerHTML = '<i class="bi bi-download"></i> Create Laravel App';
+    btn.innerHTML = '<i class="bi bi-download"></i> Create Laravel app';
     return;
   }
   if (laravelPollInterval) clearInterval(laravelPollInterval);
@@ -2721,9 +2767,9 @@ async function startLaravelInstall() {
     if (job.status === 'done') {
       clearInterval(laravelPollInterval);
       btn.disabled = false;
-      btn.innerHTML = '<i class="bi bi-download"></i> Create Another';
+      btn.innerHTML = '<i class="bi bi-download"></i> Create another';
       if (job.result?.success) {
-        toast('Laravel app created!', 'success');
+        toast('Laravel app created', 'success');
         document.getElementById('lv-result-url').href = job.result.url;
         result.style.display = 'block';
         loadLaravelApps();
@@ -2732,7 +2778,7 @@ async function startLaravelInstall() {
       clearInterval(laravelPollInterval);
       btn.disabled = false;
       btn.innerHTML = '<i class="bi bi-download"></i> Retry';
-      toast('Laravel install failed', 'error');
+      toast('Laravel app creation failed. Check the installation log and try again.', 'error');
     }
   }, 1500);
 }
@@ -2742,20 +2788,20 @@ async function changeLaravelPort(name, nginxSite, currentPort) {
   if (port === null) return;
   const r = await api('/api/laravel/port', 'POST', { nginx_site: nginxSite, port });
   if (r.success) { toast(`${name} is now on port ${port}`, 'success'); loadLaravelApps(); }
-  else toast('Port change failed: ' + (r.stderr || r.error || 'unknown'), 'error');
+  else toast('Port change failed. Check that the port is free and retry: ' + (r.stderr || r.error || 'unknown'), 'error');
 }
 
 async function runLaravelTool(path, action) {
   toast('Running Laravel command…', 'info');
   const r = await api('/api/laravel/artisan', 'POST', { path, action });
   if (r.success) toast((r.stdout || 'Command completed').slice(0, 180), 'success');
-  else toast('Laravel command failed: ' + (r.stderr || r.error || 'unknown'), 'error');
+  else toast('Laravel command failed. Check the app configuration and retry: ' + (r.stderr || r.error || 'unknown'), 'error');
 }
 
 async function deleteLaravelApp(name, path, dbName, dbUser, nginxSite) {
   if (!confirm(`Delete Laravel app ${name}? This removes files, database, user, and Nginx site.`)) return;
   const r = await apiDelete('/api/laravel/apps', { path, db_name: dbName, db_user: dbUser, nginx_site: nginxSite });
-  if (!r.success) { toast('Delete failed: ' + (r.error || 'unknown'), 'error'); return; }
+  if (!r.success) { toast('Deletion failed. Check the deletion log and retry: ' + (r.error || 'unknown'), 'error'); return; }
   toast('Deleting Laravel app…', 'info');
   if (laravelDeletePollInterval) clearInterval(laravelDeletePollInterval);
   laravelDeletePollInterval = setInterval(async () => {
@@ -2766,7 +2812,7 @@ async function deleteLaravelApp(name, path, dbName, dbUser, nginxSite) {
       loadLaravelApps();
     } else if (job.status === 'error') {
       clearInterval(laravelDeletePollInterval);
-      toast('Delete failed: ' + (job.result?.error || 'unknown'), 'error');
+      toast('Deletion failed. Check the deletion log and retry: ' + (job.result?.error || 'unknown'), 'error');
     }
   }, 1200);
 }
@@ -2813,7 +2859,7 @@ function renderCodeIgniterApps() {
   const apps = filterAndSortApps('codeigniter', appListState.codeigniter.items);
   renderAppListControls('codeigniter', apps.length, total);
   if (!total) {
-    container.innerHTML = `<div class="empty-state"><i class="bi bi-braces"></i>No CodeIgniter apps found<br><small style="color:var(--text-faint)">Searched in /var/www and /opt</small></div>`;
+    container.innerHTML = `<div class="empty-state"><i class="bi bi-braces"></i>No CodeIgniter apps found<br><small class="text-faint">Searched in /var/www and /opt</small></div>`;
     return;
   }
   if (!apps.length) {
@@ -2825,7 +2871,7 @@ function renderCodeIgniterApps() {
       <div class="wp-card">
         <div class="d-flex align-items-start justify-content-between">
           <div class="wp-title"><i class="bi bi-braces text-info"></i> ${esc(app.name)}</div>
-          <button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;font-size:.72rem;" onclick="deleteCodeIgniterApp('${esc(app.name)}','${esc(app.path)}','${esc(app.db_name||'')}','${esc(app.db_user||'')}','${esc(app.nginx_site||app.name)}')"><i class="bi bi-trash"></i> Delete</button>
+          <button class="btn btn-sm btn-outline-danger btn-compact" onclick="deleteCodeIgniterApp('${esc(app.name)}','${esc(app.path)}','${esc(app.db_name||'')}','${esc(app.db_user||'')}','${esc(app.nginx_site||app.name)}')"><i class="bi bi-trash"></i> Delete</button>
         </div>
         <div class="wp-meta mt-1">
           <span><b>Path:</b> ${esc(app.path)}</span>
@@ -2835,28 +2881,28 @@ function renderCodeIgniterApps() {
           <span><b>Nginx site:</b> ${esc(app.nginx_site || '—')}</span>
           <span><b>Version:</b> ${esc(app.version || 'CodeIgniter 4')}</span>
         </div>
-        <div class="mt-3 p-2 rounded" style="background:var(--inset);border:1px solid var(--line);font-size:.8rem;">
-          <div style="font-size:.7rem;color:var(--text-faint);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">Database Login</div>
+        <div class="mt-3 p-2 rounded inset-box type-small">
+          <div class="field-label mb-2">Database login</div>
           <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
-            <b style="color:var(--text-soft);">DB:</b>
-            <code id="ci-db-name-${i}" style="color:var(--success);">${esc(app.db_name || '')}</code>
-            <button class="btn btn-sm btn-outline-secondary" style="padding:2px 8px;font-size:.72rem;" onclick="copyText('ci-db-name-${i}')"><i class="bi bi-clipboard"></i> Copy</button>
+            <b class="text-soft">DB:</b>
+            <code class="text-success" id="ci-db-name-${i}">${esc(app.db_name || '')}</code>
+            <button class="btn btn-sm btn-outline-secondary btn-compact" onclick="copyText('ci-db-name-${i}')"><i class="bi bi-clipboard"></i> Copy</button>
           </div>
           <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
-            <b style="color:var(--text-soft);">User:</b>
-            <code id="ci-db-user-${i}" style="color:var(--success);">${esc(app.db_user || '')}</code>
-            <button class="btn btn-sm btn-outline-secondary" style="padding:2px 8px;font-size:.72rem;" onclick="copyText('ci-db-user-${i}')"><i class="bi bi-clipboard"></i> Copy</button>
+            <b class="text-soft">User:</b>
+            <code class="text-success" id="ci-db-user-${i}">${esc(app.db_user || '')}</code>
+            <button class="btn btn-sm btn-outline-secondary btn-compact" onclick="copyText('ci-db-user-${i}')"><i class="bi bi-clipboard"></i> Copy</button>
           </div>
           <div class="d-flex align-items-center gap-2 flex-wrap">
-            <b style="color:var(--text-soft);">Pass:</b>
-            <code id="ci-db-pass-${i}" style="color:var(--warn);word-break:break-all;">${esc(app.db_pass || '')}</code>
-            <button class="btn btn-sm btn-outline-secondary" style="padding:2px 8px;font-size:.72rem;" onclick="copyText('ci-db-pass-${i}')"><i class="bi bi-clipboard"></i> Copy</button>
+            <b class="text-soft">Pass:</b>
+            <code class="text-warning text-break" id="ci-db-pass-${i}">${esc(app.db_pass || '')}</code>
+            <button class="btn btn-sm btn-outline-secondary btn-compact" onclick="copyText('ci-db-pass-${i}')"><i class="bi bi-clipboard"></i> Copy</button>
           </div>
         </div>
         <div class="mt-3 d-flex gap-2 flex-wrap">
           ${app.port ? `<a class="btn btn-sm btn-outline-secondary" href="http://localhost:${esc(app.port)}/" target="_blank"><i class="bi bi-globe"></i> Site</a>` : ''}
           <a class="btn btn-sm btn-outline-warning ${app.db_name ? '' : 'disabled'}" href="${app.db_name ? `http://localhost:8081/index.php?route=/database/structure&db=${encodeURIComponent(app.db_name)}` : '#'}" target="_blank"><i class="bi bi-database"></i> phpMyAdmin</a>
-          <button class="btn btn-sm btn-outline-info" onclick="openSiteFolder('${esc(app.path)}')"><i class="bi bi-folder2-open"></i> Open Folder</button>
+          <button class="btn btn-sm btn-outline-info" onclick="openSiteFolder('${esc(app.path)}')"><i class="bi bi-folder2-open"></i> Open folder</button>
           <button class="btn btn-sm btn-outline-secondary" onclick="changeCodeIgniterPort('${esc(app.name)}','${esc(app.nginx_site||app.name)}','${esc(app.port||'')}')"><i class="bi bi-router"></i> Port</button>
         </div>
       </div>
@@ -2879,13 +2925,13 @@ async function startCodeIgniterInstall() {
   log.textContent = 'Starting CodeIgniter installation…\n';
   result.style.display = 'none';
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner-sm"></span> Creating…';
+  btn.innerHTML = '<span class="spinner-sm"></span> Creating';
 
   const r = await api('/api/codeigniter/install', 'POST', { site_name: siteName, install_path: installPath, port, db_name: dbName, db_user: dbUser, db_pass: dbPass || undefined });
   if (!r.success) {
     log.textContent = 'Error: ' + (r.error || 'Failed to start');
     btn.disabled = false;
-    btn.innerHTML = '<i class="bi bi-download"></i> Create CodeIgniter App';
+    btn.innerHTML = '<i class="bi bi-download"></i> Create CodeIgniter app';
     return;
   }
   if (codeIgniterPollInterval) clearInterval(codeIgniterPollInterval);
@@ -2896,9 +2942,9 @@ async function startCodeIgniterInstall() {
     if (job.status === 'done') {
       clearInterval(codeIgniterPollInterval);
       btn.disabled = false;
-      btn.innerHTML = '<i class="bi bi-download"></i> Create Another';
+      btn.innerHTML = '<i class="bi bi-download"></i> Create another';
       if (job.result?.success) {
-        toast('CodeIgniter app created!', 'success');
+        toast('CodeIgniter app created', 'success');
         document.getElementById('ci-result-url').href = job.result.url;
         result.style.display = 'block';
         loadCodeIgniterApps();
@@ -2907,7 +2953,7 @@ async function startCodeIgniterInstall() {
       clearInterval(codeIgniterPollInterval);
       btn.disabled = false;
       btn.innerHTML = '<i class="bi bi-download"></i> Retry';
-      toast('CodeIgniter install failed', 'error');
+      toast('CodeIgniter app creation failed. Check the installation log and try again.', 'error');
     }
   }, 1500);
 }
@@ -2917,13 +2963,13 @@ async function changeCodeIgniterPort(name, nginxSite, currentPort) {
   if (port === null) return;
   const r = await api('/api/codeigniter/port', 'POST', { nginx_site: nginxSite, port });
   if (r.success) { toast(`${name} is now on port ${port}`, 'success'); loadCodeIgniterApps(); }
-  else toast('Port change failed: ' + (r.stderr || r.error || 'unknown'), 'error');
+  else toast('Port change failed. Check that the port is free and retry: ' + (r.stderr || r.error || 'unknown'), 'error');
 }
 
 async function deleteCodeIgniterApp(name, path, dbName, dbUser, nginxSite) {
   if (!confirm(`Delete CodeIgniter app ${name}? This removes files, database, user, and Nginx site.`)) return;
   const r = await apiDelete('/api/codeigniter/apps', { path, db_name: dbName, db_user: dbUser, nginx_site: nginxSite });
-  if (!r.success) { toast('Delete failed: ' + (r.error || 'unknown'), 'error'); return; }
+  if (!r.success) { toast('Deletion failed. Check the deletion log and retry: ' + (r.error || 'unknown'), 'error'); return; }
   toast('Deleting CodeIgniter app…', 'info');
   if (codeIgniterDeletePollInterval) clearInterval(codeIgniterDeletePollInterval);
   codeIgniterDeletePollInterval = setInterval(async () => {
@@ -2934,7 +2980,7 @@ async function deleteCodeIgniterApp(name, path, dbName, dbUser, nginxSite) {
       loadCodeIgniterApps();
     } else if (job.status === 'error') {
       clearInterval(codeIgniterDeletePollInterval);
-      toast('Delete failed: ' + (job.result?.error || 'unknown'), 'error');
+      toast('Deletion failed. Check the deletion log and retry: ' + (job.result?.error || 'unknown'), 'error');
     }
   }, 1200);
 }
@@ -2992,7 +3038,7 @@ function renderPhpProjects() {
   const apps = filterAndSortApps('php-projects', appListState['php-projects'].items);
   renderAppListControls('php-projects', apps.length, total);
   if (!total) {
-    container.innerHTML = `<div class="empty-state"><i class="bi bi-filetype-php"></i>No PHP projects found<br><small style="color:var(--text-faint)">Only panel-created PHP projects are listed</small></div>`;
+    container.innerHTML = `<div class="empty-state"><i class="bi bi-filetype-php"></i>No PHP projects found<br><small class="text-faint">Only panel-created PHP projects are listed</small></div>`;
     return;
   }
   if (!apps.length) {
@@ -3004,7 +3050,7 @@ function renderPhpProjects() {
       <div class="wp-card">
         <div class="d-flex align-items-start justify-content-between">
           <div class="wp-title"><i class="bi bi-filetype-php text-info"></i> ${esc(app.name)}</div>
-          <button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;font-size:.72rem;" onclick="deletePhpProject('${esc(app.name)}','${esc(app.path)}','${esc(app.db_name||'')}','${esc(app.db_user||'')}','${esc(app.nginx_site||app.name)}')"><i class="bi bi-trash"></i> Delete</button>
+          <button class="btn btn-sm btn-outline-danger btn-compact" onclick="deletePhpProject('${esc(app.name)}','${esc(app.path)}','${esc(app.db_name||'')}','${esc(app.db_user||'')}','${esc(app.nginx_site||app.name)}')"><i class="bi bi-trash"></i> Delete</button>
         </div>
         <div class="wp-meta mt-1">
           <span><b>Path:</b> ${esc(app.path)}</span>
@@ -3014,11 +3060,11 @@ function renderPhpProjects() {
           <span><b>Database:</b> ${esc(app.db_name || '—')}</span>
           <span><b>DB User:</b> ${esc(app.db_user || '—')}</span>
         </div>
-        ${app.db_name ? `<div class="mt-3 p-2 rounded" style="background:var(--inset);border:1px solid var(--line);font-size:.8rem;"><b style="color:var(--text-soft);">DB:</b> <code id="php-db-name-${i}" style="color:var(--success);">${esc(app.db_name)}</code> <button class="btn btn-sm btn-outline-secondary" style="padding:2px 8px;font-size:.72rem;" onclick="copyText('php-db-name-${i}')"><i class="bi bi-clipboard"></i> Copy</button></div>` : ''}
+        ${app.db_name ? `<div class="mt-3 p-2 rounded inset-box type-small"><b class="text-soft">DB:</b> <code class="text-success" id="php-db-name-${i}">${esc(app.db_name)}</code> <button class="btn btn-sm btn-outline-secondary btn-compact" onclick="copyText('php-db-name-${i}')"><i class="bi bi-clipboard"></i> Copy</button></div>` : ''}
         <div class="mt-3 d-flex gap-2 flex-wrap">
           ${app.port ? `<a class="btn btn-sm btn-outline-secondary" href="http://localhost:${esc(app.port)}/" target="_blank"><i class="bi bi-globe"></i> Site</a>` : ''}
           ${app.db_name ? `<a class="btn btn-sm btn-outline-warning" href="http://localhost:8081/index.php?route=/database/structure&db=${encodeURIComponent(app.db_name)}" target="_blank"><i class="bi bi-database"></i> phpMyAdmin</a>` : ''}
-          <button class="btn btn-sm btn-outline-info" onclick="openSiteFolder('${esc(app.path)}')"><i class="bi bi-folder2-open"></i> Open Folder</button>
+          <button class="btn btn-sm btn-outline-info" onclick="openSiteFolder('${esc(app.path)}')"><i class="bi bi-folder2-open"></i> Open folder</button>
           <button class="btn btn-sm btn-outline-secondary" onclick="changePhpProjectPort('${esc(app.name)}','${esc(app.nginx_site||app.name)}','${esc(app.port||'')}')"><i class="bi bi-router"></i> Port</button>
         </div>
       </div>
@@ -3042,7 +3088,7 @@ async function startPhpProjectInstall() {
   log.textContent = 'Starting PHP project installation...\n';
   result.style.display = 'none';
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner-sm"></span> Creating...';
+  btn.innerHTML = '<span class="spinner-sm"></span> Creating';
 
   const payload = { site_name: siteName, install_path: installPath, template, port };
   if (template === 'php_db') Object.assign(payload, { db_name: dbName, db_user: dbUser, db_pass: dbPass || undefined });
@@ -3050,7 +3096,7 @@ async function startPhpProjectInstall() {
   if (!r.success) {
     log.textContent = 'Error: ' + (r.error || 'Failed to start');
     btn.disabled = false;
-    btn.innerHTML = '<i class="bi bi-download"></i> Create PHP Project';
+    btn.innerHTML = '<i class="bi bi-download"></i> Create PHP project';
     return;
   }
   if (phpProjectPollInterval) clearInterval(phpProjectPollInterval);
@@ -3061,9 +3107,9 @@ async function startPhpProjectInstall() {
     if (job.status === 'done') {
       clearInterval(phpProjectPollInterval);
       btn.disabled = false;
-      btn.innerHTML = '<i class="bi bi-download"></i> Create Another';
+      btn.innerHTML = '<i class="bi bi-download"></i> Create another';
       if (job.result?.success) {
-        toast('PHP project created!', 'success');
+        toast('PHP project created', 'success');
         document.getElementById('php-result-url').href = job.result.url;
         result.style.display = 'block';
         loadPhpProjects();
@@ -3072,7 +3118,7 @@ async function startPhpProjectInstall() {
       clearInterval(phpProjectPollInterval);
       btn.disabled = false;
       btn.innerHTML = '<i class="bi bi-download"></i> Retry';
-      toast('PHP project install failed', 'error');
+      toast('PHP project creation failed. Check the installation log and try again.', 'error');
     }
   }, 1500);
 }
@@ -3082,13 +3128,13 @@ async function changePhpProjectPort(name, nginxSite, currentPort) {
   if (port === null) return;
   const r = await api('/api/php-projects/port', 'POST', { nginx_site: nginxSite, port });
   if (r.success) { toast(`${name} is now on port ${port}`, 'success'); loadPhpProjects(); }
-  else toast('Port change failed: ' + (r.stderr || r.error || 'unknown'), 'error');
+  else toast('Port change failed. Check that the port is free and retry: ' + (r.stderr || r.error || 'unknown'), 'error');
 }
 
 async function deletePhpProject(name, path, dbName, dbUser, nginxSite) {
   if (!confirm(`Delete PHP project ${name}? This removes panel-created files, Nginx site, and DB resources when applicable.`)) return;
   const r = await apiDelete('/api/php-projects/apps', { path, db_name: dbName, db_user: dbUser, nginx_site: nginxSite });
-  if (!r.success) { toast('Delete failed: ' + (r.error || 'unknown'), 'error'); return; }
+  if (!r.success) { toast('Deletion failed. Check the deletion log and retry: ' + (r.error || 'unknown'), 'error'); return; }
   toast('Deleting PHP project...', 'info');
   if (phpProjectDeletePollInterval) clearInterval(phpProjectDeletePollInterval);
   phpProjectDeletePollInterval = setInterval(async () => {
@@ -3099,7 +3145,7 @@ async function deletePhpProject(name, path, dbName, dbUser, nginxSite) {
       loadPhpProjects();
     } else if (job.status === 'error') {
       clearInterval(phpProjectDeletePollInterval);
-      toast('Delete failed: ' + (job.result?.error || 'unknown'), 'error');
+      toast('Deletion failed. Check the deletion log and retry: ' + (job.result?.error || 'unknown'), 'error');
     }
   }, 1200);
 }
@@ -3128,7 +3174,7 @@ async function loadPmaStatus() {
       <div class="col-md-4">
         <div class="stat-card">
           <div class="label">phpMyAdmin</div>
-          <div class="value" style="font-size:1.1rem;padding-top:6px;">
+          <div class="value status-icon">
             <span class="svc-status ${installed ? 'status-active' : 'status-inactive'}">${installed ? 'Installed' : 'Not Installed'}</span>
           </div>
           <div class="sub mt-1">${installed ? '/usr/share/phpmyadmin' : 'apt install phpmyadmin'}</div>
@@ -3137,16 +3183,16 @@ async function loadPmaStatus() {
       <div class="col-md-4">
         <div class="stat-card">
           <div class="label">Nginx Site</div>
-          <div class="value" style="font-size:1.1rem;padding-top:6px;">
+          <div class="value status-icon">
             <span class="svc-status ${nginxEnabled ? 'status-active' : 'status-inactive'}">${nginxEnabled ? 'Enabled' : r.nginx_site_exists ? 'Disabled' : 'Not Created'}</span>
           </div>
-          <div class="sub mt-1">${nginxEnabled ? `Listening on port ${r.pma_port}` : 'Configure in Nginx Setup tab'}</div>
+          <div class="sub mt-1">${nginxEnabled ? `Listening on port ${r.pma_port}` : 'Configure in Nginx setup tab'}</div>
         </div>
       </div>
       <div class="col-md-4">
         <div class="stat-card">
           <div class="label">PHP-FPM (${r.php_version})</div>
-          <div class="value" style="font-size:1.1rem;padding-top:6px;">
+          <div class="value status-icon">
             <span class="svc-status ${fpmActive ? 'status-active' : 'status-inactive'}">${fpmActive ? 'Active' : 'Inactive'}</span>
           </div>
           <div class="sub mt-1">${fpmSvc}</div>
@@ -3159,7 +3205,7 @@ async function loadPmaStatus() {
       <div class="d-flex align-items-center justify-content-between">
         <div>
           <div class="svc-name"><i class="bi bi-check-circle text-success"></i> phpMyAdmin is ready</div>
-          <div style="font-size:.82rem;color:var(--text-muted);margin-top:4px;">Accessible at <code>${r.url}</code></div>
+          <div class="text-help mt-1">Accessible at <code>${r.url}</code></div>
         </div>
         <a href="${r.url}" target="_blank" class="btn btn-success btn-sm"><i class="bi bi-box-arrow-up-right"></i> Open phpMyAdmin</a>
       </div>
@@ -3170,12 +3216,12 @@ async function loadPmaStatus() {
       <div class="col-md-6">
         <div class="service-card">
           <div class="svc-name mb-2"><i class="bi bi-download text-warning"></i> Install phpMyAdmin</div>
-          <p style="font-size:.82rem;color:var(--text-muted);">Installs phpMyAdmin and required PHP extensions via apt.</p>
+          <p class="text-help">Installs phpMyAdmin and required PHP extensions via apt.</p>
           <div id="pma-install-log" class="log-box mb-2" style="height:80px;display:none;"></div>
           <button class="btn btn-warning btn-sm" onclick="installPma()" id="pma-install-btn">
-            <i class="bi bi-download"></i> Install Now
+            <i class="bi bi-download"></i> Install now
           </button>
-          <div style="font-size:.75rem;color:var(--text-faint);margin-top:6px;">Requires sudo apt access (~2–5 min)</div>
+          <div class="text-meta" style="margin-top:6px;">Requires sudo apt access (~2–5 min)</div>
         </div>
       </div>` : ''}
 
@@ -3195,8 +3241,8 @@ async function loadPmaStatus() {
           <div class="action-btns">
             ${nginxEnabled
               ? `<button class="btn btn-outline-danger btn-sm" onclick="pmaAction('disable')"><i class="bi bi-x-circle"></i> Disable</button>`
-              : `<button class="btn btn-success btn-sm" onclick="pmaAction('enable')"><i class="bi bi-check-circle"></i> Enable &amp; Reload</button>`}
-            <button class="btn btn-outline-secondary btn-sm" onclick="switchTab('phpmyadmin','nginx', document.querySelector('#page-phpmyadmin .custom-tabs button:nth-child(2)'))"><i class="bi bi-pencil"></i> Edit Config</button>
+              : `<button class="btn btn-success btn-sm" onclick="pmaAction('enable')"><i class="bi bi-check-circle"></i> Enable &amp; reload</button>`}
+            <button class="btn btn-outline-secondary btn-sm" onclick="switchTab('phpmyadmin','nginx', document.querySelector('#page-phpmyadmin .custom-tabs button:nth-child(2)'))"><i class="bi bi-pencil"></i> Edit config</button>
           </div>
         </div>
       </div>` : ''}
@@ -3209,13 +3255,13 @@ async function installPma() {
   const btn = document.getElementById('pma-install-btn');
   const log = document.getElementById('pma-install-log');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner-sm"></span> Installing…';
+  btn.innerHTML = '<span class="spinner-sm"></span> Installing';
   log.style.display = 'block';
   log.textContent = 'Running apt-get install… (this may take 2–5 minutes)';
   const r = await api('/api/phpmyadmin/install', 'POST', {}, 300000);
   log.textContent = r.stdout || r.stderr || r.error || 'Done';
   if (r.installed) {
-    toast('phpMyAdmin installed successfully!', 'success');
+    toast('phpMyAdmin installed', 'success');
     loadPmaStatus();
     loadPmaNginxConfig();
   } else {
@@ -3242,7 +3288,7 @@ async function generatePmaConfig() {
     document.getElementById('pma-nginx-editor').value = r.content;
     toast('Config generated', 'info');
   } else {
-    toast('Failed: ' + r.error, 'error');
+    toast('Config generation failed. Check the settings and retry: ' + r.error, 'error');
   }
 }
 
@@ -3252,10 +3298,10 @@ async function savePmaConfig() {
   const r = await api('/api/phpmyadmin/nginx', 'POST', { action: 'save', content });
   if (r.success) {
     toast('Nginx site config saved', 'success');
-    st.textContent = 'Saved. Click "Enable & Reload" to activate.';
+    st.textContent = 'Saved. Click "Enable & reload" to activate.';
     st.style.color = 'var(--success)'; st.style.display = 'block';
   } else {
-    toast('Save failed: ' + (r.stderr || r.error), 'error');
+    toast('Site config could not be saved. Check the output and retry: ' + (r.stderr || r.error), 'error');
     st.textContent = 'Error: ' + (r.stderr || r.error);
     st.style.color = 'var(--error)'; st.style.display = 'block';
   }
@@ -3268,7 +3314,7 @@ async function pmaAction(action) {
     loadPmaStatus();
     refreshStatus();
   } else {
-    toast(`Failed: ${r.stderr || r.error}`, 'error');
+    toast(`phpMyAdmin site action failed. Check Nginx logs and retry: ${r.stderr || r.error}`, 'error');
   }
 }
 
@@ -3288,9 +3334,9 @@ async function savePmaPhpConfig() {
   const r = await api('/api/phpmyadmin/config', 'POST', { content });
   if (r.success) {
     toast('config.inc.php saved', 'success');
-    msg.textContent = 'Saved successfully.'; msg.style.color = 'var(--success)'; msg.style.display = 'block';
+    msg.textContent = 'Changes saved.'; msg.style.color = 'var(--success)'; msg.style.display = 'block';
   } else {
-    toast('Save failed: ' + (r.stderr || r.error), 'error');
+    toast('PHP config could not be saved. Check the output and retry: ' + (r.stderr || r.error), 'error');
     msg.textContent = 'Error: ' + (r.stderr || r.error); msg.style.color = 'var(--error)'; msg.style.display = 'block';
   }
 }
@@ -3357,18 +3403,18 @@ function buildPerfForm(section, data) {
     let input;
     if (f.type === 'select') {
       const opts = f.opts.map(o => `<option value="${o}"${o==val?'selected':''}>${o}</option>`).join('');
-      input = `<select class="input-dark" data-key="${f.key}" style="flex:1;">${opts}</select>`;
+      input = `<select class="input-dark flex-1" data-key="${f.key}">${opts}</select>`;
     } else {
-      input = `<input type="${f.type}" class="input-dark" data-key="${f.key}" value="${val}" style="flex:1;">`;
+      input = `<input type="${f.type}" class="input-dark flex-1" data-key="${f.key}" value="${val}">`;
     }
     return `
       <div class="mb-3">
         <div class="d-flex align-items-center gap-2 mb-1">
-          <label style="font-size:.82rem;color:var(--text-soft);min-width:160px;">${f.label}</label>
+          <label class="type-small text-soft" style="min-width:160px;">${f.label}</label>
           ${input}
-          ${f.unit ? `<span style="font-size:.78rem;color:var(--text-faint);white-space:nowrap;">${f.unit}</span>` : ''}
+          ${f.unit ? `<span class="text-meta text-nowrap">${f.unit}</span>` : ''}
         </div>
-        <div style="font-size:.72rem;color:var(--text-faint);padding-left:164px;">${f.hint}</div>
+        <div class="text-meta" style="padding-left:164px;">${f.hint}</div>
       </div>`;
   }).join('');
 }
@@ -3407,7 +3453,7 @@ async function savePerf(section) {
     toast(`${section.toUpperCase()} settings saved`, 'success');
     loadPerformance(); // refresh displayed values
   } else {
-    toast(`Save failed: ${r.error || r.details || 'check output'}`, 'error');
+    toast(`Settings could not be saved. Check the output and retry: ${r.error || r.details || 'check output'}`, 'error');
   }
 }
 
@@ -3444,7 +3490,7 @@ function closeCredModal() {
 
 function copyText(elemId) {
   const val = document.getElementById(elemId).textContent;
-  navigator.clipboard.writeText(val).then(() => toast('Copied!', 'success'));
+  navigator.clipboard.writeText(val).then(() => toast('Copied', 'success'));
 }
 
 // ══ Change Passwords Modal ════════════════════════════════════════════════════
@@ -3487,14 +3533,14 @@ async function doChangeDbPass() {
   const btn = document.getElementById('chpass-db-btn');
   const msg = document.getElementById('chpass-db-msg');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner-sm"></span> Updating…';
+  btn.innerHTML = '<span class="spinner-sm"></span> Updating';
   const r = await api('/api/wordpress/change_db_password', 'POST', {
     install_path: _cpSite.path,
     db_user: _cpSite.dbUser,
     new_pass: newPass,
   });
   btn.disabled = false;
-  btn.innerHTML = '<i class="bi bi-floppy"></i> Update DB Password';
+  btn.innerHTML = '<i class="bi bi-floppy"></i> Update DB password';
   if (r.success) {
     msg.textContent = 'DB password updated.' + (r.config_updated ? ' wp-config.php updated.' : ' Warning: could not update wp-config.php.');
     msg.style.color = r.config_updated ? 'var(--success)' : 'var(--warn)';
@@ -3504,7 +3550,7 @@ async function doChangeDbPass() {
     msg.textContent = 'Error: ' + (r.error || 'Failed');
     msg.style.color = 'var(--error)';
     msg.style.display = 'block';
-    toast('DB password change failed', 'error');
+    toast('DB password update failed. Check the output and try again.', 'error');
   }
 }
 
@@ -3515,14 +3561,14 @@ async function doChangeWpPass() {
   const btn = document.getElementById('chpass-wp-btn');
   const msg = document.getElementById('chpass-wp-msg');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner-sm"></span> Updating…';
+  btn.innerHTML = '<span class="spinner-sm"></span> Updating';
   const r = await api('/api/wordpress/change_wp_admin', 'POST', {
     install_path: _cpSite.path,
     wp_admin_user: document.getElementById('chpass-wp-user').value,
     new_pass: newPass,
   });
   btn.disabled = false;
-  btn.innerHTML = '<i class="bi bi-floppy"></i> Update WP Admin Password';
+  btn.innerHTML = '<i class="bi bi-floppy"></i> Update WP admin password';
   if (r.success) {
     msg.textContent = `WP admin password updated (via ${r.method}).`;
     msg.style.color = 'var(--success)';
@@ -3533,7 +3579,7 @@ async function doChangeWpPass() {
     msg.textContent = 'Error: ' + (r.error || 'Failed');
     msg.style.color = 'var(--error)';
     msg.style.display = 'block';
-    toast('WP admin password change failed', 'error');
+    toast('WP admin password update failed. Check the output and try again.', 'error');
   }
 }
 
