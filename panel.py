@@ -8,6 +8,8 @@ Default password: admin
 """
 
 import json
+import argparse
+import sys
 import subprocess
 import os
 import re
@@ -42,6 +44,7 @@ ASSET_TYPES = {
 }
 
 DEFAULT_CONFIG = {
+    "username": "admin",
     "password_hash": hashlib.sha256("admin".encode()).hexdigest(),
     "session_tokens": {},
     "mysql_user": "root",
@@ -109,6 +112,32 @@ def load_config():
 def save_config(cfg):
     with open(CONFIG_FILE, "w") as f:
         json.dump(cfg, f, indent=2)
+
+
+def validate_username(username):
+    if not isinstance(username, str) or not re.fullmatch(r"[A-Za-z0-9._-]{1,32}", username):
+        raise ValueError("Username must be 1–32 characters using only letters, digits, '.', '_' or '-'.")
+    return username
+
+
+def set_login_from_stdin():
+    username = sys.stdin.readline().rstrip("\r\n") or "admin"
+    password = sys.stdin.readline().rstrip("\r\n") or "admin"
+    try:
+        validate_username(username)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    cfg = load_config()
+    cfg["username"] = username
+    cfg["password_hash"] = hashlib.sha256(password.encode()).hexdigest()
+    cfg["session_tokens"] = {}
+    # Restrict permissions before writing, including when replacing an existing login.
+    with os.fdopen(os.open(CONFIG_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w") as f:
+        os.fchmod(f.fileno(), 0o600)
+        json.dump(cfg, f, indent=2)
+    print(f"Login saved for user {username}.")
+    return 0
 
 
 def get_wp_admin_credential(install_path):
@@ -2211,7 +2240,10 @@ class Handler(BaseHTTPRequestHandler):
 
         cfg = load_config()
 
-        if path == "/api/status":
+        if path == "/api/settings":
+            self.send_json({"username": cfg["username"]})
+
+        elif path == "/api/status":
             nginx = svc_status("nginx")
             mysql = svc_status("mysql") if svc_status("mysql") == "active" else svc_status("mariadb")
             self.send_json({
@@ -2382,14 +2414,17 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/login":
             data = self.read_body()
             pw = data.get("password", "")
+            username = data.get("username", "admin")
             cfg = load_config()
-            if hashlib.sha256(pw.encode()).hexdigest() == cfg["password_hash"]:
+            if (isinstance(username, str) and isinstance(pw, str)
+                    and username.strip() == cfg["username"]
+                    and hashlib.sha256(pw.encode()).hexdigest() == cfg["password_hash"]):
                 token = secrets.token_hex(32)
                 cfg.setdefault("session_tokens", {})[token] = time.time()
                 save_config(cfg)
                 self.send_json({"success": True, "token": token})
             else:
-                self.send_json({"success": False, "error": "Wrong password"}, 401)
+                self.send_json({"success": False, "error": "Wrong username or password"}, 401)
             return
 
         if path == "/api/panel/close":
@@ -2494,6 +2529,17 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(r)
 
         elif path == "/api/settings":
+            if "new_username" in data:
+                try:
+                    validate_username(data["new_username"])
+                except ValueError as exc:
+                    self.send_json({"success": False, "error": str(exc)}); return
+                current_password = data.get("current_password")
+                if (not isinstance(current_password, str)
+                        or hashlib.sha256(current_password.encode()).hexdigest() != cfg["password_hash"]):
+                    self.send_json({"success": False, "error": "Current password is required and must be correct."}); return
+                cfg["username"] = data["new_username"]
+                cfg["session_tokens"] = {}
             if data.get("new_password"):
                 cfg["password_hash"] = hashlib.sha256(data["new_password"].encode()).hexdigest()
                 cfg["session_tokens"] = {}  # invalidate sessions
@@ -2967,7 +3013,13 @@ echo 'ok';
 
 # ── entry point ───────────────────────────────────────────────────────────────
 
-if __name__ == "__main__":
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Local Server Management Panel")
+    parser.add_argument("--set-login", action="store_true", help="Read username and password from stdin and exit")
+    args = parser.parse_args(argv)
+    if args.set_login:
+        return set_login_from_stdin()
+
     if not os.path.exists(CONFIG_FILE):
         save_config(DEFAULT_CONFIG)
 
@@ -2980,7 +3032,10 @@ if __name__ == "__main__":
     print(f"║   Server Management Panel  v1.1      ║")
     print(f"╚══════════════════════════════════════╝")
     print(f"  URL      : http://{HOST}:{PORT}")
-    print(f"  Password : admin  (change in Settings)")
+    cfg = load_config()
+    print(f"  User     : {cfg['username']}")
+    if cfg["password_hash"] == hashlib.sha256(b"admin").hexdigest():
+        print("  default password admin — change it in Settings")
     print(f"  Stop     : Ctrl+C")
     print()
 
@@ -2989,3 +3044,8 @@ if __name__ == "__main__":
         server.serve_forever()
     except KeyboardInterrupt:
         print("\nStopped.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

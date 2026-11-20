@@ -264,7 +264,10 @@ select.input-dark option{background:var(--field);color:var(--text);}
     <h2>Server Panel</h2>
     <p>Run Nginx, MySQL, PHP and your local sites from one place.</p>
     <div class="mb-3">
-      <input id="login-pw" type="password" class="input-dark" placeholder="Password" style="width:100%;padding:10px 14px;" onkeydown="if(event.key==='Enter')doLogin()">
+      <input id="login-user" autocomplete="username" class="input-dark" placeholder="Username" value="admin" style="width:100%;padding:10px 14px;" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="mb-3">
+      <input id="login-pw" type="password" autocomplete="current-password" class="input-dark" placeholder="Password" style="width:100%;padding:10px 14px;" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <button class="btn btn-primary w-100" onclick="doLogin()">Sign in</button>
     <div id="login-err" class="mt-2 text-danger" style="font-size:.83rem;display:none;"></div>
@@ -1217,7 +1220,23 @@ select.input-dark option{background:var(--field);color:var(--text);}
         <div class="row g-4">
           <div class="col-md-5">
             <div class="service-card">
-              <div class="section-title"><i class="bi bi-lock"></i> Change Password</div>
+              <div class="section-title"><i class="bi bi-person"></i> Username</div>
+              <p class="text-help">Current username: <span id="current-username"></span></p>
+              <div class="mb-3">
+                <label for="new-username" class="field-label">New username</label>
+                <input id="new-username" class="input-dark mt-1" autocomplete="username" maxlength="32">
+                <div class="text-help mt-1">Use 1–32 letters, digits, dots, underscores or hyphens.</div>
+              </div>
+              <div class="mb-3">
+                <label for="username-current-pw" class="field-label">Current password</label>
+                <input id="username-current-pw" type="password" class="input-dark mt-1" autocomplete="current-password">
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="changeUsername()">Save username</button>
+            </div>
+          </div>
+          <div class="col-md-5">
+            <div class="service-card">
+              <div class="section-title"><i class="bi bi-lock"></i> Change password</div>
               <div class="mb-3">
                 <label class="text-help">New password</label>
                 <input id="new-pw" type="password" class="input-dark mt-1">
@@ -1388,15 +1407,16 @@ let panelServicesStarted = sessionStorage.getItem('panel_services_started') === 
 
 // ══ Auth ═════════════════════════════════════════════════════════════════════
 async function doLogin() {
+  const username = document.getElementById('login-user').value.trim();
   const pw = document.getElementById('login-pw').value;
-  const r = await api('/api/login', 'POST', { password: pw });
+  const r = await api('/api/login', 'POST', { username, password: pw });
   if (r.success) {
     token = r.token;
     localStorage.setItem('panel_token', token);
     showPanel();
   } else {
     const el = document.getElementById('login-err');
-    el.textContent = 'Wrong password.';
+    el.textContent = 'Wrong username or password.';
     el.style.display = 'block';
   }
 }
@@ -1778,6 +1798,7 @@ function onPageLoad(name) {
   if (name === 'php-projects') { loadPhpProjects(); loadPhpProjectNextPort(); }
   if (name === 'phpmyadmin')  { loadPmaStatus(); loadPmaNginxConfig(); loadPmaPhpConfig(); }
   if (name === 'performance') { loadPerformance(); }
+  if (name === 'settings') { loadSettings(); }
 }
 
 // ══ Tab switching ═════════════════════════════════════════════════════════════
@@ -2434,6 +2455,23 @@ async function confirmDelete() {
 }
 
 // ══ Settings ══════════════════════════════════════════════════════════════════
+async function loadSettings() {
+  const r = await api('/api/settings');
+  document.getElementById('current-username').textContent = r.username || '';
+}
+
+async function changeUsername() {
+  const username = document.getElementById('new-username').value;
+  const password = document.getElementById('username-current-pw').value;
+  const r = await api('/api/settings', 'POST', { new_username: username, current_password: password });
+  if (r.success) {
+    document.getElementById('username-current-pw').value = '';
+    document.getElementById('login-user').value = username;
+    toast('Username saved. Sign in again.', 'success');
+    setTimeout(doLogout, 1500);
+  } else toast(r.error || 'Username could not be saved. Try again.', 'error');
+}
+
 async function changePassword() {
   const p1 = document.getElementById('new-pw').value;
   const p2 = document.getElementById('new-pw2').value;

@@ -8,6 +8,12 @@ if [ -z "$USER" ]; then
   exit 1
 fi
 
+PANEL_DIR="${2:-/home/$USER/Documents/server-panel}"
+if [[ ! "$PANEL_DIR" =~ ^[A-Za-z0-9/._-]+$ ]]; then
+  echo "Invalid panel directory: use only letters, digits, /, ., _ or - (no spaces or commas)."
+  exit 1
+fi
+
 cat > /etc/sudoers.d/server-panel << EOF
 # Server Panel — passwordless sudo rules for $USER
 $USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl start nginx
@@ -30,12 +36,12 @@ $USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart php*-fpm
 $USER ALL=(ALL) NOPASSWD: /bin/cp /tmp/_panel_pma_* /etc/phpmyadmin/*
 $USER ALL=(ALL) NOPASSWD: /bin/cp /tmp/_panel_pma_nginx /etc/nginx/sites-available/phpmyadmin
 $USER ALL=(ALL) NOPASSWD: /usr/bin/apt-get install -y phpmyadmin *
-$USER ALL=(ALL) NOPASSWD: /home/$USER/Documents/server-panel/wp-install-helper.sh *
-$USER ALL=(ALL) NOPASSWD: /home/$USER/Documents/server-panel/wp-delete-helper.sh *
-$USER ALL=(ALL) NOPASSWD: /home/$USER/Documents/server-panel/laravel-helper.sh *
-$USER ALL=(ALL) NOPASSWD: /home/$USER/Documents/server-panel/codeigniter-helper.sh *
-$USER ALL=(ALL) NOPASSWD: /home/$USER/Documents/server-panel/php-project-helper.sh *
-$USER ALL=(ALL) NOPASSWD: /home/$USER/Documents/server-panel/perf-helper.sh *
+$USER ALL=(ALL) NOPASSWD: $PANEL_DIR/wp-install-helper.sh *
+$USER ALL=(ALL) NOPASSWD: $PANEL_DIR/wp-delete-helper.sh *
+$USER ALL=(ALL) NOPASSWD: $PANEL_DIR/laravel-helper.sh *
+$USER ALL=(ALL) NOPASSWD: $PANEL_DIR/codeigniter-helper.sh *
+$USER ALL=(ALL) NOPASSWD: $PANEL_DIR/php-project-helper.sh *
+$USER ALL=(ALL) NOPASSWD: $PANEL_DIR/perf-helper.sh *
 EOF
 
 chmod 440 /etc/sudoers.d/server-panel

@@ -61,6 +61,8 @@ Done (2026-11-20, not yet committed): new token-based style block, 224 inline co
 - Login gets a username field; old configs without a username default to `admin`, so nobody gets locked out.
 - Settings page can change username + password.
 
+Done (2026-11-20): `install.sh` (python check, tool report, login prompt via `panel.py --set-login` over stdin, optional sudo setup, launcher, opt-in autostart, `--yes`). Login takes username; legacy configs and requests without a username act as `admin`. Settings can change username (needs current password). `setup-sudo.sh` takes an optional install dir as 2nd arg; output for the old call is byte-identical (checked). Dry-run of the installer in a temp copy with a fake HOME passed.
+
 ## Phase 4 — MCP server
 
 `mcp/server_panel_mcp.py`, pure Python stdio (no dependencies), talks to the panel API on 127.0.0.1 with a token.
