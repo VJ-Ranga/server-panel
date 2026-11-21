@@ -9,39 +9,65 @@ ask you before calling tools that change the server. Tool descriptions and
 annotations request confirmation; this bridge does not enforce a confirmation
 prompt. Results may contain site credentials or SQL output: share them carefully.
 
+## Quick setup
+
+From the repository directory, run these commands as your normal user.
+
+```bash
+scripts/mcp-setup.sh on
+scripts/mcp-setup.sh status
+scripts/mcp-setup.sh off
+```
+
+`on` enables the key and registers `server-panel` in Claude Code and Codex when their CLIs are available. Existing entries are kept by default. Use `on --force` to replace an existing entry. If OpenCode is detected, the script prints a JSON snippet for you to merge into its configuration. Restart the AI tool after setup.
+
+The key is stored in the repository's Git-ignored `panel_config.json` with mode `0600`. The AI tool registration needs only the bridge command. `off` revokes key-based access immediately on a running panel and offers to remove Claude Code and Codex registrations. Use `off --yes` to keep them without prompting or `off --remove-clients` to remove them without prompting. Existing password-based registrations still authenticate after the key is turned off. Manage the OpenCode entry in its configuration.
+
+To replace an active key, run `python3 panel.py --mcp-key rotate` and restart the AI tool.
+
 ## Configuration
 
 | Environment variable | Default | Purpose |
 | --- | --- | --- |
-| `SERVER_PANEL_URL` | `http://127.0.0.1:8765` | Panel origin; only `127.0.0.1`, `localhost`, and `::1` hosts allowed |
-| `SERVER_PANEL_USER` | `admin` | Login username |
-| `SERVER_PANEL_PASSWORD` | `admin` | Login password |
-| `SERVER_PANEL_TOKEN` | unset | Use an existing token directly; on 401, log in using the credentials above |
+| `SERVER_PANEL_URL` | `http://127.0.0.1:8765` | Panel origin. Hosts allowed are `127.0.0.1`, `localhost` and `::1` |
+| `SERVER_PANEL_TOKEN` | unset | Use an explicit bearer token first |
+| `SERVER_PANEL_PASSWORD` | unset | Use the existing password-based login flow when supplied |
+| `SERVER_PANEL_USER` | `admin` | Username for password-based login |
+| `SERVER_PANEL_CONFIG` | Repository-root `panel_config.json` | Config path used to read the MCP key when neither token nor password is supplied |
 
-Login is lazy and tokens are held in memory. One 401 triggers one re-login and
-retry. Normal requests use a 30-second timeout; job requests, initiating job
-operations, and generic API requests use 120 seconds. Logs go to stderr only.
-Redirects and environment HTTP proxies are disabled. No panel config file is read.
-Use your actual panel credentials in the client configuration below.
+Login is lazy and credentials are held in memory. When a password is configured, a 401 triggers one login and retry. Normal requests use a 30-second timeout. Job requests, job initiation and generic API requests use 120 seconds. Logs go to stderr only. Redirects and environment HTTP proxies are disabled.
 
-## Setup
+If you override `SERVER_PANEL_CONFIG`, provide the same absolute path to the panel, setup script and MCP bridge. Automatic registration uses the repository default unless the AI client passes the override to the bridge process.
 
-Claude Code:
+MCP keys can read settings. Updating settings or opening and closing the panel requires a browser or API session token.
+
+## Manual client setup
+
+Enable the key first with `python3 panel.py --mcp-key on`. Use the absolute path to the bridge in your checkout.
+
+### Claude Code
 
 ```sh
-claude mcp add server-panel --scope user -e SERVER_PANEL_USER=admin -e SERVER_PANEL_PASSWORD=admin -- python3 /ABSOLUTE/PATH/server-panel/mcp/server_panel_mcp.py
+claude mcp add server-panel -s user -- python3 /ABSOLUTE/PATH/server-panel/mcp/server_panel_mcp.py
 ```
 
-Codex (`~/.codex/config.toml`):
+### Codex
+
+```sh
+codex mcp add server-panel -- python3 /ABSOLUTE/PATH/server-panel/mcp/server_panel_mcp.py
+```
+
+You can also add the following to `~/.codex/config.toml`.
 
 ```toml
 [mcp_servers.server-panel]
 command = "python3"
 args = ["/ABSOLUTE/PATH/server-panel/mcp/server_panel_mcp.py"]
-env = { SERVER_PANEL_USER = "admin", SERVER_PANEL_PASSWORD = "admin" }
 ```
 
-OpenCode (`opencode.json`):
+### OpenCode
+
+Merge this entry into `opencode.json`.
 
 ```json
 {
@@ -49,15 +75,13 @@ OpenCode (`opencode.json`):
     "server-panel": {
       "type": "local",
       "command": ["python3", "/ABSOLUTE/PATH/server-panel/mcp/server_panel_mcp.py"],
-      "environment": {
-        "SERVER_PANEL_USER": "admin",
-        "SERVER_PANEL_PASSWORD": "admin"
-      },
       "enabled": true
     }
   }
 }
 ```
+
+Restart your AI tool after saving the registration.
 
 ## Read-only tools
 
@@ -120,8 +144,8 @@ optional `db_name`, `db_user`, `nginx_site`. Port changes use `nginx_site`, `por
 `panel_api` refuses `/api/login`, `/api/panel/open`, and `/api/panel/close`,
 including query variants. Paths must be direct `/api/` paths without traversal
 or encoded path segments; encoded query parameters are supported. Settings and
-WordPress auto-login are not dedicated tools. Generic API calls can still reach
-those routes, so review them before approval.
+WordPress auto-login are not dedicated tools. Generic API calls can reach
+WordPress auto-login and read settings. Settings updates require a session token.
 
 ## Job kinds
 

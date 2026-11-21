@@ -1,5 +1,7 @@
 # Local secrets/config
 panel_config.json
+panel_config.json.lock
+panel_config.json.*.tmp
 
 # Runtime/cache artifacts
 cache/

@@ -41,11 +41,13 @@ class LoginBackendTests(unittest.TestCase):
     def write_config(self, data):
         self.config.write_text(json.dumps(data))
 
-    def request(self, path, data=None, authenticated=True, method="POST"):
+    def request(self, path, data=None, authenticated=True, method="POST", bearer=None):
         handler = panel.Handler.__new__(panel.Handler)
         handler.path = path
         handler.read_body = lambda: data
-        handler.authed = lambda: authenticated
+        handler.headers = {"Authorization": f"Bearer {bearer}"} if bearer is not None else {}
+        if bearer is None and authenticated:
+            handler.authed = lambda: True
         responses = []
         handler.send_json = lambda body, status=200: responses.append((body, status))
         getattr(handler, "do_" + method)()
@@ -126,9 +128,84 @@ class LoginBackendTests(unittest.TestCase):
         self.assertEqual(panel.load_config()["password_hash"], self.password_hash("new-secret"))
         self.assertEqual(panel.load_config()["session_tokens"], {})
 
-    def test_settings_get_returns_only_username_and_requires_auth(self):
-        self.assertEqual(self.request("/api/settings", method="GET"), ({"username": "admin"}, 200))
+    def test_settings_get_returns_public_defaults_and_requires_auth(self):
+        self.assertEqual(self.request("/api/settings", method="GET"), ({
+            "username": "admin",
+            "home_dir": os.path.expanduser("~"),
+            "default_install_location": "home-local",
+        }, 200))
         self.assertEqual(self.request("/api/settings", method="GET", authenticated=False)[1], 401)
+
+    def test_settings_save_location_keeps_session_and_validates_value(self):
+        login, _ = self.request("/api/login", {"password": "secret"})
+        self.assertEqual(self.request("/api/settings", {"default_install_location": "/opt"},
+                                      bearer=login["token"]), ({"success": True}, 200))
+        body, status = self.request("/api/settings", method="GET", bearer=login["token"])
+        self.assertEqual((body["default_install_location"], status), ("/opt", 200))
+        before = self.config.read_bytes()
+        for invalid in ("~/local", "/tmp", [], None):
+            self.assertEqual(self.request("/api/settings", {
+                "default_install_location": invalid, "mysql_user": "changed",
+            })[1], 400)
+            self.assertEqual(self.config.read_bytes(), before)
+
+    def run_cli(self, *args):
+        output = io.StringIO()
+        with mock.patch.object(sys, "stdout", output):
+            self.assertEqual(panel.main(list(args)), 0)
+        return output.getvalue()
+
+    def test_install_location_cli_validates_and_writes_private_config(self):
+        self.config.unlink()
+        for location in ("home-local", "/var/www", "/opt"):
+            self.assertIn(location, self.run_cli("--set-install-location", location))
+            self.assertEqual(panel.load_config()["default_install_location"], location)
+            self.assertEqual(stat.S_IMODE(self.config.stat().st_mode), 0o600)
+        before = self.config.read_bytes()
+        with mock.patch.object(sys, "stderr", io.StringIO()), self.assertRaises(SystemExit) as exc:
+            panel.main(["--set-install-location", "/tmp"])
+        self.assertEqual(exc.exception.code, 2)
+        self.assertEqual(self.config.read_bytes(), before)
+
+    def test_mcp_key_lifecycle_never_prints_key(self):
+        self.assertEqual(self.run_cli("--mcp-key", "status"), "off\n")
+        first_output = self.run_cli("--mcp-key", "on")
+        first_key = panel.load_config()["mcp_key"]
+        self.assertRegex(first_key, r"^[A-Za-z0-9_-]{43}$")
+        second_output = self.run_cli("--mcp-key", "on")
+        self.assertEqual(panel.load_config()["mcp_key"], first_key)
+        self.assertEqual(self.run_cli("--mcp-key", "status"), "on\n")
+        rotate_output = self.run_cli("--mcp-key", "rotate")
+        second_key = panel.load_config()["mcp_key"]
+        self.assertNotEqual(first_key, second_key)
+        self.assertEqual(stat.S_IMODE(self.config.stat().st_mode), 0o600)
+        off_output = self.run_cli("--mcp-key", "off")
+        self.assertEqual(panel.load_config()["mcp_key"], "")
+        for output in (first_output, second_output, rotate_output, off_output):
+            self.assertNotIn(first_key, output)
+            self.assertNotIn(second_key, output)
+
+    def test_mcp_key_auth_revocation_and_session_only_routes(self):
+        login, _ = self.request("/api/login", {"password": "secret"})
+        self.run_cli("--mcp-key", "on")
+        key = panel.load_config()["mcp_key"]
+        first_mtime = self.config.stat().st_mtime_ns
+        self.assertEqual(self.request("/api/settings", method="GET", bearer=key)[1], 200)
+        self.assertEqual(self.request("/api/settings", method="GET", bearer="wrong")[1], 401)
+        with mock.patch.object(panel.Handler, "start_panel_services") as start, \
+                mock.patch.object(panel.Handler, "stop_panel_services") as stop, \
+                mock.patch.object(panel.time, "sleep"):
+            for path in ("/api/settings", "/api/panel/open", "/api/panel/close"):
+                self.assertEqual(self.request(path, {}, bearer=key)[1], 403)
+            self.assertEqual(self.request("/api/panel/close", {"token": key})[1], 403)
+            start.assert_not_called()
+            stop.assert_not_called()
+            self.assertEqual(self.request("/api/panel/open", {}, bearer=login["token"])[1], 200)
+            self.assertEqual(self.request("/api/panel/close", {"token": login["token"]})[1], 200)
+        self.run_cli("--mcp-key", "off")
+        self.assertNotEqual(self.config.stat().st_mtime_ns, first_mtime)
+        self.assertEqual(self.request("/api/settings", method="GET", bearer=key)[1], 401)
+        self.assertEqual(self.request("/api/settings", method="GET", bearer=login["token"])[1], 200)
 
     def run_set_login(self, lines):
         output = io.StringIO()

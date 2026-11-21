@@ -14,6 +14,9 @@ import subprocess
 import os
 import re
 import hashlib
+import hmac
+import fcntl
+import tempfile
 import secrets
 import time
 import glob
@@ -21,6 +24,8 @@ import threading
 import string
 import shlex
 import zipfile
+from contextlib import contextmanager
+from copy import deepcopy
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs, unquote
 
@@ -30,7 +35,7 @@ _jobs = {}   # job_id -> {"status": "running"|"done"|"error", "logs": [], "resul
 PORT = 8765
 HOST = "127.0.0.1"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_FILE = os.path.join(SCRIPT_DIR, "panel_config.json")
+CONFIG_FILE = os.environ.get("SERVER_PANEL_CONFIG") or os.path.join(SCRIPT_DIR, "panel_config.json")
 WP_CACHE_DIR = os.path.join(SCRIPT_DIR, "cache", "wordpress")
 WP_CACHE_TAR = os.path.join(WP_CACHE_DIR, "latest.tar.gz")
 WP_CACHE_VERSION = os.path.join(WP_CACHE_DIR, "latest.version")
@@ -43,10 +48,14 @@ ASSET_TYPES = {
     ".ico": "image/x-icon",
 }
 
+INSTALL_LOCATIONS = ("home-local", "/var/www", "/opt")
+
 DEFAULT_CONFIG = {
     "username": "admin",
     "password_hash": hashlib.sha256("admin".encode()).hexdigest(),
     "session_tokens": {},
+    "default_install_location": "home-local",
+    "mcp_key": "",
     "mysql_user": "root",
     "mysql_password": "",
     "wp_admin_credentials": {},
@@ -99,19 +108,33 @@ def resolve_asset(rel_path):
 
 
 def load_config():
-    if os.path.exists(CONFIG_FILE):
+    try:
         with open(CONFIG_FILE) as f:
-            cfg = json.load(f)
-        merged = DEFAULT_CONFIG.copy()
-        merged.update(cfg)
-        merged.setdefault("wp_admin_credentials", {})
-        return merged
-    return DEFAULT_CONFIG.copy()
+            return {**deepcopy(DEFAULT_CONFIG), **json.load(f)}
+    except FileNotFoundError:
+        return deepcopy(DEFAULT_CONFIG)
+
+
+@contextmanager
+def config_write_lock():
+    # Share the lock between HTTP threads and CLI commands, even across replacement.
+    with os.fdopen(os.open(CONFIG_FILE + ".lock", os.O_WRONLY | os.O_CREAT, 0o600), "w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield
 
 
 def save_config(cfg):
-    with open(CONFIG_FILE, "w") as f:
-        json.dump(cfg, f, indent=2)
+    # Readers see a complete version of the file. mkstemp creates it privately.
+    directory, filename = os.path.split(os.path.abspath(CONFIG_FILE))
+    fd, path = tempfile.mkstemp(dir=directory, prefix=filename + ".", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            os.fchmod(f.fileno(), 0o600)
+            json.dump(cfg, f, indent=2)
+        os.replace(path, CONFIG_FILE)
+    finally:
+        if os.path.exists(path):
+            os.unlink(path)
 
 
 def validate_username(username):
@@ -128,14 +151,12 @@ def set_login_from_stdin():
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
         return 1
-    cfg = load_config()
-    cfg["username"] = username
-    cfg["password_hash"] = hashlib.sha256(password.encode()).hexdigest()
-    cfg["session_tokens"] = {}
-    # Restrict permissions before writing, including when replacing an existing login.
-    with os.fdopen(os.open(CONFIG_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w") as f:
-        os.fchmod(f.fileno(), 0o600)
-        json.dump(cfg, f, indent=2)
+    with config_write_lock():
+        cfg = load_config()
+        cfg["username"] = username
+        cfg["password_hash"] = hashlib.sha256(password.encode()).hexdigest()
+        cfg["session_tokens"] = {}
+        save_config(cfg)
     print(f"Login saved for user {username}.")
     return 0
 
@@ -148,21 +169,23 @@ def get_wp_admin_credential(install_path):
 def save_wp_admin_credential(install_path, username, password):
     if not install_path or not username or not password:
         return
-    cfg = load_config()
-    cfg.setdefault("wp_admin_credentials", {})[install_path] = {
-        "username": username,
-        "password": password,
-        "updated_at": int(time.time()),
-    }
-    save_config(cfg)
+    with config_write_lock():
+        cfg = load_config()
+        cfg.setdefault("wp_admin_credentials", {})[install_path] = {
+            "username": username,
+            "password": password,
+            "updated_at": int(time.time()),
+        }
+        save_config(cfg)
 
 
 def remove_wp_admin_credential(install_path):
-    cfg = load_config()
-    creds = cfg.setdefault("wp_admin_credentials", {})
-    if install_path in creds:
-        del creds[install_path]
-        save_config(cfg)
+    with config_write_lock():
+        cfg = load_config()
+        creds = cfg.setdefault("wp_admin_credentials", {})
+        if install_path in creds:
+            del creds[install_path]
+            save_config(cfg)
 
 
 def random_wp_admin_username(site_name=""):
@@ -2183,17 +2206,27 @@ class Handler(BaseHTTPRequestHandler):
         return data if isinstance(data, dict) else {}
 
     def authed(self):
-        auth = self.headers.get("Authorization", "")
-        if not auth.startswith("Bearer "):
-            return False
-        return self.valid_token(auth[7:])
+        self.auth_kind = self.token_kind(self.bearer_token())
+        return self.auth_kind is not None
 
-    def valid_token(self, token):
+    def bearer_token(self):
+        auth = self.headers.get("Authorization", "")
+        return auth[7:] if auth.startswith("Bearer ") else ""
+
+    def token_kind(self, token):
+        if not isinstance(token, str) or not token:
+            return None
         cfg = load_config()
+        key = cfg["mcp_key"]
+        if isinstance(key, str) and key and key.isascii() and token.isascii() and hmac.compare_digest(token, key):
+            return "mcp"
         tokens = cfg.get("session_tokens", {})
         if token in tokens and time.time() - tokens[token] < 86400:
-            return True
-        return False
+            return "session"
+        return None
+
+    def valid_token(self, token):
+        return self.token_kind(token) is not None
 
     def start_panel_services(self):
         php_ver, php_svc = detect_php_fpm()
@@ -2241,7 +2274,11 @@ class Handler(BaseHTTPRequestHandler):
         cfg = load_config()
 
         if path == "/api/settings":
-            self.send_json({"username": cfg["username"]})
+            self.send_json({
+                "username": cfg["username"],
+                "home_dir": os.path.expanduser("~"),
+                "default_install_location": cfg["default_install_location"],
+            })
 
         elif path == "/api/status":
             nginx = svc_status("nginx")
@@ -2415,13 +2452,16 @@ class Handler(BaseHTTPRequestHandler):
             data = self.read_body()
             pw = data.get("password", "")
             username = data.get("username", "admin")
-            cfg = load_config()
-            if (isinstance(username, str) and isinstance(pw, str)
-                    and username.strip() == cfg["username"]
-                    and hashlib.sha256(pw.encode()).hexdigest() == cfg["password_hash"]):
-                token = secrets.token_hex(32)
-                cfg.setdefault("session_tokens", {})[token] = time.time()
-                save_config(cfg)
+            token = None
+            with config_write_lock():
+                cfg = load_config()
+                if (isinstance(username, str) and isinstance(pw, str)
+                        and username.strip() == cfg["username"]
+                        and hashlib.sha256(pw.encode()).hexdigest() == cfg["password_hash"]):
+                    token = secrets.token_hex(32)
+                    cfg.setdefault("session_tokens", {})[token] = time.time()
+                    save_config(cfg)
+            if token:
                 self.send_json({"success": True, "token": token})
             else:
                 self.send_json({"success": False, "error": "Wrong username or password"}, 401)
@@ -2429,7 +2469,11 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/panel/close":
             data = self.read_body()
-            if not self.valid_token(data.get("token", "")):
+            kind = self.token_kind(data.get("token", ""))
+            if kind == "mcp" or self.token_kind(self.bearer_token()) == "mcp":
+                self.send_json({"error": "This operation requires a panel session"}, 403)
+                return
+            if kind != "session":
                 self.send_json({"error": "Unauthorized"}, 401)
                 return
             results = self.stop_panel_services()
@@ -2438,6 +2482,10 @@ class Handler(BaseHTTPRequestHandler):
 
         if not self.authed():
             self.send_json({"error": "Unauthorized"}, 401)
+            return
+
+        if path in ("/api/settings", "/api/panel/open") and getattr(self, "auth_kind", None) == "mcp":
+            self.send_json({"error": "This operation requires a panel session"}, 403)
             return
 
         cfg  = load_config()
@@ -2529,25 +2577,32 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(r)
 
         elif path == "/api/settings":
-            if "new_username" in data:
-                try:
-                    validate_username(data["new_username"])
-                except ValueError as exc:
-                    self.send_json({"success": False, "error": str(exc)}); return
-                current_password = data.get("current_password")
-                if (not isinstance(current_password, str)
-                        or hashlib.sha256(current_password.encode()).hexdigest() != cfg["password_hash"]):
-                    self.send_json({"success": False, "error": "Current password is required and must be correct."}); return
-                cfg["username"] = data["new_username"]
-                cfg["session_tokens"] = {}
-            if data.get("new_password"):
-                cfg["password_hash"] = hashlib.sha256(data["new_password"].encode()).hexdigest()
-                cfg["session_tokens"] = {}  # invalidate sessions
-            if "mysql_user" in data:
-                cfg["mysql_user"] = data["mysql_user"]
-            if "mysql_password" in data:
-                cfg["mysql_password"] = data["mysql_password"]
-            save_config(cfg)
+            if "default_install_location" in data and data["default_install_location"] not in INSTALL_LOCATIONS:
+                self.send_json({"success": False, "error": "Invalid default project location"}, 400)
+                return
+            with config_write_lock():
+                cfg = load_config()
+                if "default_install_location" in data:
+                    cfg["default_install_location"] = data["default_install_location"]
+                if "new_username" in data:
+                    try:
+                        validate_username(data["new_username"])
+                    except ValueError as exc:
+                        self.send_json({"success": False, "error": str(exc)}); return
+                    current_password = data.get("current_password")
+                    if (not isinstance(current_password, str)
+                            or hashlib.sha256(current_password.encode()).hexdigest() != cfg["password_hash"]):
+                        self.send_json({"success": False, "error": "Current password is required and must be correct."}); return
+                    cfg["username"] = data["new_username"]
+                    cfg["session_tokens"] = {}
+                if data.get("new_password"):
+                    cfg["password_hash"] = hashlib.sha256(data["new_password"].encode()).hexdigest()
+                    cfg["session_tokens"] = {}  # invalidate sessions
+                if "mysql_user" in data:
+                    cfg["mysql_user"] = data["mysql_user"]
+                if "mysql_password" in data:
+                    cfg["mysql_password"] = data["mysql_password"]
+                save_config(cfg)
             self.send_json({"success": True})
 
         elif path == "/api/wordpress/install":
@@ -3015,13 +3070,37 @@ echo 'ok';
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Local Server Management Panel")
-    parser.add_argument("--set-login", action="store_true", help="Read username and password from stdin and exit")
+    command = parser.add_mutually_exclusive_group()
+    command.add_argument("--set-login", action="store_true", help="Read username and password from stdin and exit")
+    command.add_argument("--set-install-location", choices=INSTALL_LOCATIONS)
+    command.add_argument("--mcp-key", choices=("on", "off", "status", "rotate"))
     args = parser.parse_args(argv)
     if args.set_login:
         return set_login_from_stdin()
+    if args.set_install_location:
+        with config_write_lock():
+            cfg = load_config()
+            cfg["default_install_location"] = args.set_install_location
+            save_config(cfg)
+        print(f"Default project location saved ({args.set_install_location}).")
+        return 0
+    if args.mcp_key:
+        if args.mcp_key == "status":
+            print("on" if load_config()["mcp_key"] else "off")
+            return 0
+        with config_write_lock():
+            cfg = load_config()
+            if args.mcp_key == "off":
+                cfg["mcp_key"] = ""
+            elif args.mcp_key == "rotate" or not cfg["mcp_key"]:
+                cfg["mcp_key"] = secrets.token_urlsafe(32)
+            save_config(cfg)
+        return 0
 
     if not os.path.exists(CONFIG_FILE):
-        save_config(DEFAULT_CONFIG)
+        with config_write_lock():
+            if not os.path.exists(CONFIG_FILE):
+                save_config(DEFAULT_CONFIG)
 
     html = os.path.join(SCRIPT_DIR, "index.html")
     if not os.path.exists(html):

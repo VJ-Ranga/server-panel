@@ -6,6 +6,7 @@ from pathlib import Path
 import socket
 import subprocess
 import sys
+import tempfile
 import threading
 import unittest
 import urllib.error
@@ -155,6 +156,48 @@ class MCPTests(unittest.TestCase):
         result = server.handle({'id': 1, 'method': 'tools/call', 'params': {'name': 'panel_status'}})
         self.assertFalse(result['result'].get('isError', False))
         self.assertEqual(self.http.logins, 3)
+
+    def test_config_key_and_explicit_credential_priority(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = Path(tmp) / 'test-panel.json'
+            config.write_text(json.dumps({'mcp_key': 'token-0'}))
+            env = {'SERVER_PANEL_URL': self.url, 'SERVER_PANEL_CONFIG': str(config)}
+            for credentials, expected_logins in (
+                ({}, 0),
+                ({'SERVER_PANEL_PASSWORD': 'secret'}, 1),
+                ({'SERVER_PANEL_TOKEN': 'token-0', 'SERVER_PANEL_PASSWORD': 'secret'}, 0),
+            ):
+                with self.subTest(credentials=list(credentials)), mock.patch.dict(
+                    os.environ, dict(env, **credentials), clear=True,
+                ):
+                    self.http.logins = 0
+                    self.http.requests.clear()
+                    self.server = self.module.MCPServer()
+                    result = self.call('panel_status')
+                    self.assertFalse(result.get('isError', False), result)
+                    self.assertEqual(self.http.logins, expected_logins)
+                    if expected_logins:
+                        self.assertEqual(self.http.requests[0], (
+                            'POST', '/api/login', {'username': 'admin', 'password': 'secret'},
+                        ))
+
+    def test_config_key_rejection_and_missing_key_are_clear_tool_errors(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = Path(tmp) / 'test-panel.json'
+            with mock.patch.dict(os.environ, {
+                'SERVER_PANEL_URL': self.url, 'SERVER_PANEL_CONFIG': str(config),
+            }, clear=True):
+                self.server = self.module.MCPServer()
+                result = self.call('panel_status')
+                self.assertTrue(result['isError'])
+                self.assertIn('MCP is off. Run scripts/mcp-setup.sh on', result['content'][0]['text'])
+                self.assertEqual(self.http.requests, [])
+                config.write_text(json.dumps({'mcp_key': 'rejected-test-key'}))
+                result = self.call('panel_status')
+                self.assertTrue(result['isError'])
+                self.assertIn('MCP key rejected', result['content'][0]['text'])
+                self.assertNotIn('rejected-test-key', result['content'][0]['text'])
+                self.assertEqual(self.http.requests, [('GET', '/api/status', None)])
 
     def test_connection_refused_is_tool_error(self):
         with socket.socket() as sock:

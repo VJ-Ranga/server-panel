@@ -7,6 +7,7 @@ if (( EUID == 0 )); then
 fi
 
 INSTALL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_PATH="${SERVER_PANEL_CONFIG:-$INSTALL_DIR/panel_config.json}"
 ASSUME_YES=false
 for arg in "$@"; do
   case "$arg" in
@@ -72,7 +73,7 @@ if command -v wp >/dev/null 2>&1; then found=true; fi
 report wp-cli "$found" 'Try: sudo apt install wp-cli (if available in your apt repositories; otherwise use the official WP-CLI installer)'
 
 change_login=true
-if [[ -f "$INSTALL_DIR/panel_config.json" ]] && ask 'Keep current panel login? [Y/n]' y; then
+if [[ -f "$CONFIG_PATH" ]] && ask 'Keep current panel login? [Y/n]' y; then
   change_login=false
 fi
 if "$change_login"; then
@@ -97,6 +98,38 @@ if "$change_login"; then
   unset admin_password confirm_password
 fi
 
+echo
+echo "Default project location"
+echo "  1) ~/local (default)"
+echo "  2) /var/www"
+echo "  3) /opt"
+current_location="$(python3 - "$CONFIG_PATH" <<'PYTHON'
+import json
+import sys
+
+with open(sys.argv[1]) as config_file:
+    location = json.load(config_file).get("default_install_location")
+print(location if location in ("home-local", "/var/www", "/opt") else "home-local")
+PYTHON
+)"
+current_label="$current_location"
+if [[ "$current_location" == home-local ]]; then current_label='~/local'; fi
+echo "Current location: $current_label"
+install_location="$current_location"
+if ! "$ASSUME_YES"; then
+  while true; do
+    read -r -p 'Choose a location [Enter keeps current]: ' location_choice || location_choice=""
+    case "$location_choice" in
+      '') break ;;
+      1) install_location=home-local; break ;;
+      2) install_location=/var/www; break ;;
+      3) install_location=/opt; break ;;
+      *) echo "Choose 1, 2 or 3." ;;
+    esac
+  done
+fi
+python3 "$INSTALL_DIR/panel.py" --set-install-location "$install_location"
+
 if ask 'Set up passwordless sudo rules for the panel helpers now? (needs your sudo password) [Y/n]' y; then
   sudo_options=()
   if "$ASSUME_YES"; then sudo_options=(-n); fi
@@ -110,8 +143,15 @@ else
   printf 'sudo bash %q %q %q\n' "$INSTALL_DIR/setup-sudo.sh" "$USER" "$INSTALL_DIR"
 fi
 
-chmod +x "$INSTALL_DIR/"*-helper.sh "$INSTALL_DIR/start-panel.sh"
-[[ -f "$INSTALL_DIR/panel_config.json" ]] && chmod 600 "$INSTALL_DIR/panel_config.json"
+chmod +x "$INSTALL_DIR/"*-helper.sh "$INSTALL_DIR/start-panel.sh" "$INSTALL_DIR/scripts/mcp-setup.sh"
+[[ -f "$CONFIG_PATH" ]] && chmod 600 "$CONFIG_PATH"
+
+echo
+echo "MCP for AI tools (Claude Code, Codex, OpenCode)"
+if ask 'Turn on MCP? [y/N]' n; then
+  "$INSTALL_DIR/scripts/mcp-setup.sh" on
+fi
+echo 'To change MCP later, run scripts/mcp-setup.sh on|off|status from the repository directory.'
 
 # Escape directory text for the desktop entry format and its Exec argument.
 desktop_dir="${INSTALL_DIR//\\/\\\\}"
@@ -156,7 +196,7 @@ echo
 echo "Panel URL: http://127.0.0.1:8765"
 printf 'Start with: %q\n' "$INSTALL_DIR/start-panel.sh"
 printf 'Or run: python3 %q\n' "$INSTALL_DIR/panel.py"
-python3 - "$INSTALL_DIR/panel_config.json" <<'PY'
+python3 - "$CONFIG_PATH" <<'PY'
 import hashlib
 import json
 import sys

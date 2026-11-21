@@ -4,6 +4,7 @@ import errno
 import json
 import math
 import os
+from pathlib import Path
 import re
 import sys
 import time
@@ -49,7 +50,10 @@ class PanelClient:
         if not valid:
             raise ValueError('SERVER_PANEL_URL must be a localhost HTTP(S) origin (127.0.0.1, localhost, or ::1).')
         self.username = os.environ.get('SERVER_PANEL_USER', 'admin')
-        self.password = os.environ.get('SERVER_PANEL_PASSWORD', 'admin')
+        self.password = os.environ.get('SERVER_PANEL_PASSWORD')
+        self.config = Path(os.environ.get('SERVER_PANEL_CONFIG') or
+                           Path(__file__).resolve().parents[1] / 'panel_config.json')
+        self.using_mcp_key = False
         self.token = os.environ.get('SERVER_PANEL_TOKEN') or None
         # Do not send credentials through environment proxies or follow redirects.
         self.opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
@@ -96,13 +100,34 @@ class PanelClient:
             raise ToolError('Panel login failed: no authentication token was returned.')
         self.token = data['token']
 
+    def load_mcp_key(self):
+        try:
+            with self.config.open() as file:
+                config = json.load(file)
+        except FileNotFoundError:
+            config = {}
+        except (OSError, ValueError):
+            raise ToolError('Could not read panel config. Check SERVER_PANEL_CONFIG.') from None
+        key = config.get('mcp_key') if isinstance(config, dict) else None
+        if not isinstance(key, str) or not key:
+            raise ToolError('MCP is off. Run scripts/mcp-setup.sh on.')
+        self.token = key
+        self.using_mcp_key = True
+
     def request(self, method, path, body=None, timeout=30):
         if not self.token:
-            self.login(timeout)
+            if self.password is not None:
+                self.login(timeout)
+            else:
+                self.load_mcp_key()
         for attempt in range(2):
             try:
                 return self._request(method, path, body, timeout)
             except urllib.error.HTTPError:
+                if self.using_mcp_key:
+                    raise ToolError('MCP key rejected — MCP may have been turned off (scripts/mcp-setup.sh on).') from None
+                if self.password is None:
+                    raise ToolError('Panel rejected SERVER_PANEL_TOKEN (HTTP 401).') from None
                 if attempt:
                     raise ToolError('Panel rejected authentication after re-login (HTTP 401).') from None
                 self.token = None

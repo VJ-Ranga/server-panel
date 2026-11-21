@@ -16,7 +16,7 @@ Use `python3 scripts/demo_server.py` to preview the same UI on `127.0.0.1:8799` 
 
 ## First Time Setup (run once)
 
-Run `./install.sh` as your regular user. It checks dependencies, configures the panel login, and offers sudo setup, a desktop launcher and desktop autostart. Use `--yes` to accept the defaults.
+Run `./install.sh` as your regular user. It checks dependencies, configures the panel login and default project location, and offers sudo setup, MCP access, a desktop launcher and desktop autostart. Use `--yes` to accept the defaults.
 
 The installer calls `python3 panel.py --set-login`, which reads the username and password from stdin on separate lines and exits. A blank line selects `admin`. A login change invalidates existing sessions. For manual sudo setup, run this command from the repository directory:
 
@@ -46,6 +46,7 @@ This writes `/etc/sudoers.d/server-panel` with rules for project helpers and spe
 | `panel-icon.svg` | Desktop launcher icon |
 | `wp-auto-login-plugin.php` | Source for the optional per-site WordPress auto-login plugin |
 | `wp-plugin-library/` | Local plugin ZIP library for the WordPress install wizard |
+| `scripts/mcp-setup.sh` | Enable or revoke an MCP key and manage AI client registrations |
 | `mcp/server_panel_mcp.py` | Standard-library MCP bridge. See [client setup](mcp/README.md) |
 | `scripts/demo_server.py` | Standalone read-only demo using fixed fake data |
 | `scripts/make_screenshots.sh` | Generates demo screenshots with headless Chrome |
@@ -153,6 +154,7 @@ This writes `/etc/sudoers.d/server-panel` with rules for project helpers and spe
 ### Settings
 - Change the panel username or password. Username changes require the current password
 - Set MySQL credentials (saved to panel_config.json)
+- Choose the default for the WordPress install form from `~/local`, `/var/www` and `/opt`. The install form can select a different location.
 
 ### Performance
 - Read/tune selected Nginx, PHP, PHP-FPM, and MySQL settings
@@ -160,6 +162,8 @@ This writes `/etc/sudoers.d/server-panel` with rules for project helpers and spe
 
 ### MCP
 - The stdio bridge connects Claude Code, Codex and OpenCode to the localhost API
+- Run `scripts/mcp-setup.sh on`, `scripts/mcp-setup.sh off` or `scripts/mcp-setup.sh status` to manage key-based access. `panel_config.json` stores the key privately with mode `0600`, and revocation takes effect on the next request.
+- Existing clients can continue using `SERVER_PANEL_PASSWORD`. MCP keys cannot update settings or call the panel open and close endpoints.
 - See [MCP setup and tool documentation](mcp/README.md)
 
 ## Architecture
@@ -229,8 +233,8 @@ API requests use a bearer token except login and panel close. Login issues the t
 | POST | `/api/phpmyadmin/nginx` | Generate, save, enable or disable the site configuration |
 | GET | `/api/phpmyadmin/status` | phpMyAdmin install/nginx/fpm status |
 | POST | `/api/services/<svc>/<action>` | Control service (start/stop/restart/reload) |
-| GET | `/api/settings` | Return the current panel username |
-| POST | `/api/settings` | Update username with `new_username` and `current_password`, update password with `new_password`, or update MySQL credentials |
+| GET | `/api/settings` | Return `username`, `home_dir` and `default_install_location` |
+| POST | `/api/settings` | Update username with `new_username` and `current_password`, update password with `new_password`, update MySQL credentials, or save `default_install_location`. Requires a session token |
 | GET | `/api/status` | Nginx/MySQL status + system info |
 | GET | `/api/system/info` | Return system metrics and hostname |
 | POST | `/api/wordpress/auto-login` | Install, enable, disable, or remove per-site auto-login plugin |

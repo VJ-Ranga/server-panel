@@ -1262,6 +1262,20 @@ select.input-dark option{background:var(--field);color:var(--text);}
               <button class="btn btn-primary btn-sm" onclick="saveMySQL()">Save credentials</button>
             </div>
           </div>
+          <div class="col-md-5">
+            <div class="service-card">
+              <div class="section-title"><i class="bi bi-folder"></i> Default project location</div>
+              <div class="mb-3">
+                <label for="default-install-location" class="field-label">WordPress install location</label>
+                <select id="default-install-location" class="input-dark mt-1">
+                  <option value="home-local">~/local</option>
+                  <option value="/var/www">/var/www</option>
+                  <option value="/opt">/opt</option>
+                </select>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="saveDefaultInstallLocation()">Save location</button>
+            </div>
+          </div>
           <div class="col-12">
             <div class="service-card">
               <div class="section-title"><i class="bi bi-info-circle"></i> Sudo Permissions</div>
@@ -1403,6 +1417,8 @@ let currentLog = 'error';
 let editingSite = '';
 let statusInterval = null;
 let currentPage = 'dashboard';
+let panelSettings = {};
+let wpInstallLocationChanged = false;
 let panelServicesStarted = sessionStorage.getItem('panel_services_started') === '1';
 
 // ══ Auth ═════════════════════════════════════════════════════════════════════
@@ -1431,7 +1447,12 @@ function doLogout() {
   document.getElementById('login-screen').style.display = 'flex';
 }
 
-function showPanel() {
+async function showPanel() {
+  const sessionToken = token;
+  const settings = await api('/api/settings');
+  if (token !== sessionToken) return;
+  panelSettings = settings;
+  setWpInstallLocationDefault();
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('panel').style.display = 'block';
   initPanel();
@@ -2455,9 +2476,19 @@ async function confirmDelete() {
 }
 
 // ══ Settings ══════════════════════════════════════════════════════════════════
-async function loadSettings() {
-  const r = await api('/api/settings');
-  document.getElementById('current-username').textContent = r.username || '';
+function loadSettings() {
+  document.getElementById('current-username').textContent = panelSettings.username || '';
+  document.getElementById('default-install-location').value = panelSettings.default_install_location || 'home-local';
+}
+
+async function saveDefaultInstallLocation() {
+  const location = document.getElementById('default-install-location').value;
+  const r = await api('/api/settings', 'POST', { default_install_location: location });
+  if (r.success) {
+    panelSettings.default_install_location = location;
+    if (!document.getElementById('wp-install-path').value) setWpInstallLocationDefault();
+    toast('Default project location saved', 'success');
+  } else toast(r.error || 'Location could not be saved. Try again.', 'error');
 }
 
 async function changeUsername() {
@@ -2492,14 +2523,21 @@ async function saveMySQL() {
 
 // ══ WordPress Install ═════════════════════════════════════════════════════════
 
+function setWpInstallLocationDefault() {
+  if (wpInstallLocationChanged) return;
+  const locationEl = document.getElementById('wp-install-location');
+  locationEl.value = panelSettings.default_install_location || 'home-local';
+}
+
 function getWpInstallBase() {
   const locationEl = document.getElementById('wp-install-location');
   const selected = locationEl ? locationEl.value : 'home-local';
-  if (selected === 'home-local') return '/home/vjranga/local';
+  if (selected === 'home-local') return panelSettings.home_dir?.startsWith('/') ? `${panelSettings.home_dir}/local` : '/var/www';
   return selected || '/var/www';
 }
 
-function wpAutoFill() {
+function wpAutoFill(locationChanged = false) {
+  if (locationChanged) wpInstallLocationChanged = true;
   const name = document.getElementById('wp-site-name').value.trim().toLowerCase().replace(/[^\w\-]/g,'');
   const base = getWpInstallBase();
   document.getElementById('wp-install-path').value = name ? `${base}/${name}` : '';
@@ -2580,7 +2618,8 @@ function resetWpInstallForm() {
     'wp-admin-user', 'wp-admin-pass', 'wp-site-title'
   ];
   fields.forEach(id => { document.getElementById(id).value = ''; });
-  document.getElementById('wp-install-location').value = 'home-local';
+  wpInstallLocationChanged = false;
+  setWpInstallLocationDefault();
   document.getElementById('wp-admin-email').value = 'admin@localhost.local';
   document.getElementById('wp-install-log').textContent = 'Fill in the form and click Install…';
   document.getElementById('wp-install-result').style.display = 'none';

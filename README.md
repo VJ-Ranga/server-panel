@@ -14,7 +14,7 @@ CloudyCode Server Panel is a localhost dashboard for managing a Linux developmen
 - **Nginx** lists virtual hosts, enables or disables sites, edits and validates configuration, and shows access and error logs.
 - **MySQL** lists, creates and drops databases and runs SQL queries. **phpMyAdmin** has controls for installation, Nginx setup and configuration.
 - **Performance** edits selected settings for Nginx, PHP, PHP-FPM and MySQL.
-- **Settings** updates the panel username, password and MySQL connection credentials. The interface supports light and dark themes.
+- **Settings** updates the panel username, password, MySQL connection credentials and default WordPress install location. The interface supports light and dark themes.
 - **MCP** exposes panel operations to Claude Code, Codex and OpenCode.
 
 [App Launcher](docs/screenshots/apps-light.png) · [WordPress](docs/screenshots/wordpress-light.png) · [Nginx](docs/screenshots/nginx-dark.png) · [Mobile dashboard](docs/screenshots/mobile-dashboard-light.png)
@@ -36,9 +36,15 @@ cd server-panel
 ./install.sh
 ```
 
-The installer checks for stack dependencies and prints installation hints. It prompts for a panel username, password and confirmation. Press Enter at all three prompts for `admin` / `admin`. If a panel login is already configured, you can keep it. The installer offers to set up sudo rules, add a desktop launcher and enable autostart at desktop login.
+The installer checks stack dependencies and guides you through setup.
 
-Use `./install.sh --yes` to accept the defaults. It keeps an existing login or sets `admin` / `admin`, adds the desktop launcher and leaves autostart off. Sudo setup runs non-interactively and the installer prints the manual command if it needs to be completed later.
+- **Panel login.** Keep an existing login or choose a username and password. Press Enter at all three login prompts for `admin` / `admin`.
+- **Default project location.** Choose `~/local`, `/var/www` or `/opt` for the WordPress install form. Enter keeps the current choice. Fresh installs default to `~/local`. You can change it in Settings or choose a different location in the form. The existing helpers support the home-local option for standard Linux homes under `/home/<user>`.
+- **Sudo rules.** Set up permission for the panel helpers and service controls.
+- **MCP for AI tools.** Choose whether to enable key-based access for Claude Code, Codex and OpenCode. The prompt defaults to No.
+- **Desktop integration.** Choose whether to add a launcher and start the panel at desktop login.
+
+Use `./install.sh --yes` to accept the defaults. It keeps an existing login and location, or uses `admin` / `admin` and `~/local` on first install. It skips MCP setup, adds the launcher and leaves autostart off. Sudo setup runs non-interactively and prints a manual command if needed.
 
 Start the panel from the desktop launcher or run `./start-panel.sh`.
 
@@ -61,7 +67,17 @@ Sudo access is defined in `/etc/sudoers.d/server-panel`. The rules cover specifi
 
 ## AI agents (MCP)
 
-The Python MCP bridge sends authenticated localhost HTTP requests to a running panel. Configure your client to request confirmation before invoking tools that modify services, sites or databases. Setup and tool details are in the [MCP guide](mcp/README.md).
+The Python MCP bridge sends authenticated localhost HTTP requests to a running panel. Run these commands from the repository directory.
+
+```bash
+scripts/mcp-setup.sh on
+scripts/mcp-setup.sh status
+scripts/mcp-setup.sh off
+```
+
+The setup script registers Claude Code and Codex when their CLIs are available and prints a configuration snippet for OpenCode when detected. The key lives in the Git-ignored `panel_config.json`, private to your user (mode `0600`). The `off` command revokes key-based access immediately while the panel is running. Existing `SERVER_PANEL_PASSWORD` configurations remain supported and continue to work independently of the key.
+
+Configure your client to request confirmation before invoking tools that modify services, sites or databases. See the [MCP guide](mcp/README.md) for manual client setup and tool details.
 
 ## Project layout
 
@@ -76,6 +92,7 @@ The Python MCP bridge sends authenticated localhost HTTP requests to a running p
 | `laravel-helper.sh`, `codeigniter-helper.sh`, `php-project-helper.sh` | Privileged filesystem and Nginx operations for each app type |
 | `perf-helper.sh` | Applies supported performance configuration changes |
 | `panel_config.json` | Generated, Git-ignored settings and credentials |
+| `scripts/mcp-setup.sh` | Enable or disable MCP keys and manage client registrations |
 | `mcp/server_panel_mcp.py`, `mcp/README.md` | MCP bridge and client setup guide |
 | `scripts/demo_server.py` | Standalone localhost demo with fake data and disabled changes |
 | `scripts/make_screenshots.sh`, `docs/screenshots/` | Headless Chrome capture script and demo PNGs |

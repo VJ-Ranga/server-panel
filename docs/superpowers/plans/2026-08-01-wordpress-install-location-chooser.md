@@ -51,7 +51,7 @@ In `index.html`, insert an `Install Location` select before the existing `Instal
 
 - [ ] **Step 4: Add path-generation logic**
 
-Update `wpAutoFill()` to call `getWpInstallBase()` and generate `${base}/${name}`. Add `getWpInstallBase()` using `window.__PANEL_USER__ || 'vjranga'` only as a local fallback if the panel does not expose a username.
+Update `wpAutoFill()` to call `getWpInstallBase()` and generate `${base}/${name}`. Add `getWpInstallBase()` using the home directory returned by panel settings, with `/var/www` as the fallback when the home directory is unavailable.
 
 - [ ] **Step 5: Run targeted tests**
 

@@ -167,7 +167,7 @@ SITE_CONFIGS["phpmyadmin"] = site_config("phpmyadmin", PHPMYADMIN["pma_port"], "
 GET_RESPONSES = {
     "/api/status": {"nginx": "active", "mysql": "active", "system": SYSTEM},
     "/api/system/info": SYSTEM,
-    "/api/settings": {"username": "admin"},
+    "/api/settings": {"username": "admin", "home_dir": "/home/demo", "default_install_location": "home-local"},
     "/api/wordpress/sites": {"success": True, "sites": WORDPRESS},
     "/api/wordpress/plugins": {"success": True, "plugins": [], "invalid": []},
     "/api/wordpress/core-update-status": {
