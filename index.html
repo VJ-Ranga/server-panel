@@ -2379,10 +2379,11 @@ function renderWordPressSites() {
               </select>
               <button class="btn btn-sm btn-outline-secondary btn-compact" onclick="copySelectedWpAdminUser(${i})"><i class="bi bi-clipboard"></i> Copy</button>
             </div>` : ''}
-          ${s.wp_admin_pass ? `
+          ${s.has_saved_admin_pass ? `
             <div class="d-flex align-items-center gap-2 flex-wrap">
               <b class="text-soft">Pass${s.wp_saved_admin_user ? ` (${esc(s.wp_saved_admin_user)})` : ''}:</b>
-              <code class="text-warning text-break" id="wp-admin-pass-${i}">${esc(s.wp_admin_pass)}</code>
+              <code class="text-warning text-break" id="wp-admin-pass-${i}" data-kind="wp_admin" data-path="${esc(s.path)}">••••••••</code>
+              <button class="btn btn-sm btn-outline-secondary btn-compact" onclick="revealSecret('wp_admin', '${esc(s.path)}', 'wp-admin-pass-${i}', this)"><i class="bi bi-eye"></i> Show</button>
               <button class="btn btn-sm btn-outline-secondary btn-compact" onclick="copyText('wp-admin-pass-${i}')"><i class="bi bi-clipboard"></i> Copy</button>
             </div>` : `
             <div class="text-muted">${s.wp_admin_user ? 'Password is not saved.' : 'Admin user not detected.'} Use <b>Passwords</b> to set a new password for the selected admin, then it will be saved here.</div>`}
@@ -2901,8 +2902,14 @@ function renderLaravelApps() {
           </div>
           <div class="d-flex align-items-center gap-2 flex-wrap">
             <b class="text-soft">Pass:</b>
-            <code class="text-warning text-break" id="lv-db-pass-${i}">${esc(app.db_pass || '')}</code>
-            <button class="btn btn-sm btn-outline-secondary btn-compact" onclick="copyText('lv-db-pass-${i}')"><i class="bi bi-clipboard"></i> Copy</button>
+            ${app.has_db_pass ? `
+              <code class="text-warning text-break" id="lv-db-pass-${i}" data-kind="laravel_db" data-path="${esc(app.path)}">••••••••</code>
+              <button class="btn btn-sm btn-outline-secondary btn-compact" onclick="revealSecret('laravel_db', '${esc(app.path)}', 'lv-db-pass-${i}', this)"><i class="bi bi-eye"></i> Show</button>
+              <button class="btn btn-sm btn-outline-secondary btn-compact" onclick="copyText('lv-db-pass-${i}')"><i class="bi bi-clipboard"></i> Copy</button>
+            ` : `
+              <code class="text-warning text-break" id="lv-db-pass-${i}"></code>
+              <span class="text-muted type-tiny">None</span>
+            `}
           </div>
         </div>
         <div class="mt-3 d-flex gap-2 flex-wrap">
@@ -3079,8 +3086,14 @@ function renderCodeIgniterApps() {
           </div>
           <div class="d-flex align-items-center gap-2 flex-wrap">
             <b class="text-soft">Pass:</b>
-            <code class="text-warning text-break" id="ci-db-pass-${i}">${esc(app.db_pass || '')}</code>
-            <button class="btn btn-sm btn-outline-secondary btn-compact" onclick="copyText('ci-db-pass-${i}')"><i class="bi bi-clipboard"></i> Copy</button>
+            ${app.has_db_pass ? `
+              <code class="text-warning text-break" id="ci-db-pass-${i}" data-kind="codeigniter_db" data-path="${esc(app.path)}">••••••••</code>
+              <button class="btn btn-sm btn-outline-secondary btn-compact" onclick="revealSecret('codeigniter_db', '${esc(app.path)}', 'ci-db-pass-${i}', this)"><i class="bi bi-eye"></i> Show</button>
+              <button class="btn btn-sm btn-outline-secondary btn-compact" onclick="copyText('ci-db-pass-${i}')"><i class="bi bi-clipboard"></i> Copy</button>
+            ` : `
+              <code class="text-warning text-break" id="ci-db-pass-${i}"></code>
+              <span class="text-muted type-tiny">None</span>
+            `}
           </div>
         </div>
         <div class="mt-3 d-flex gap-2 flex-wrap">
@@ -3672,9 +3685,53 @@ function closeCredModal() {
   document.getElementById('cred-modal').style.display = 'none';
 }
 
-function copyText(elemId) {
-  const val = document.getElementById(elemId).textContent;
-  navigator.clipboard.writeText(val).then(() => toast('Copied', 'success'));
+async function revealSecret(kind, path, elemId, btn = null) {
+  const el = document.getElementById(elemId);
+  if (!el) return '';
+  if (el.textContent && el.textContent !== '••••••••') {
+    return el.textContent;
+  }
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-sm"></span> Loading';
+  }
+  try {
+    const r = await api('/api/secrets/reveal', 'POST', { kind, path });
+    if (r.success && r.password !== undefined) {
+      el.textContent = r.password;
+      if (btn) btn.style.display = 'none';
+      return r.password;
+    } else {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-eye"></i> Show';
+      }
+      toast('Could not reveal secret: ' + (r.error || 'Failed'), 'error');
+      return '';
+    }
+  } catch (err) {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-eye"></i> Show';
+    }
+    toast('Could not reveal secret: ' + err, 'error');
+    return '';
+  }
+}
+
+async function copyText(elemId) {
+  const el = document.getElementById(elemId);
+  if (!el) return;
+  if (el.dataset.kind && el.dataset.path && el.textContent === '••••••••') {
+    const pass = await revealSecret(el.dataset.kind, el.dataset.path, elemId);
+    if (!pass) return;
+  }
+  const val = el.textContent;
+  if (val && val !== '••••••••') {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(val).then(() => toast('Copied', 'success'));
+    }
+  }
 }
 
 // ══ Change Passwords Modal ════════════════════════════════════════════════════

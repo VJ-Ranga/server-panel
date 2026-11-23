@@ -64,6 +64,8 @@ Open [http://127.0.0.1:8765](http://127.0.0.1:8765) on the machine running the p
 
 The panel binds to `127.0.0.1` for use on a single-user development machine. Keep it on loopback and do not expose it to a network. Change the default credentials before use.
 
+List endpoints return presence flags rather than plaintext secrets. Stored application credentials can be revealed on demand within an authenticated browser session, but remain inaccessible to AI agents connecting through the MCP bridge. The MCP bridge further applies automatic redaction to all returned tool output. Database commands supply credentials through the environment rather than process command-line arguments.
+
 Sudo access is defined in `/etc/sudoers.d/server-panel`. The rules cover specific project helper scripts and direct commands for service control, database operations, Nginx, and phpMyAdmin. Keep the generated local configuration private. Opening and closing the panel in the browser can start and stop services on the machine.
 
 ## AI agents (MCP)

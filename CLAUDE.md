@@ -190,14 +190,14 @@ API requests use a bearer token except login and panel close. Login issues the t
 
 | Method | Path | Description |
 | --- | --- | --- |
-| GET | `/api/codeigniter/apps` | List CodeIgniter 4 apps |
+| GET | `/api/codeigniter/apps` | List CodeIgniter 4 apps (includes `has_db_pass`, no passwords) |
 | DELETE | `/api/codeigniter/apps` | Start CodeIgniter delete job |
 | GET | `/api/codeigniter/delete/<job_id>` | Poll CodeIgniter delete progress |
 | POST | `/api/codeigniter/install` | Start CodeIgniter 4 install job |
 | GET | `/api/codeigniter/install/<job_id>` | Poll CodeIgniter install progress |
 | GET | `/api/codeigniter/next_port` | Find next available suggested CodeIgniter port |
 | POST | `/api/codeigniter/port` | Change a CodeIgniter Nginx site listen port |
-| GET | `/api/laravel/apps` | List Laravel apps |
+| GET | `/api/laravel/apps` | List Laravel apps (includes `has_db_pass`, no passwords) |
 | DELETE | `/api/laravel/apps` | Start a Laravel delete job |
 | POST | `/api/laravel/artisan` | Run a supported Artisan or Composer action |
 | GET | `/api/laravel/delete/<job_id>` | Poll Laravel delete progress |
@@ -244,6 +244,7 @@ API requests use a bearer token except login and panel close. Login issues the t
 | POST | `/api/projects` | Create a project |
 | POST | `/api/projects/<id>` | Replace editable fields of an existing project |
 | DELETE | `/api/projects/<id>` | Delete a project |
+| POST | `/api/secrets/reveal` | Reveal credentials for a discovered WordPress, Laravel, or CodeIgniter install. Requires a session token (refuses MCP key) |
 | POST | `/api/services/<svc>/<action>` | Control service (start/stop/restart/reload) |
 | GET | `/api/settings` | Return `username`, `home_dir` and `default_install_location` |
 | POST | `/api/settings` | Update username with `new_username` and `current_password`, update password with `new_password`, update MySQL credentials, or save `default_install_location`. Requires a session token |
@@ -251,20 +252,20 @@ API requests use a bearer token except login and panel close. Login issues the t
 | GET | `/api/system/info` | Return system metrics and hostname |
 | POST | `/api/wordpress/auto-login` | Install, enable, disable, or remove per-site auto-login plugin |
 | POST | `/api/wordpress/auto-login/token` | Create one-use native WordPress admin login URL |
-| POST | `/api/wordpress/change_db_password` | Change site DB user password and update wp-config.php |
-| POST | `/api/wordpress/change_wp_admin` | Change the selected WordPress admin password |
+| POST | `/api/wordpress/change_db_password` | Change site DB user password and update wp-config.php for a discovered site. Requires a session token (refuses MCP key) |
+| POST | `/api/wordpress/change_wp_admin` | Change the selected WordPress admin password for a discovered site. Requires a session token (refuses MCP key) |
 | POST | `/api/wordpress/core-update` | Start bulk core update job → returns job_id |
 | GET | `/api/wordpress/core-update-status` | Latest known WP version + shared cache state |
-| GET | `/api/wordpress/core-update/<job_id>` | Poll a core update or cache refresh job |
+| GET | `/api/wordpress/core-update/<job_id>` | Poll a core update or cache refresh job (redacted for MCP keys) |
 | POST | `/api/wordpress/core-update/refresh` | Start a shared core archive refresh job |
-| GET | `/api/wordpress/credentials?path=<path>` | Read DB credentials from a site's wp-config.php |
+| GET | `/api/wordpress/credentials?path=<path>` | Read DB credentials from a discovered site's wp-config.php. Requires a session token (refuses MCP key) |
 | GET | `/api/wordpress/delete/<job_id>` | Poll delete progress |
 | POST | `/api/wordpress/install` | Start install job → returns job_id |
-| GET | `/api/wordpress/install/<job_id>` | Poll install progress |
+| GET | `/api/wordpress/install/<job_id>` | Poll install progress (redacted for MCP keys) |
 | GET | `/api/wordpress/next_port` | Find next available suggested WP port |
 | GET | `/api/wordpress/plugins` | List plugin ZIPs and validation errors |
 | POST | `/api/wordpress/port` | Change a WP Nginx site listen port |
-| GET | `/api/wordpress/sites` | List WP installations |
+| GET | `/api/wordpress/sites` | List WP installations (includes `has_saved_admin_pass`, no passwords) |
 | DELETE | `/api/wordpress/sites` | Start delete job → returns job_id |
 
 ## Known Bugs Fixed

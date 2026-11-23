@@ -7,7 +7,8 @@ newline-delimited JSON-RPC over stdio. It does not start the panel.
 Destructive tools act on real sites and databases. Configure your MCP client to
 ask you before calling tools that change the server. Tool descriptions and
 annotations request confirmation; this bridge does not enforce a confirmation
-prompt. Results may contain site credentials or SQL output: share them carefully.
+prompt. Results are automatically redacted to protect plaintext credentials,
+but share SQL output and server data carefully.
 
 ## Quick setup
 
@@ -39,7 +40,7 @@ Login is lazy and credentials are held in memory. When a password is configured,
 
 If you override `SERVER_PANEL_CONFIG`, provide the same absolute path to the panel, setup script and MCP bridge. Automatic registration uses the repository default unless the AI client passes the override to the bridge process.
 
-MCP keys can read settings. Updating settings or opening and closing the panel requires a browser or API session token.
+MCP keys can read settings. Updating settings, revealing credentials, reading WordPress credentials, or opening and closing the panel requires a browser or API session token.
 
 ## Manual client setup
 
@@ -143,11 +144,16 @@ Deletes accept `install_path` for WordPress or `path` for other apps, plus
 optional `db_name`, `db_user`, `nginx_site`. Port changes use `nginx_site`, `port`.
 `tools/list` supplies full schemas, defaults, and service/action enums.
 
-`panel_api` refuses `/api/login`, `/api/panel/open`, and `/api/panel/close`,
-including query variants. Paths must be direct `/api/` paths without traversal
-or encoded path segments; encoded query parameters are supported. Settings and
-WordPress auto-login are not dedicated tools. Generic API calls can reach
-WordPress auto-login and read settings. Settings updates require a session token.
+`panel_api` refuses `/api/login`, `/api/panel/open`, `/api/panel/close`,
+`/api/secrets/reveal`, `/api/wordpress/credentials`,
+`/api/wordpress/change_db_password`, and `/api/wordpress/change_wp_admin`,
+including case, slash, encoding, and query variants.
+Paths must be direct `/api/` paths without traversal or encoded path segments;
+encoded query parameters are supported. Tool results undergo recursive redaction
+of sensitive credential keys and line patterns before returning to AI clients.
+Settings and WordPress auto-login are not dedicated tools. Generic API calls can
+reach WordPress auto-login and read settings. Settings updates, credential changes,
+and credential reveals require a session token.
 
 ## Job kinds
 

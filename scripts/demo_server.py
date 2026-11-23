@@ -77,6 +77,7 @@ WORDPRESS = [
         "wp_admin_users": ["admin"],
         "wp_admin_user": "admin",
         "has_wpcli": True,
+        "has_saved_admin_pass": True,
         "auto_login": {"installed": enabled, "active": enabled},
     }
     for name, port, modified_at, version, enabled in (
@@ -91,14 +92,14 @@ LARAVEL = {
     "app_name": "Demo Inventory",
     "app_url": "http://demo-inventory.example.test:8100",
     "version": "Laravel Framework 12.10.0",
-    "db_pass": "admin",
+    "has_db_pass": True,
 }
 
 CODEIGNITER = {
     **demo_app("sample-directory", 8200, 1781956800),
     "app_url": "http://sample-directory.example.test:8200",
     "version": "CodeIgniter v4.6.1",
-    "db_pass": "admin",
+    "has_db_pass": True,
 }
 
 PHP_PROJECT = {
@@ -361,6 +362,8 @@ class DemoHandler(BaseHTTPRequestHandler):
             self.send_json({"success": True, "token": "demo"})
         elif path in ("/api/panel/open", "/api/panel/close"):
             self.send_json({"success": True, "results": {}})
+        elif path == "/api/secrets/reveal":
+            self.send_json({"success": True, "password": "demo_password", "username": "admin"})
         else:
             self.send_json(REFUSED)
 

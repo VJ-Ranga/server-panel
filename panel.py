@@ -1342,15 +1342,36 @@ def get_wp_sites():
         entry["port"]        = get_nginx_site_port(entry["nginx_site"])
         entry["auto_login"]  = get_wp_auto_login_status(site_path)
         admin_creds = get_wp_admin_credential(site_path)
+        has_saved_admin_pass = False
         if admin_creds:
             saved_user = admin_creds.get("username") or ""
             entry["wp_saved_admin_user"] = saved_user
             if saved_user and not entry.get("wp_admin_users"):
                 entry["wp_admin_users"] = [saved_user]
             entry["wp_admin_user"] = saved_user if saved_user in entry.get("wp_admin_users", []) else entry.get("wp_admin_user", "")
-            entry["wp_admin_pass"] = admin_creds.get("password", "")
+            if admin_creds.get("password"):
+                has_saved_admin_pass = True
+        entry["has_saved_admin_pass"] = has_saved_admin_pass
         sites.append(entry)
     return sites
+
+
+def find_discovered_wp_site(target_path):
+    if not isinstance(target_path, str) or not target_path.strip():
+        return None
+    try:
+        target_real = os.path.realpath(target_path.strip())
+    except Exception:
+        return None
+    for site in get_wp_sites():
+        site_path = site.get("path")
+        if site_path:
+            try:
+                if os.path.realpath(site_path) == target_real:
+                    return site
+            except Exception:
+                continue
+    return None
 
 
 def read_env_file(path):
@@ -1398,7 +1419,7 @@ def get_laravel_apps():
             "app_url": env.get("APP_URL", ""),
             "db_name": env.get("DB_DATABASE", ""),
             "db_user": env.get("DB_USERNAME", ""),
-            "db_pass": env.get("DB_PASSWORD", ""),
+            "has_db_pass": bool(env.get("DB_PASSWORD", "")),
             "nginx_site": nginx_site,
             "port": get_nginx_site_port(nginx_site),
             "version": version,
@@ -1566,7 +1587,7 @@ def get_codeigniter_apps():
             "app_url": env.get("app.baseURL", ""),
             "db_name": env.get("database.default.database", ""),
             "db_user": env.get("database.default.username", ""),
-            "db_pass": env.get("database.default.password", ""),
+            "has_db_pass": bool(env.get("database.default.password", "")),
             "nginx_site": nginx_site,
             "port": get_nginx_site_port(nginx_site),
             "version": version,
@@ -1960,13 +1981,14 @@ def delete_php_project_job(job_id, app_path, db_name, db_user, nginx_site, cfg):
 def mysql_cmd(cfg, query, database=None):
     user = cfg.get("mysql_user", "root")
     pwd  = cfg.get("mysql_password", "")
-    auth = f"-u{user}" + (f" -p{pwd}" if pwd else "")
-    db   = database if database and database != "_none_" else ""
+    auth = f"-u{shell_quote(user)}" if user else ""
+    env  = f"MYSQL_PWD={shell_quote(pwd)} " if pwd else ""
+    db   = f" {shell_quote(database)}" if database and database != "_none_" else ""
     # Try progressively: normal → sudo with auth → sudo socket-only (for auth_socket root)
     attempts = [
-        f"mysql {auth} {db} --batch",
-        f"sudo mysql {auth} {db} --batch",
-        f"sudo mysql {db} --batch",
+        f"{env}mysql {auth}{db} --batch".strip(),
+        f"{env}sudo mysql {auth}{db} --batch".strip(),
+        f"sudo mysql{db} --batch".strip(),
     ]
     for cmd in attempts:
         r = run_cmd(cmd, input_data=query)
@@ -2520,9 +2542,49 @@ echo 'ok';
                 os.remove(tmp)
 
 
+JOB_SECRET_KEYS = re.compile(
+    r'(?i)(database\.default\.password|db_password|wp_admin_pass|db_pass|api[_-]key|mcp_key|password|passwd|secret|token|pass)'
+)
+JOB_SECRET_LINES = re.compile(
+    r'(?im)\b(?P<label>database\.default\.password|db[ _]password|wp_admin_pass|db[ _]pass|api[_-]key|mcp_key|password|passwd|secret|token|pass)\b\s*[:=]\s*\S+.*$'
+)
+
+
+def sanitize_job_value(val):
+    if isinstance(val, dict):
+        out = {}
+        for k, v in val.items():
+            if isinstance(k, str) and not k.lower().startswith("has_") and isinstance(v, str) and JOB_SECRET_KEYS.search(k):
+                out[k] = "[redacted]"
+            else:
+                out[k] = sanitize_job_value(v)
+        return out
+    if isinstance(val, list):
+        return [sanitize_job_value(item) for item in val]
+    if isinstance(val, str):
+        return JOB_SECRET_LINES.sub(r'\g<label>: [redacted]', val)
+    return val
+
+
+def sanitize_job_for_mcp(job):
+    if not isinstance(job, dict):
+        return job
+    return sanitize_job_value(deepcopy(job))
+
+
 # ── HTTP handler ──────────────────────────────────────────────────────────────
 
 class Handler(BaseHTTPRequestHandler):
+
+    def send_job_status(self, job_id):
+        if job_id not in _jobs:
+            self.send_json({"error": "Job not found"}, 404)
+            return
+        job = _jobs[job_id]
+        if getattr(self, "auth_kind", None) == "mcp":
+            self.send_json(sanitize_job_for_mcp(job))
+        else:
+            self.send_json(job)
 
     def log_message(self, *_):
         pass  # silence access log
@@ -2737,10 +2799,17 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"success": True, "port": find_next_port(8300)})
 
         elif path == "/api/wordpress/credentials":
+            if getattr(self, "auth_kind", None) == "mcp":
+                self.send_json({"error": "This operation requires a panel session"}, 403)
+                return
             qs = parse_qs(urlparse(self.path).query)
             wp_path = qs.get("path", [None])[0]
             if not wp_path:
-                self.send_json({"success": False, "error": "Missing path"}); return
+                self.send_json({"success": False, "error": "Site not found"}, 404); return
+            site = find_discovered_wp_site(wp_path)
+            if not site:
+                self.send_json({"success": False, "error": "Site not found"}, 404); return
+            wp_path = site["path"]
             try:
                 creds = read_wp_config(wp_path)
                 self.send_json({"success": True, **creds})
@@ -2751,39 +2820,19 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(get_system_info())
 
         elif path.startswith("/api/wordpress/install/") or path.startswith("/api/wordpress/delete/"):
-            job_id = path.split("/")[-1]
-            if job_id in _jobs:
-                self.send_json(_jobs[job_id])
-            else:
-                self.send_json({"error": "Job not found"}, 404)
+            self.send_job_status(path.split("/")[-1])
 
         elif path.startswith("/api/wordpress/core-update/"):
-            job_id = path.split("/")[-1]
-            if job_id in _jobs:
-                self.send_json(_jobs[job_id])
-            else:
-                self.send_json({"error": "Job not found"}, 404)
+            self.send_job_status(path.split("/")[-1])
 
         elif path.startswith("/api/laravel/install/") or path.startswith("/api/laravel/delete/"):
-            job_id = path.split("/")[-1]
-            if job_id in _jobs:
-                self.send_json(_jobs[job_id])
-            else:
-                self.send_json({"error": "Job not found"}, 404)
+            self.send_job_status(path.split("/")[-1])
 
         elif path.startswith("/api/codeigniter/install/") or path.startswith("/api/codeigniter/delete/"):
-            job_id = path.split("/")[-1]
-            if job_id in _jobs:
-                self.send_json(_jobs[job_id])
-            else:
-                self.send_json({"error": "Job not found"}, 404)
+            self.send_job_status(path.split("/")[-1])
 
         elif path.startswith("/api/php-projects/install/") or path.startswith("/api/php-projects/delete/"):
-            job_id = path.split("/")[-1]
-            if job_id in _jobs:
-                self.send_json(_jobs[job_id])
-            else:
-                self.send_json({"error": "Job not found"}, 404)
+            self.send_job_status(path.split("/")[-1])
 
         elif path == "/api/performance":
             self.send_json({
@@ -2865,7 +2914,13 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"error": "Unauthorized"}, 401)
             return
 
-        if path in ("/api/settings", "/api/panel/open") and getattr(self, "auth_kind", None) == "mcp":
+        if path in (
+            "/api/settings",
+            "/api/panel/open",
+            "/api/secrets/reveal",
+            "/api/wordpress/change_db_password",
+            "/api/wordpress/change_wp_admin",
+        ) and getattr(self, "auth_kind", None) == "mcp":
             self.send_json({"error": "This operation requires a panel session"}, 403)
             return
 
@@ -3032,6 +3087,46 @@ class Handler(BaseHTTPRequestHandler):
                     cfg["mysql_password"] = data["mysql_password"]
                 save_config(cfg)
             self.send_json({"success": True})
+
+        elif path == "/api/secrets/reveal":
+            kind = data.get("kind")
+            req_path = data.get("path")
+            if kind not in ("wp_admin", "laravel_db", "codeigniter_db"):
+                self.send_json({"success": False, "error": "Invalid kind"}, 400)
+                return
+            if not isinstance(req_path, str) or not req_path:
+                self.send_json({"success": False, "error": "Path not found"}, 404)
+                return
+            norm_target = os.path.normpath(req_path)
+            if kind == "wp_admin":
+                site = find_discovered_wp_site(req_path)
+                if not site:
+                    self.send_json({"success": False, "error": "Site not found"}, 404)
+                    return
+                admin_creds = get_wp_admin_credential(site["path"])
+                username = admin_creds.get("username") or site.get("wp_admin_user", "")
+                password = admin_creds.get("password", "")
+                self.send_json({"success": True, "password": password, "username": username})
+            elif kind == "laravel_db":
+                apps = get_laravel_apps()
+                app = next((a for a in apps if a.get("path") == req_path or os.path.normpath(a.get("path", "")) == norm_target), None)
+                if not app:
+                    self.send_json({"success": False, "error": "App not found"}, 404)
+                    return
+                env = read_env_file(os.path.join(app["path"], ".env"))
+                username = app.get("db_user") or env.get("DB_USERNAME", "")
+                password = env.get("DB_PASSWORD", "")
+                self.send_json({"success": True, "password": password, "username": username})
+            elif kind == "codeigniter_db":
+                apps = get_codeigniter_apps()
+                app = next((a for a in apps if a.get("path") == req_path or os.path.normpath(a.get("path", "")) == norm_target), None)
+                if not app:
+                    self.send_json({"success": False, "error": "App not found"}, 404)
+                    return
+                env = read_env_file(os.path.join(app["path"], ".env"))
+                username = app.get("db_user") or env.get("database.default.username", "")
+                password = env.get("database.default.password", "")
+                self.send_json({"success": True, "password": password, "username": username})
 
         elif path == "/api/wordpress/install":
             required = ["site_name", "db_name", "db_user", "db_pass", "port"]
@@ -3310,6 +3405,10 @@ class Handler(BaseHTTPRequestHandler):
             new_pass     = data.get("new_pass", "").strip()
             if not all([install_path, db_user, new_pass]):
                 self.send_json({"success": False, "error": "Missing required fields"}); return
+            site = find_discovered_wp_site(install_path)
+            if not site:
+                self.send_json({"success": False, "error": "Site not found"}, 404); return
+            install_path = site["path"]
             if not re.fullmatch(r"[\w\-]+", db_user):
                 self.send_json({"success": False, "error": "Invalid DB user"}); return
             if "'" in new_pass or "\\" in new_pass:
@@ -3346,6 +3445,10 @@ class Handler(BaseHTTPRequestHandler):
             new_pass      = data.get("new_pass", "").strip()
             if not all([install_path, new_pass]):
                 self.send_json({"success": False, "error": "Missing required fields"}); return
+            site = find_discovered_wp_site(install_path)
+            if not site:
+                self.send_json({"success": False, "error": "Site not found"}, 404); return
+            install_path = site["path"]
             if wp_admin_user and not re.fullmatch(r"[\w\-.@]+", wp_admin_user):
                 self.send_json({"success": False, "error": "Invalid WP admin username"}); return
             if not wp_admin_user:

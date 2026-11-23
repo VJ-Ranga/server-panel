@@ -5,6 +5,7 @@ import json
 import math
 import os
 from pathlib import Path
+import posixpath
 import re
 import sys
 import time
@@ -22,7 +23,38 @@ JOB_PATHS = {
     for action in ('install', 'delete')
 }
 JOB_PATHS['wordpress_core_update'] = '/api/wordpress/core-update/'
-BLOCKED_PATHS = {'/api/login', '/api/panel/open', '/api/panel/close'}
+BLOCKED_PATHS = {
+    '/api/login',
+    '/api/panel/open',
+    '/api/panel/close',
+    '/api/secrets/reveal',
+    '/api/wordpress/credentials',
+    '/api/wordpress/change_db_password',
+    '/api/wordpress/change_wp_admin',
+}
+
+
+def normalize_blocked_path(path):
+    if not isinstance(path, str):
+        return ""
+    clean = urllib.parse.urlsplit(path).path
+    for _ in range(3):
+        decoded = urllib.parse.unquote(clean)
+        if decoded == clean:
+            break
+        clean = decoded
+    clean = re.sub(r'/+', '/', clean)
+    clean = posixpath.normpath(clean)
+    if len(clean) > 1 and clean.endswith('/'):
+        clean = clean.rstrip('/')
+    return clean.lower()
+
+
+BLOCKED_NORMALIZED = {normalize_blocked_path(p) for p in BLOCKED_PATHS}
+
+
+def is_blocked_path(path):
+    return normalize_blocked_path(path) in BLOCKED_NORMALIZED
 
 
 class ToolError(Exception):
@@ -115,6 +147,8 @@ class PanelClient:
         self.using_mcp_key = True
 
     def request(self, method, path, body=None, timeout=30):
+        if is_blocked_path(path):
+            raise ToolError('This route is forbidden for agents: {}.'.format(path))
         if not self.token:
             if self.password is not None:
                 self.login(timeout)
@@ -285,6 +319,8 @@ def validate(value, schema, label='arguments'):
 
 
 def safe_api_path(path):
+    if is_blocked_path(path):
+        raise ToolError('This route is forbidden for agents: {}.'.format(path))
     parsed = urllib.parse.urlsplit(path)
     decoded = urllib.parse.unquote(parsed.path)
     if (not path.startswith('/api/') or parsed.scheme or parsed.netloc or parsed.fragment
@@ -292,9 +328,34 @@ def safe_api_path(path):
             or '\\' in path or decoded != parsed.path
             or any(part in ('.', '..', '') for part in parsed.path.split('/')[1:])):
         raise ToolError('Path must be a direct /api/ route without traversal, encoded path segments, or a URL origin.')
-    if parsed.path in BLOCKED_PATHS:
-        raise ToolError('This route is forbidden for agents: {}.'.format(parsed.path))
     return path
+
+
+REDACT_KEY_RE = re.compile(
+    r'(?i)(database\.default\.password|db_password|wp_admin_pass|db_pass|api[_-]key|mcp_key|password|passwd|secret|token|pass)'
+)
+REDACT_LINE_RE = re.compile(
+    r'(?im)\b(?P<label>database\.default\.password|db[ _]password|wp_admin_pass|db[ _]pass|api[_-]key|mcp_key|password|passwd|secret|token|pass)\b\s*[:=]\s*\S+.*$'
+)
+
+
+def redact_secrets(data):
+    if isinstance(data, dict):
+        out = {}
+        for k, v in data.items():
+            if (isinstance(k, str)
+                    and not k.lower().startswith('has_')
+                    and isinstance(v, str)
+                    and REDACT_KEY_RE.search(k)):
+                out[k] = '[redacted]'
+            else:
+                out[k] = redact_secrets(v)
+        return out
+    if isinstance(data, list):
+        return [redact_secrets(item) for item in data]
+    if isinstance(data, str):
+        return REDACT_LINE_RE.sub(r'\g<label>: [redacted]', data)
+    return data
 
 
 def result(data, error=False):
@@ -406,12 +467,13 @@ class MCPServer:
             args = params.get('arguments', {})
             validate(args, TOOLS_BY_NAME[name]['inputSchema'])
             data = self.execute(name, args)
+            data = redact_secrets(data)
             failed = isinstance(data, dict) and (data.get('success') is False or bool(data.get('error')) or data.get('status') == 'error')
             if isinstance(data, dict) and isinstance(data.get('result'), dict):
                 failed = failed or data['result'].get('success') is False
             return result(data, failed)
         except (ToolError, ValueError, TypeError, OSError) as exc:
-            return result(str(exc), True)
+            return result(redact_secrets(str(exc)), True)
         except Exception:
             # Do not leak credentials, request headers, or tracebacks into stdout.
             print('Unexpected tool execution failure.', file=sys.stderr)

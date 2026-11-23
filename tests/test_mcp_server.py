@@ -216,6 +216,7 @@ class MCPTests(unittest.TestCase):
 
     def test_generic_api_path_guards(self):
         for path in ('/api/panel/close', '/api/panel/open?x=1', '/api/login', '/outside',
+                     '/api/secrets/reveal', '/api/wordpress/credentials', '/api/wordpress/credentials?path=1',
                      '//example.com/api/status', '/api/../api/panel/close', '/api/panel/%63lose'):
             self.assertTrue(self.call('panel_api', method='POST', path=path)['isError'], path)
         self.assertEqual(self.http.requests, [])
@@ -312,8 +313,8 @@ class MCPTests(unittest.TestCase):
         self.assertTrue(result['isError'])
         self.assertIn('redirect', result['content'][0]['text'].lower())
         with mock.patch.object(self.server.client, 'request', return_value={}) as request:
-            self.call('panel_api', method='GET', path='/api/wordpress/credentials?path=%2Fvar%2Fwww%2Fdemo')
-            self.assertEqual(request.call_args.args[1], '/api/wordpress/credentials?path=%2Fvar%2Fwww%2Fdemo')
+            self.call('panel_api', method='GET', path='/api/projects?search=%2Fvar%2Fwww%2Fdemo')
+            self.assertEqual(request.call_args.args[1], '/api/projects?search=%2Fvar%2Fwww%2Fdemo')
 
     def test_retry_stops_after_second_401(self):
         with mock.patch.object(self.server.client, '_request', side_effect=urllib.error.HTTPError(self.url, 401, 'Unauthorized', {}, None)):
