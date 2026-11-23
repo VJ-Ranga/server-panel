@@ -58,6 +58,11 @@ class FakePanel(BaseHTTPRequestHandler):
             self.respond({'nginx': 'active', 'mysql': 'active'})
         elif self.path == '/api/wordpress/sites':
             self.respond({'success': True, 'sites': []})
+        elif self.path == '/api/projects':
+            self.respond({'projects': [
+                {'id': 'a1b2c3d4', 'name': 'Acme Shop', 'parts': []},
+                {'id': 'b2c3d4e5', 'name': 'Demo Blog', 'parts': []},
+            ]})
         elif self.path.startswith('/api/wordpress/install/'):
             self.server.polls += 1
             self.respond({'status': self.server.job_status if self.server.polls >= 2 else 'running',
@@ -117,7 +122,7 @@ class MCPTests(unittest.TestCase):
         tools = self.rpc('tools/list')['result']['tools']
         names = {t['name'] for t in tools}
         expected = {'panel_status', 'list_wordpress_sites', 'list_laravel_apps', 'list_codeigniter_apps',
-                    'list_php_projects', 'wordpress_core_update_status', 'service_control', 'panel_api',
+                    'list_php_projects', 'list_projects', 'get_project', 'wordpress_core_update_status', 'service_control', 'panel_api',
                     'get_job', 'wait_for_job', 'phpmyadmin_status', 'mysql_query'}
         for prefix in ('wordpress', 'laravel', 'codeigniter', 'php_project'):
             expected.update(prefix + '_' + action for action in ('install', 'delete', 'change_port'))
@@ -338,6 +343,35 @@ class MCPTests(unittest.TestCase):
             text = self.call('panel_status')['content'][0]['text']
             self.assertIn('Truncated', text)
             self.assertLess(len(text), 60100)
+
+    def test_projects_tools(self):
+        # list_projects calls GET /api/projects
+        res = self.call('list_projects')
+        self.assertFalse(res['isError'])
+        data = json.loads(res['content'][0]['text'])
+        self.assertIn('projects', data)
+        self.assertEqual(len(data['projects']), 2)
+
+        # get_project by ID
+        res = self.call('get_project', id='a1b2c3d4')
+        self.assertFalse(res['isError'])
+        proj = json.loads(res['content'][0]['text'])
+        self.assertEqual(proj['name'], 'Acme Shop')
+
+        # get_project by name (case-insensitive)
+        res = self.call('get_project', name='demo blog')
+        self.assertFalse(res['isError'])
+        proj = json.loads(res['content'][0]['text'])
+        self.assertEqual(proj['id'], 'b2c3d4e5')
+
+        # get_project not found
+        res = self.call('get_project', name='Nonexistent')
+        self.assertTrue(res['isError'])
+        self.assertIn('not found', res['content'][0]['text'].lower())
+
+        # get_project without arguments
+        res = self.call('get_project')
+        self.assertTrue(res['isError'])
 
     def test_non_localhost_url_refused_at_startup(self):
         for url in ('http://example.com', 'http://127.0.0.2', 'file:///tmp/panel',

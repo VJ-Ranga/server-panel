@@ -2,6 +2,9 @@
 panel_config.json
 panel_config.json.lock
 panel_config.json.*.tmp
+projects.json
+projects.json.lock
+projects.json.*.tmp
 
 # Runtime/cache artifacts
 cache/

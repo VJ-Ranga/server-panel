@@ -92,6 +92,8 @@ Restart your AI tool after saving the registration.
 | `list_laravel_apps` | GET `/api/laravel/apps` |
 | `list_codeigniter_apps` | GET `/api/codeigniter/apps` |
 | `list_php_projects` | GET `/api/php-projects/apps` |
+| `list_projects` | GET `/api/projects` |
+| `get_project(id?, name?)` | GET `/api/projects` (filtered by ID or case-insensitive name) |
 | `wordpress_core_update_status` | GET `/api/wordpress/core-update-status` |
 | `nginx_list_sites` | GET `/api/nginx/sites` |
 | `nginx_get_site_config(name)` | GET `/api/nginx/site/{name}` |

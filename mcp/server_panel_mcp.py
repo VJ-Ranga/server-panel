@@ -153,6 +153,7 @@ READ_ROUTES = {
     'list_laravel_apps': '/api/laravel/apps',
     'list_codeigniter_apps': '/api/codeigniter/apps',
     'list_php_projects': '/api/php-projects/apps',
+    'list_projects': '/api/projects',
     'wordpress_core_update_status': '/api/wordpress/core-update-status',
     'nginx_list_sites': '/api/nginx/sites',
     'nginx_get_main_config': '/api/nginx/config',
@@ -170,6 +171,8 @@ READ_DESCRIPTIONS = {
     'list_laravel_apps': 'List local Laravel apps with path, database, Nginx site and port.',
     'list_codeigniter_apps': 'List local CodeIgniter 4 apps with path, database, Nginx site and port.',
     'list_php_projects': 'List panel-created plain PHP projects with path, optional database, Nginx site and port.',
+    'list_projects': 'List registered projects with their parts, URLs, folders and local running status.',
+    'get_project': 'Get a single registered project by its ID or case-insensitive name.',
     'wordpress_core_update_status': 'Get the latest cached WordPress version and the shared core-update cache state.',
     'nginx_list_sites': 'List Nginx virtual hosts and whether each one is enabled.',
     'nginx_get_main_config': 'Read the main nginx.conf file.',
@@ -179,6 +182,10 @@ READ_DESCRIPTIONS = {
 }
 TOOLS = [tool(name, READ_DESCRIPTIONS[name], read=True) for name in READ_ROUTES]
 TOOLS += [
+    tool('get_project', READ_DESCRIPTIONS['get_project'],
+         {'id': field('Project ID (8 lowercase hex characters).'),
+          'name': field('Case-insensitive project name.')},
+         read=True),
     tool('nginx_get_site_config', 'Read a site configuration.', {'name': NAME}, ('name',), read=True),
     tool('nginx_logs', 'Read the last 200 lines of a Nginx log.',
          {'kind': field('Log kind.', enum=['error', 'access'])}, ('kind',), read=True),
@@ -331,6 +338,22 @@ class MCPServer:
                 if job.get('status') != 'running':
                     raise ToolError('Panel returned an unknown job status: {}.'.format(job.get('status')))
                 time.sleep(min(POLL_INTERVAL, max(0, deadline - time.monotonic())))
+        if name == 'get_project':
+            project_id = args.get('id')
+            project_name = args.get('name')
+            if not project_id and not project_name:
+                raise ToolError('Either id or name must be provided to get_project.')
+            data = self.client.request('GET', '/api/projects')
+            projects = data.get('projects', []) if isinstance(data, dict) else []
+            target_id = (project_id or '').strip().lower()
+            target_name = (project_name or '').strip().lower()
+            for p in projects:
+                if target_id and p.get('id', '').lower() == target_id:
+                    return p
+                if target_name and p.get('name', '').strip().lower() == target_name:
+                    return p
+            lookup = project_id if project_id else project_name
+            raise ToolError('Project not found: {}'.format(lookup))
         if name == 'panel_api':
             path = safe_api_path(args['path'])
             return self.client.request(args['method'], path, args.get('body'), timeout=120)

@@ -111,6 +111,75 @@ PHP_PROJECT = {
     "created_at": 1781784000,
 }
 
+DEMO_PROJECTS = [
+    {
+        "id": "a1b2c3d4",
+        "name": "Acme Shop",
+        "client": "Acme Corp",
+        "status": "live",
+        "vault_path": "/home/demo/vault/acme-shop",
+        "notes": "E-commerce store with WordPress backend and Astro frontend.",
+        "created": "2026-06-20T10:00:00Z",
+        "updated": "2026-06-24T12:00:00Z",
+        "parts": [
+            {
+                "id": "p1a2b3c4",
+                "role": "wordpress",
+                "label": "WordPress Backend",
+                "local_url": "http://localhost:8082",
+                "local_running": True,
+                "local_path": "/var/www/acme-shop",
+                "live_url": "https://api.example.com",
+                "staging_url": "https://staging-api.example.com",
+                "hosting_url": "https://hosting.example.com/acme-shop",
+                "git_url": "git@example.com:acme/backend.git",
+                "hosting_name": "Cloud Hosting",
+                "notes": "Headless WordPress serving WPGraphQL.",
+            },
+            {
+                "id": "p2a2b3c4",
+                "role": "astro",
+                "label": "Astro Frontend",
+                "local_url": "http://localhost:4321",
+                "local_running": False,
+                "local_path": "/home/demo/projects/acme-astro",
+                "live_url": "https://www.example.com",
+                "staging_url": "https://staging.example.com",
+                "hosting_url": "https://hosting.example.com/acme-astro",
+                "git_url": "https://example.com/acme/frontend",
+                "hosting_name": "Edge Hosting",
+                "notes": "Astro SSR store frontend.",
+            },
+        ],
+    },
+    {
+        "id": "b2c3d4e5",
+        "name": "Demo Blog",
+        "client": "",
+        "status": "building",
+        "vault_path": "",
+        "notes": "Personal blog project.",
+        "created": "2026-06-21T08:00:00Z",
+        "updated": "2026-06-21T08:00:00Z",
+        "parts": [
+            {
+                "id": "p3a2b3c4",
+                "role": "wordpress",
+                "label": "Blog Backend",
+                "local_url": "http://localhost:8083",
+                "local_running": False,
+                "local_path": "/var/www/demo-blog",
+                "live_url": "https://blog.example.com",
+                "staging_url": "",
+                "hosting_url": "",
+                "git_url": "git@example.com:demo/blog.git",
+                "hosting_name": "",
+                "notes": "",
+            },
+        ],
+    },
+]
+
 NGINX_SITES = [
     {"name": "default", "server_name": "_", "enabled": False},
     {"name": "phpmyadmin", "server_name": "phpmyadmin.example.test", "enabled": True},
@@ -165,6 +234,7 @@ SITE_CONFIGS["default"] = site_config("default", 80, "/var/www/html")
 SITE_CONFIGS["phpmyadmin"] = site_config("phpmyadmin", PHPMYADMIN["pma_port"], "/usr/share/phpmyadmin")
 
 GET_RESPONSES = {
+    "/api/projects": {"projects": DEMO_PROJECTS},
     "/api/status": {"nginx": "active", "mysql": "active", "system": SYSTEM},
     "/api/system/info": SYSTEM,
     "/api/settings": {"username": "admin", "home_dir": "/home/demo", "default_install_location": "home-local"},

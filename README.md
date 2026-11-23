@@ -15,6 +15,7 @@ CloudyCode Server Panel is a localhost dashboard for managing a Linux developmen
 - **MySQL** lists, creates and drops databases and runs SQL queries. **phpMyAdmin** has controls for installation, Nginx setup and configuration.
 - **Performance** edits selected settings for Nginx, PHP, PHP-FPM and MySQL.
 - **Settings** updates the panel username, password, MySQL connection credentials and default WordPress install location. The interface supports light and dark themes.
+- **Projects registry** tracks local, Git, live, staging and hosting links for multi-part projects with live loopback status checks.
 - **MCP** exposes panel operations to Claude Code, Codex and OpenCode.
 
 [App Launcher](docs/screenshots/apps-light.png) · [WordPress](docs/screenshots/wordpress-light.png) · [Nginx](docs/screenshots/nginx-dark.png) · [Mobile dashboard](docs/screenshots/mobile-dashboard-light.png)
@@ -92,6 +93,7 @@ Configure your client to request confirmation before invoking tools that modify 
 | `laravel-helper.sh`, `codeigniter-helper.sh`, `php-project-helper.sh` | Privileged filesystem and Nginx operations for each app type |
 | `perf-helper.sh` | Applies supported performance configuration changes |
 | `panel_config.json` | Generated, Git-ignored settings and credentials |
+| `projects.json` | Generated, Git-ignored project and links registry |
 | `scripts/mcp-setup.sh` | Enable or disable MCP keys and manage client registrations |
 | `mcp/server_panel_mcp.py`, `mcp/README.md` | MCP bridge and client setup guide |
 | `scripts/demo_server.py` | Standalone localhost demo with fake data and disabled changes |

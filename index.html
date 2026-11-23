@@ -252,6 +252,21 @@ select.input-dark option{background:var(--field);color:var(--text);}
 .ms-icon{margin-left:var(--sp-2);}
 .list-search{max-width:320px;}
 .list-sort{max-width:180px;}
+
+/* ── projects registry ── */
+.project-card{background:var(--sheet);border:1px solid var(--rule-strong);border-radius:var(--r-card);box-shadow:var(--cut);padding:18px 20px;margin-bottom:16px;}
+.project-part-row{background:var(--inset);border:1px solid var(--line);border-radius:var(--r-field);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.project-part-info{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;}
+.project-part-links{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.project-role-badge{font-size:.72rem;padding:2px 8px;border-radius:var(--r-pill);background:var(--neutral-wash);color:var(--text);font-weight:600;border:1px solid var(--rule);}
+.project-status-badge{font-size:.72rem;padding:2px 8px;border-radius:var(--r-pill);font-weight:600;}
+.project-client-badge{font-size:.72rem;padding:2px 8px;border-radius:var(--r-pill);background:var(--neutral-wash);color:var(--text-soft);font-weight:500;}
+.status-planning{background:var(--neutral-wash);color:var(--text-soft);}
+.status-building{background:var(--ink-wash);color:var(--ink);}
+.status-review{background:var(--warn-wash);color:var(--warn);}
+.status-live{background:var(--success-wash);color:var(--success);}
+.status-maintenance{background:var(--warn-wash);color:var(--warn);}
+.status-archived{background:var(--neutral-wash);color:var(--text-faint);}
 </style>
 </head>
 <body>
@@ -295,6 +310,7 @@ select.input-dark option{background:var(--field);color:var(--text);}
       <div class="nav-section">Overview</div>
       <a href="#dashboard" class="active" onclick="showPage('dashboard',this); return false;"><i class="bi bi-grid-1x2"></i> Dashboard</a>
       <a href="#app-launcher" onclick="showPage('app-launcher',this); return false;"><i class="bi bi-rocket-takeoff"></i> App Launcher</a>
+      <a href="#projects" onclick="showPage('projects',this); return false;"><i class="bi bi-kanban"></i> Projects</a>
       <div class="nav-section">Server</div>
       <a href="#nginx" onclick="showPage('nginx',this); return false;"><i class="bi bi-arrow-left-right"></i> Nginx</a>
       <a href="#mysql" onclick="showPage('mysql',this); return false;"><i class="bi bi-database"></i> MySQL</a>
@@ -507,6 +523,23 @@ select.input-dark option{background:var(--field);color:var(--text);}
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- ── PROJECTS REGISTRY ──────────────────────────────────────────── -->
+      <div id="page-projects" class="page">
+        <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+          <div>
+            <div class="section-title mb-1"><i class="bi bi-kanban"></i> Projects</div>
+            <div class="text-help">Track projects, parts, repositories, local servers, and production links.</div>
+          </div>
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <input type="search" id="projects-search-input" class="input-dark list-search" placeholder="Search projects, parts, URLs…" oninput="filterProjects()">
+            <button class="btn btn-sm btn-primary" onclick="openProjectModal()"><i class="bi bi-plus-lg"></i> Add project</button>
+          </div>
+        </div>
+        <div id="projects-list-container">
+          <div class="empty-state"><div class="spinner-sm mx-auto"></div></div>
         </div>
       </div>
 
@@ -1409,6 +1442,64 @@ EOF</pre>
   </div>
 </div>
 
+<!-- Project Add/Edit modal -->
+<div class="dialog-overlay" id="project-modal" style="display:none;">
+  <div style="background:var(--sheet);border:1px solid var(--line);border-radius:14px;padding:24px;width:760px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column;">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <div class="fw-bold" style="font-size:1.05rem;" id="project-modal-title"><i class="bi bi-kanban text-primary"></i> Add Project</div>
+      <button type="button" class="btn btn-sm btn-icon" onclick="closeProjectModal()"><i class="bi bi-x-lg"></i></button>
+    </div>
+
+    <div style="overflow-y:auto;flex:1;padding-right:4px;">
+      <div class="row g-2 mb-3">
+        <div class="col-md-6">
+          <label class="form-label-sm">Project Name <span class="text-danger">*</span></label>
+          <input type="text" id="project-form-name" class="input-dark" maxlength="80" placeholder="e.g. Acme Website">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label-sm">Client</label>
+          <input type="text" id="project-form-client" class="input-dark" maxlength="80" placeholder="e.g. Acme Corp">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label-sm">Status</label>
+          <select id="project-form-status" class="input-dark">
+            <option value="building" selected>Building</option>
+            <option value="planning">Planning</option>
+            <option value="review">Review</option>
+            <option value="live">Live</option>
+            <option value="maintenance">Maintenance</option>
+            <option value="archived">Archived</option>
+          </select>
+        </div>
+        <div class="col-12">
+          <label class="form-label-sm">Vault Path</label>
+          <input type="text" id="project-form-vault-path" class="input-dark" maxlength="300" placeholder="/absolute/path/to/notes/or/vault">
+        </div>
+        <div class="col-12">
+          <label class="form-label-sm">Notes</label>
+          <textarea id="project-form-notes" class="input-dark" maxlength="2000" rows="2" placeholder="Project overview, reminders, tech stack..."></textarea>
+        </div>
+      </div>
+
+      <div class="d-flex align-items-center justify-content-between mt-3 mb-2">
+        <div class="fw-bold type-small"><i class="bi bi-layers"></i> Parts (max 12)</div>
+        <button type="button" class="btn btn-sm btn-outline-secondary btn-compact" id="project-add-part-btn" onclick="addProjectPart()">
+          <i class="bi bi-plus-lg"></i> Add Part
+        </button>
+      </div>
+
+      <div id="project-modal-parts-container">
+        <!-- Dynamic part items injected here -->
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2 mt-3 pt-2" style="border-top:1px solid var(--rule);">
+      <button type="button" class="btn btn-sm btn-outline-secondary" onclick="closeProjectModal()">Cancel</button>
+      <button type="button" class="btn btn-sm btn-primary" onclick="saveProject()"><i class="bi bi-floppy"></i> Save Project</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 // ══ State ════════════════════════════════════════════════════════════════════
@@ -1668,7 +1759,7 @@ function setText(id, val) {
 
 // ══ Navigation ════════════════════════════════════════════════════════════════
 const appLauncherPageTypes = ['wordpress', 'laravel', 'codeigniter', 'php-projects'];
-const pageTitles = { dashboard:'Dashboard', 'app-launcher':'App Launcher', nginx:'Nginx', mysql:'MySQL', wordpress:'WordPress', laravel:'Laravel', codeigniter:'CodeIgniter', 'php-projects':'PHP Projects', phpmyadmin:'phpMyAdmin', performance:'Performance', settings:'Settings' };
+const pageTitles = { dashboard:'Dashboard', 'app-launcher':'App Launcher', projects:'Projects', nginx:'Nginx', mysql:'MySQL', wordpress:'WordPress', laravel:'Laravel', codeigniter:'CodeIgniter', 'php-projects':'PHP Projects', phpmyadmin:'phpMyAdmin', performance:'Performance', settings:'Settings' };
 function validPage(name) {
   return name && document.getElementById('page-' + name) ? name : '';
 }
@@ -1811,6 +1902,7 @@ function launcherItemMeta(item) {
 
 function onPageLoad(name) {
   if (name === 'app-launcher') { loadAppLauncherSummary(); }
+  if (name === 'projects')     { loadProjects(); fetchLocalSites(); }
   if (name === 'nginx')      { loadNginxSites(); loadNginxConfig(); }
   if (name === 'mysql')      { loadDatabases(); }
   if (name === 'wordpress')  { loadWPSites(); loadNextPort(); loadWpPluginLibrary(); }
@@ -2403,7 +2495,10 @@ let _delPending = null;
 let _delPollInterval = null;
 
 function deleteWPSite(name, path, dbName, dbUser, nginxSite) {
-  _delPending = { name, path, dbName, dbUser, nginxSite };
+  _delPending = { type: 'wordpress', name, path, dbName, dbUser, nginxSite };
+
+  const titleEl = document.querySelector('#del-step-confirm .text-danger');
+  if (titleEl) titleEl.innerHTML = '<i class="bi bi-trash"></i> Delete WordPress Site';
 
   document.getElementById('del-modal-body').innerHTML =
     `This will permanently remove:<br>
@@ -2437,6 +2532,18 @@ function closeDeleteModal() {
 
 async function confirmDelete() {
   if (!_delPending) return;
+  if (_delPending.type === 'project') {
+    const { id, name } = _delPending;
+    closeDeleteModal();
+    const r = await apiDelete(`/api/projects/${encodeURIComponent(id)}`);
+    if (r.success) {
+      toast(`Project "${name}" deleted`, 'success');
+      loadProjects();
+    } else {
+      toast('Failed to delete project: ' + (r.error || 'unknown'), 'error');
+    }
+    return;
+  }
   const { name, path, dbName, dbUser, nginxSite } = _delPending;
 
   // Switch to progress view
@@ -3658,6 +3765,648 @@ async function doChangeWpPass() {
     msg.style.display = 'block';
     toast('WP admin password update failed. Check the output and try again.', 'error');
   }
+}
+
+// ══ Projects Registry ═════════════════════════════════════════════════════════
+let allProjects = [];
+let projectsCache = {};
+let localSitesCache = null;
+
+function sanitizeHttpUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  url = url.trim();
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return url;
+    }
+  } catch (e) {}
+  return '';
+}
+
+function formatGitRepoUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  url = url.trim();
+  const gitMatch = url.match(/^git@([^:]+):(.+?)(?:\.git)?$/);
+  if (gitMatch) {
+    const host = gitMatch[1].trim();
+    const repoPath = gitMatch[2].trim().replace(/^\/+/, '');
+    return sanitizeHttpUrl(`https://${host}/${repoPath}`);
+  }
+  return sanitizeHttpUrl(url);
+}
+
+function copyToClipboard(text) {
+  if (!text) return;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      toast('Copied to clipboard', 'success');
+    }).catch(() => {
+      fallbackCopyText(text);
+    });
+  } else {
+    fallbackCopyText(text);
+  }
+}
+
+function fallbackCopyText(text) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('Copied to clipboard', 'success');
+  } catch (e) {
+    toast('Failed to copy', 'error');
+  }
+}
+
+function copyFromElement(el) {
+  const text = el.getAttribute('data-copy') || '';
+  if (text) copyToClipboard(text);
+}
+
+function projectStatusBadge(status) {
+  status = status || 'building';
+  const labels = {
+    planning: 'Planning',
+    building: 'Building',
+    review: 'Review',
+    live: 'Live',
+    maintenance: 'Maintenance',
+    archived: 'Archived',
+  };
+  const label = labels[status] || status;
+  return `<span class="project-status-badge status-${esc(status)}">${esc(label)}</span>`;
+}
+
+function projectRoleBadge(role) {
+  const roles = {
+    wordpress: 'WordPress',
+    astro: 'Astro',
+    laravel: 'Laravel',
+    codeigniter: 'CodeIgniter',
+    php: 'PHP',
+    api: 'API',
+    frontend: 'Frontend',
+    backend: 'Backend',
+    other: 'Other',
+  };
+  const label = roles[role] || role || 'Other';
+  return `<span class="project-role-badge">${esc(label)}</span>`;
+}
+
+async function fetchLocalSites() {
+  const [wp, lv, ci, php] = await Promise.allSettled([
+    api('/api/wordpress/sites'),
+    api('/api/laravel/apps'),
+    api('/api/codeigniter/apps'),
+    api('/api/php-projects/apps'),
+  ]);
+
+  const list = [];
+  if (wp.status === 'fulfilled' && wp.value?.success && Array.isArray(wp.value.sites)) {
+    for (const s of wp.value.sites) {
+      list.push({ type: 'wordpress', role: 'wordpress', name: s.name, port: s.port, path: s.path });
+    }
+  }
+  if (lv.status === 'fulfilled' && lv.value?.success && Array.isArray(lv.value.apps)) {
+    for (const a of lv.value.apps) {
+      list.push({ type: 'laravel', role: 'laravel', name: a.name, port: a.port, path: a.path });
+    }
+  }
+  if (ci.status === 'fulfilled' && ci.value?.success && Array.isArray(ci.value.apps)) {
+    for (const a of ci.value.apps) {
+      list.push({ type: 'codeigniter', role: 'codeigniter', name: a.name, port: a.port, path: a.path });
+    }
+  }
+  if (php.status === 'fulfilled' && php.value?.success && Array.isArray(php.value.apps)) {
+    for (const a of php.value.apps) {
+      list.push({ type: 'php-projects', role: 'php', name: a.name, port: a.port, path: a.path });
+    }
+  }
+  localSitesCache = list;
+  return list;
+}
+
+function buildLocalSiteSelectOptions() {
+  if (!localSitesCache || !localSitesCache.length) {
+    return '<option value="">-- Link local site (none detected) --</option>';
+  }
+  let out = '<option value="">-- Link local site --</option>';
+  const groups = [
+    { title: 'WordPress', items: localSitesCache.filter(s => s.type === 'wordpress') },
+    { title: 'Laravel', items: localSitesCache.filter(s => s.type === 'laravel') },
+    { title: 'CodeIgniter', items: localSitesCache.filter(s => s.type === 'codeigniter') },
+    { title: 'PHP Projects', items: localSitesCache.filter(s => s.type === 'php-projects') },
+  ];
+  for (const g of groups) {
+    if (g.items.length) {
+      out += `<optgroup label="${esc(g.title)}">`;
+      for (const item of g.items) {
+        const idx = localSitesCache.indexOf(item);
+        const portStr = item.port ? ` (:${item.port})` : '';
+        out += `<option value="${idx}">${esc(item.name)}${esc(portStr)}</option>`;
+      }
+      out += '</optgroup>';
+    }
+  }
+  return out;
+}
+
+function onLinkLocalSiteSelect(selectEl) {
+  const val = selectEl.value;
+  if (val === '' || !localSitesCache) return;
+  const site = localSitesCache[parseInt(val, 10)];
+  if (!site) return;
+
+  const row = selectEl.closest('.project-part-item');
+  if (!row) return;
+
+  const urlInput = row.querySelector('.part-local-url');
+  if (urlInput) {
+    urlInput.value = site.port ? `http://localhost:${site.port}/` : 'http://localhost/';
+  }
+  const pathInput = row.querySelector('.part-local-path');
+  if (pathInput && site.path) {
+    pathInput.value = site.path;
+  }
+  const roleSelect = row.querySelector('.part-role');
+  if (roleSelect && site.role) {
+    roleSelect.value = site.role;
+  }
+  const labelInput = row.querySelector('.part-label');
+  if (labelInput && !labelInput.value) {
+    labelInput.value = site.name || '';
+  }
+}
+
+function renderProjectPartFormRow(part = {}, index = 0) {
+  const role = part.role || 'other';
+  const roles = [
+    ['wordpress', 'WordPress'],
+    ['astro', 'Astro'],
+    ['laravel', 'Laravel'],
+    ['codeigniter', 'CodeIgniter'],
+    ['php', 'PHP'],
+    ['api', 'API'],
+    ['frontend', 'Frontend'],
+    ['backend', 'Backend'],
+    ['other', 'Other']
+  ];
+  const roleOptions = roles.map(([val, label]) =>
+    `<option value="${esc(val)}" ${role === val ? 'selected' : ''}>${esc(label)}</option>`
+  ).join('');
+
+  return `
+    <div class="project-part-item p-3 mb-3" style="background:var(--inset);border:1px solid var(--line);border-radius:8px;" data-part-id="${esc(part.id || '')}">
+      <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+        <div class="fw-semibold type-small"><i class="bi bi-diagram-3"></i> Part <span class="part-index-label">${index + 1}</span></div>
+        <div class="d-flex align-items-center gap-2">
+          <select class="input-dark type-tiny py-1 part-link-site" onchange="onLinkLocalSiteSelect(this)" style="max-width:200px;">
+            ${buildLocalSiteSelectOptions()}
+          </select>
+          <button type="button" class="btn btn-sm btn-outline-danger btn-compact" onclick="removeProjectPart(this)" title="Remove part"><i class="bi bi-trash"></i></button>
+        </div>
+      </div>
+      <div class="row g-2">
+        <div class="col-md-4">
+          <label class="form-label-sm type-tiny">Role</label>
+          <select class="input-dark part-role">
+            ${roleOptions}
+          </select>
+        </div>
+        <div class="col-md-8">
+          <label class="form-label-sm type-tiny">Label</label>
+          <input type="text" class="input-dark part-label" maxlength="80" placeholder="e.g. Frontend, Web App" value="${esc(part.label || '')}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label-sm type-tiny">Local URL</label>
+          <input type="text" class="input-dark part-local-url" maxlength="500" placeholder="http://localhost:8080/" value="${esc(part.local_url || '')}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label-sm type-tiny">Local Path</label>
+          <input type="text" class="input-dark part-local-path" maxlength="300" placeholder="/var/www/site" value="${esc(part.local_path || '')}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label-sm type-tiny">Live URL</label>
+          <input type="text" class="input-dark part-live-url" maxlength="500" placeholder="https://example.com" value="${esc(part.live_url || '')}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label-sm type-tiny">Staging URL</label>
+          <input type="text" class="input-dark part-staging-url" maxlength="500" placeholder="https://staging.example.com" value="${esc(part.staging_url || '')}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label-sm type-tiny">Git URL</label>
+          <input type="text" class="input-dark part-git-url" maxlength="500" placeholder="https://... or git@..." value="${esc(part.git_url || '')}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label-sm type-tiny">Hosting Name</label>
+          <input type="text" class="input-dark part-hosting-name" maxlength="80" placeholder="Cloudflare, Vercel..." value="${esc(part.hosting_name || '')}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label-sm type-tiny">Hosting URL</label>
+          <input type="text" class="input-dark part-hosting-url" maxlength="500" placeholder="https://..." value="${esc(part.hosting_url || '')}">
+        </div>
+        <div class="col-12">
+          <label class="form-label-sm type-tiny">Notes</label>
+          <input type="text" class="input-dark part-notes" maxlength="1000" placeholder="Short notes" value="${esc(part.notes || '')}">
+        </div>
+      </div>
+    </div>`;
+}
+
+function addProjectPart(partData = {}) {
+  const container = document.getElementById('project-modal-parts-container');
+  if (!container) return;
+  const count = container.querySelectorAll('.project-part-item').length;
+  if (count >= 12) {
+    toast('Maximum of 12 parts reached', 'error');
+    return;
+  }
+  const div = document.createElement('div');
+  div.innerHTML = renderProjectPartFormRow(partData, count);
+  container.appendChild(div.firstElementChild);
+  updatePartAddButtonState();
+}
+
+function removeProjectPart(btn) {
+  const row = btn.closest('.project-part-item');
+  if (row) {
+    row.remove();
+    updatePartIndexLabels();
+    updatePartAddButtonState();
+  }
+}
+
+function updatePartIndexLabels() {
+  const items = document.querySelectorAll('#project-modal-parts-container .project-part-item');
+  items.forEach((item, idx) => {
+    const lbl = item.querySelector('.part-index-label');
+    if (lbl) lbl.textContent = idx + 1;
+  });
+}
+
+function updatePartAddButtonState() {
+  const btn = document.getElementById('project-add-part-btn');
+  const count = document.querySelectorAll('#project-modal-parts-container .project-part-item').length;
+  if (btn) {
+    btn.disabled = (count >= 12);
+  }
+}
+
+async function openProjectModal(project = null) {
+  await fetchLocalSites();
+  const modal = document.getElementById('project-modal');
+  const title = document.getElementById('project-modal-title');
+  const nameInput = document.getElementById('project-form-name');
+  const clientInput = document.getElementById('project-form-client');
+  const statusSelect = document.getElementById('project-form-status');
+  const vaultInput = document.getElementById('project-form-vault-path');
+  const notesInput = document.getElementById('project-form-notes');
+  const partsContainer = document.getElementById('project-modal-parts-container');
+
+  partsContainer.innerHTML = '';
+
+  if (project) {
+    modal.dataset.projectId = project.id;
+    title.innerHTML = '<i class="bi bi-pencil-square text-primary"></i> Edit Project';
+    nameInput.value = project.name || '';
+    clientInput.value = project.client || '';
+    statusSelect.value = project.status || 'building';
+    vaultInput.value = project.vault_path || '';
+    notesInput.value = project.notes || '';
+
+    if (Array.isArray(project.parts) && project.parts.length > 0) {
+      project.parts.forEach(p => {
+        addProjectPart(p);
+      });
+    } else {
+      addProjectPart();
+    }
+  } else {
+    modal.dataset.projectId = '';
+    title.innerHTML = '<i class="bi bi-kanban text-primary"></i> Add Project';
+    nameInput.value = '';
+    clientInput.value = '';
+    statusSelect.value = 'building';
+    vaultInput.value = '';
+    notesInput.value = '';
+    addProjectPart();
+  }
+
+  modal.style.display = 'flex';
+  setTimeout(() => nameInput.focus(), 50);
+}
+
+function openProjectModalById(id) {
+  const p = projectsCache[id];
+  openProjectModal(p);
+}
+
+function closeProjectModal() {
+  const modal = document.getElementById('project-modal');
+  if (modal) {
+    modal.style.display = 'none';
+    modal.dataset.projectId = '';
+  }
+}
+
+async function saveProject() {
+  const modal = document.getElementById('project-modal');
+  const name = (document.getElementById('project-form-name').value || '').trim();
+  if (!name) {
+    toast('Project name is required', 'error');
+    return;
+  }
+  const client = (document.getElementById('project-form-client').value || '').trim();
+  const status = document.getElementById('project-form-status').value || 'building';
+  const vault_path = (document.getElementById('project-form-vault-path').value || '').trim();
+  const notes = (document.getElementById('project-form-notes').value || '').trim();
+
+  const partRows = document.querySelectorAll('#project-modal-parts-container .project-part-item');
+  const parts = [];
+  for (const row of partRows) {
+    const role = row.querySelector('.part-role')?.value || 'other';
+    const label = (row.querySelector('.part-label')?.value || '').trim();
+    const local_url = (row.querySelector('.part-local-url')?.value || '').trim();
+    const local_path = (row.querySelector('.part-local-path')?.value || '').trim();
+    const live_url = (row.querySelector('.part-live-url')?.value || '').trim();
+    const staging_url = (row.querySelector('.part-staging-url')?.value || '').trim();
+    const git_url = (row.querySelector('.part-git-url')?.value || '').trim();
+    const hosting_name = (row.querySelector('.part-hosting-name')?.value || '').trim();
+    const hosting_url = (row.querySelector('.part-hosting-url')?.value || '').trim();
+    const partNotes = (row.querySelector('.part-notes')?.value || '').trim();
+
+    const partId = row.dataset.partId;
+    const hasContent = label || local_url || local_path || live_url || staging_url || git_url || hosting_name || hosting_url || partNotes;
+
+    if (hasContent || partId) {
+      const partObj = {
+        role,
+        label,
+        local_url,
+        local_path,
+        live_url,
+        staging_url,
+        git_url,
+        hosting_name,
+        hosting_url,
+        notes: partNotes,
+      };
+      if (partId) partObj.id = partId;
+      parts.push(partObj);
+    }
+  }
+
+  const payload = {
+    name,
+    client,
+    status,
+    vault_path,
+    notes,
+    parts,
+  };
+
+  const editingId = modal.dataset.projectId;
+  const url = editingId ? `/api/projects/${encodeURIComponent(editingId)}` : '/api/projects';
+  const r = await api(url, 'POST', payload);
+
+  if (!r.success) {
+    toast(r.error || 'Failed to save project', 'error');
+    return;
+  }
+
+  toast(editingId ? `Project "${name}" updated` : `Project "${name}" created`, 'success');
+  closeProjectModal();
+  loadProjects();
+}
+
+function deleteProject(id, name) {
+  _delPending = { type: 'project', id, name };
+
+  const titleEl = document.querySelector('#del-step-confirm .text-danger');
+  if (titleEl) titleEl.innerHTML = '<i class="bi bi-trash"></i> Delete Project';
+
+  document.getElementById('del-modal-body').innerHTML =
+    `This will permanently remove project <b>${esc(name)}</b> and all its registered parts.<br><br>
+     <span class="text-danger fw-semibold">This CANNOT be undone.</span>`;
+
+  document.getElementById('del-confirm-hint').textContent = name;
+  document.getElementById('del-confirm-input').value = '';
+  document.getElementById('del-confirm-btn').disabled = true;
+  document.getElementById('del-step-confirm').style.display = 'block';
+  document.getElementById('del-step-progress').style.display = 'none';
+  document.getElementById('del-done-row').style.display = 'none';
+
+  document.getElementById('delete-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('del-confirm-input').focus(), 50);
+}
+
+function deleteProjectById(id) {
+  const p = projectsCache[id];
+  const name = p ? p.name : id;
+  deleteProject(id, name);
+}
+
+async function loadProjects() {
+  const container = document.getElementById('projects-list-container');
+  if (!container) return;
+  if (!allProjects.length) {
+    container.innerHTML = '<div class="empty-state"><div class="spinner-sm mx-auto"></div></div>';
+  }
+  const r = await api('/api/projects');
+  if (r.success === false || !Array.isArray(r.projects)) {
+    container.innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-circle text-danger"></i>${esc(r.error || 'Failed to load projects')}</div>`;
+    return;
+  }
+  allProjects = Array.isArray(r.projects) ? r.projects : [];
+  projectsCache = {};
+  for (const p of allProjects) {
+    if (p && p.id) {
+      projectsCache[p.id] = p;
+    }
+  }
+  filterProjects();
+}
+
+function projectMatchesSearch(project, q) {
+  if (!q) return true;
+  q = q.toLowerCase();
+  if ((project.name || '').toLowerCase().includes(q)) return true;
+  if ((project.client || '').toLowerCase().includes(q)) return true;
+  if (Array.isArray(project.parts)) {
+    for (const part of project.parts) {
+      if ((part.label || '').toLowerCase().includes(q)) return true;
+      if ((part.local_url || '').toLowerCase().includes(q)) return true;
+      if ((part.live_url || '').toLowerCase().includes(q)) return true;
+      if ((part.staging_url || '').toLowerCase().includes(q)) return true;
+      if ((part.git_url || '').toLowerCase().includes(q)) return true;
+      if ((part.hosting_url || '').toLowerCase().includes(q)) return true;
+    }
+  }
+  return false;
+}
+
+function filterProjects() {
+  const container = document.getElementById('projects-list-container');
+  if (!container) return;
+  const q = (document.getElementById('projects-search-input')?.value || '').trim();
+
+  let filtered = allProjects;
+  if (q) {
+    filtered = allProjects.filter(p => projectMatchesSearch(p, q));
+  }
+
+  renderProjects(filtered, q);
+}
+
+function renderProjects(projects, query = '') {
+  const container = document.getElementById('projects-list-container');
+  if (!container) return;
+
+  if (!projects || projects.length === 0) {
+    if (query) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <i class="bi bi-search"></i>
+          <div>No projects match "${esc(query)}"</div>
+          <div class="text-meta mt-1">Try searching for a different name, client, part label, or URL.</div>
+        </div>`;
+    } else {
+      container.innerHTML = `
+        <div class="empty-state">
+          <i class="bi bi-kanban"></i>
+          <div class="fw-bold mb-1">No projects registered yet</div>
+          <div class="text-muted type-small mb-3">Add your first project to track repositories, local environments, and live links.</div>
+          <button class="btn btn-sm btn-primary" onclick="openProjectModal()"><i class="bi bi-plus-lg"></i> Add project</button>
+        </div>`;
+    }
+    return;
+  }
+
+  container.innerHTML = projects.map(renderProjectCard).join('');
+}
+
+function renderProjectCard(project) {
+  const parts = Array.isArray(project.parts) ? project.parts : [];
+  const statusBadge = projectStatusBadge(project.status);
+  const clientBadge = project.client
+    ? `<span class="badge project-client-badge text-soft">${esc(project.client)}</span>`
+    : '';
+
+  const vaultPathHtml = project.vault_path
+    ? `<div class="project-vault text-meta mt-1 d-flex align-items-center gap-1">
+         <i class="bi bi-journal-bookmark text-soft" title="Vault path"></i>
+         <span class="text-soft mono text-truncate" style="max-width:320px;" title="${esc(project.vault_path)}">${esc(project.vault_path)}</span>
+         <button type="button" class="btn btn-sm btn-icon btn-compact" data-copy="${esc(project.vault_path)}" onclick="copyFromElement(this)" title="Copy vault path">
+           <i class="bi bi-clipboard"></i>
+         </button>
+       </div>`
+    : '';
+
+  const notesHtml = project.notes
+    ? `<div class="project-notes text-muted type-small mt-2" title="${esc(project.notes)}">
+         ${esc(project.notes.length > 200 ? project.notes.slice(0, 200) + '…' : project.notes)}
+       </div>`
+    : '';
+
+  const partsHtml = parts.length > 0
+    ? `<div class="d-flex flex-column gap-2 mt-3">
+         ${parts.map(renderProjectPartRow).join('')}
+       </div>`
+    : '<div class="text-meta mt-2">No parts registered for this project.</div>';
+
+  return `
+    <div class="project-card" data-project-id="${esc(project.id)}">
+      <div class="d-flex align-items-start justify-content-between flex-wrap gap-2">
+        <div>
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span class="fw-bold" style="font-size:1.05rem;">${esc(project.name)}</span>
+            ${clientBadge}
+            ${statusBadge}
+          </div>
+          ${vaultPathHtml}
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <button type="button" class="btn btn-sm btn-outline-secondary btn-compact" onclick="openProjectModalById('${esc(project.id)}')"><i class="bi bi-pencil"></i> Edit</button>
+          <button type="button" class="btn btn-sm btn-outline-danger btn-compact" onclick="deleteProjectById('${esc(project.id)}')"><i class="bi bi-trash"></i> Delete</button>
+        </div>
+      </div>
+      ${notesHtml}
+      ${partsHtml}
+    </div>`;
+}
+
+function renderProjectPartRow(part) {
+  let runningDot = '';
+  if (part.local_running === true) {
+    runningDot = '<span class="status-dot dot-green" title="Local site is running"></span>';
+  } else if (part.local_running === false) {
+    runningDot = '<span class="status-dot dot-gray" title="Local site is stopped"></span>';
+  }
+
+  const roleBadge = projectRoleBadge(part.role);
+  const labelHtml = part.label
+    ? `<span class="fw-semibold type-small">${esc(part.label)}</span>`
+    : '';
+
+  const localPathHtml = part.local_path
+    ? `<span class="project-local-path d-inline-flex align-items-center gap-1 text-meta" title="${esc(part.local_path)}">
+         <i class="bi bi-folder text-soft"></i>
+         <code class="text-soft text-truncate" style="max-width:240px;">${esc(part.local_path)}</code>
+         <button type="button" class="btn btn-sm btn-icon btn-compact" data-copy="${esc(part.local_path)}" onclick="copyFromElement(this)" title="Copy path">
+           <i class="bi bi-clipboard"></i>
+         </button>
+       </span>`
+    : '';
+
+  const partNotesHtml = part.notes
+    ? `<span class="text-meta type-tiny" title="${esc(part.notes)}"><i class="bi bi-info-circle"></i> ${esc(part.notes)}</span>`
+    : '';
+
+  const localUrl = sanitizeHttpUrl(part.local_url);
+  const liveUrl = sanitizeHttpUrl(part.live_url);
+  const stagingUrl = sanitizeHttpUrl(part.staging_url);
+  const repoUrl = formatGitRepoUrl(part.git_url);
+  const hostingUrl = sanitizeHttpUrl(part.hosting_url);
+
+  const buttons = [];
+  if (localUrl) {
+    buttons.push(`<a href="${esc(localUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-secondary btn-compact"><i class="bi bi-laptop"></i> Local</a>`);
+  }
+  if (liveUrl) {
+    buttons.push(`<a href="${esc(liveUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary btn-compact"><i class="bi bi-box-arrow-up-right"></i> Live</a>`);
+  }
+  if (stagingUrl) {
+    buttons.push(`<a href="${esc(stagingUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-secondary btn-compact"><i class="bi bi-shield-check"></i> Staging</a>`);
+  }
+  if (repoUrl) {
+    buttons.push(`<a href="${esc(repoUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-secondary btn-compact"><i class="bi bi-git"></i> Repo</a>`);
+  }
+  if (hostingUrl) {
+    const hostingLabel = part.hosting_name ? esc(part.hosting_name) : 'Hosting';
+    const hostingTitle = part.hosting_name ? `Hosting: ${part.hosting_name}` : 'Hosting';
+    buttons.push(`<a href="${esc(hostingUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-secondary btn-compact" title="${esc(hostingTitle)}"><i class="bi bi-cloud"></i> ${hostingLabel}</a>`);
+  }
+
+  return `
+    <div class="project-part-row">
+      <div class="project-part-info">
+        ${runningDot}
+        ${roleBadge}
+        ${labelHtml}
+        ${localPathHtml}
+        ${partNotesHtml}
+      </div>
+      <div class="project-part-links">
+        ${buttons.join(' ')}
+      </div>
+    </div>`;
 }
 
 // ══ Utility ═══════════════════════════════════════════════════════════════════

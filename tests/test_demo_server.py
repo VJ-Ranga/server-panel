@@ -8,7 +8,9 @@ import pytest
 from scripts.demo_server import create_server
 
 
-def test_demo_serves_the_panel_and_refuses_changes():
+def test_demo_serves_the_panel_and_refuses_changes(monkeypatch):
+    monkeypatch.setenv("no_proxy", "*")
+    monkeypatch.setenv("NO_PROXY", "*")
     with create_server(0) as server:
         worker = Thread(target=server.serve_forever)
         worker.start()
@@ -34,7 +36,38 @@ def test_demo_serves_the_panel_and_refuses_changes():
                 assert set(status) == {"nginx", "mysql", "system"}
                 assert status["system"]["hostname"] == "dev-laptop"
 
+            # Demo projects route returns 2 fake projects
+            with urlopen(base + "/api/projects", timeout=5) as response:
+                projects_payload = json.load(response)
+                assert "projects" in projects_payload
+                projects = projects_payload["projects"]
+                assert len(projects) == 2
+                assert projects[0]["name"] == "Acme Shop"
+                assert projects[1]["name"] == "Demo Blog"
+                # Check parts on Acme Shop
+                acme_parts = projects[0]["parts"]
+                assert len(acme_parts) == 2
+                roles = {p["role"] for p in acme_parts}
+                assert roles == {"wordpress", "astro"}
+                for p in acme_parts:
+                    assert "example.com" in (p.get("live_url") or "")
+
+            # Mutations are disabled
             request = Request(base + "/api/mysql/databases", data=b"{}", method="POST")
+            with urlopen(request, timeout=5) as response:
+                assert json.load(response) == {
+                    "success": False,
+                    "error": "Demo mode: changes are disabled.",
+                }
+
+            request = Request(base + "/api/projects", data=b"{}", method="POST")
+            with urlopen(request, timeout=5) as response:
+                assert json.load(response) == {
+                    "success": False,
+                    "error": "Demo mode: changes are disabled.",
+                }
+
+            request = Request(base + "/api/projects/a1b2c3d4", method="DELETE")
             with urlopen(request, timeout=5) as response:
                 assert json.load(response) == {
                     "success": False,

@@ -33,6 +33,7 @@ This writes `/etc/sudoers.d/server-panel` with rules for project helpers and spe
 | `panel.py` | Python backend — HTTP server, all API routes |
 | `index.html` | Frontend — Bootstrap 5 and vanilla JS with CloudyCode light and dark themes |
 | `panel_config.json` | Git-ignored login, sessions and credentials (auto-created) |
+| `projects.json` | Git-ignored project and links registry (auto-created) |
 | `assets/` | Locally served CloudyCode brand artwork and Plus Jakarta Sans font |
 | `install.sh` | Installer and desktop integration |
 | `setup-sudo.sh` | Run once with sudo to grant passwordless sudo rules |
@@ -160,6 +161,13 @@ This writes `/etc/sudoers.d/server-panel` with rules for project helpers and spe
 - Read/tune selected Nginx, PHP, PHP-FPM, and MySQL settings
 - Save through `perf-helper.sh` with backups and service reload/restart
 
+### Projects
+- Stores projects and their parts (local site, Git repository, live/staging sites, hosting dashboard, vault path, notes)
+- Supports multi-part projects (e.g. WordPress backend and Astro frontend)
+- Real-time `local_running` status check via concurrent loopback TCP connect with 0.3-second timeout
+- Read-only tools exposed via MCP (`list_projects`, `get_project`)
+- Stored in Git-ignored `projects.json` with mode `0600` under atomic replacement and file locking
+
 ### MCP
 - The stdio bridge connects Claude Code, Codex and OpenCode to the localhost API
 - Run `scripts/mcp-setup.sh on`, `scripts/mcp-setup.sh off` or `scripts/mcp-setup.sh status` to manage key-based access. `panel_config.json` stores the key privately with mode `0600`, and revocation takes effect on the next request.
@@ -232,6 +240,10 @@ API requests use a bearer token except login and panel close. Login issues the t
 | GET | `/api/phpmyadmin/nginx` | Read the saved configuration or a generated template |
 | POST | `/api/phpmyadmin/nginx` | Generate, save, enable or disable the site configuration |
 | GET | `/api/phpmyadmin/status` | phpMyAdmin install/nginx/fpm status |
+| GET | `/api/projects` | List registered projects with computed local running status |
+| POST | `/api/projects` | Create a project |
+| POST | `/api/projects/<id>` | Replace editable fields of an existing project |
+| DELETE | `/api/projects/<id>` | Delete a project |
 | POST | `/api/services/<svc>/<action>` | Control service (start/stop/restart/reload) |
 | GET | `/api/settings` | Return `username`, `home_dir` and `default_install_location` |
 | POST | `/api/settings` | Update username with `new_username` and `current_password`, update password with `new_password`, update MySQL credentials, or save `default_install_location`. Requires a session token |

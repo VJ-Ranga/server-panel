@@ -24,10 +24,13 @@ import threading
 import string
 import shlex
 import zipfile
+import socket
+import concurrent.futures
+import datetime
 from contextlib import contextmanager
 from copy import deepcopy
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse, parse_qs, unquote
+from urllib.parse import urlparse, parse_qs, unquote, urlsplit
 
 # ── background job registry ───────────────────────────────────────────────────
 _jobs = {}   # job_id -> {"status": "running"|"done"|"error", "logs": [], "result": {}}
@@ -36,6 +39,9 @@ PORT = 8765
 HOST = "127.0.0.1"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_FILE = os.environ.get("SERVER_PANEL_CONFIG") or os.path.join(SCRIPT_DIR, "panel_config.json")
+PROJECTS_FILE = os.environ.get("SERVER_PANEL_PROJECTS") or os.path.join(SCRIPT_DIR, "projects.json")
+PROJECT_STATUSES = ("planning", "building", "review", "live", "maintenance", "archived")
+PART_ROLES = ("wordpress", "astro", "laravel", "codeigniter", "php", "api", "frontend", "backend", "other")
 WP_CACHE_DIR = os.path.join(SCRIPT_DIR, "cache", "wordpress")
 WP_CACHE_TAR = os.path.join(WP_CACHE_DIR, "latest.tar.gz")
 WP_CACHE_VERSION = os.path.join(WP_CACHE_DIR, "latest.version")
@@ -135,6 +141,350 @@ def save_config(cfg):
     finally:
         if os.path.exists(path):
             os.unlink(path)
+
+
+def get_projects_file():
+    return os.environ.get("SERVER_PANEL_PROJECTS") or PROJECTS_FILE
+
+
+class ProjectsCorruptError(Exception):
+    pass
+
+
+def load_projects():
+    filepath = get_projects_file()
+    if not os.path.exists(filepath):
+        return {"version": 1, "projects": []}
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception as exc:
+        raise ProjectsCorruptError(f"Corrupt projects file: {exc}")
+    if not isinstance(data, dict) or not isinstance(data.get("projects"), list):
+        raise ProjectsCorruptError("Corrupt projects file: root must be an object with a 'projects' list")
+    for proj in data["projects"]:
+        if not isinstance(proj, dict) or not isinstance(proj.get("parts", []), list) \
+                or not all(isinstance(part, dict) for part in proj.get("parts", [])):
+            raise ProjectsCorruptError("Corrupt projects file: every project and part must be an object")
+    if "version" not in data or not isinstance(data["version"], int):
+        data["version"] = 1
+    return data
+
+
+@contextmanager
+def projects_write_lock():
+    filepath = get_projects_file()
+    lock_path = filepath + ".lock"
+    with os.fdopen(os.open(lock_path, os.O_WRONLY | os.O_CREAT, 0o600), "w") as lock:
+        os.fchmod(lock.fileno(), 0o600)
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield
+
+
+def save_projects(data):
+    filepath = get_projects_file()
+    directory, filename = os.path.split(os.path.abspath(filepath))
+    fd, path = tempfile.mkstemp(dir=directory, prefix=filename + ".", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            os.fchmod(f.fileno(), 0o600)
+            json.dump(data, f, indent=2)
+        os.replace(path, filepath)
+    finally:
+        if os.path.exists(path):
+            os.unlink(path)
+
+
+def validate_project_payload(data, existing_project=None):
+    if not isinstance(data, dict):
+        return False, "Request body must be a JSON object."
+
+    name = data.get("name")
+    if not isinstance(name, str):
+        return False, "Field 'name' is required and must be a string."
+    name = name.strip()
+    if not (1 <= len(name) <= 80):
+        return False, "Field 'name' must be between 1 and 80 characters."
+
+    client = data.get("client")
+    if client is None:
+        client = ""
+    elif not isinstance(client, str):
+        return False, "Field 'client' must be a string."
+    else:
+        client = client.strip()
+        if len(client) > 80:
+            return False, "Field 'client' must be at most 80 characters."
+
+    status = data.get("status")
+    if status is None or status == "":
+        status = "building"
+    elif not isinstance(status, str):
+        return False, "Field 'status' must be a string."
+    else:
+        status = status.strip()
+        if status not in PROJECT_STATUSES:
+            return False, f"Field 'status' must be one of: {', '.join(PROJECT_STATUSES)}."
+
+    vault_path = data.get("vault_path")
+    if vault_path is None:
+        vault_path = ""
+    elif not isinstance(vault_path, str):
+        return False, "Field 'vault_path' must be a string."
+    else:
+        vault_path = vault_path.strip()
+        if vault_path:
+            if len(vault_path) > 300:
+                return False, "Field 'vault_path' must be at most 300 characters."
+            if not os.path.isabs(vault_path):
+                return False, "Field 'vault_path' must be an absolute path."
+
+    notes = data.get("notes")
+    if notes is None:
+        notes = ""
+    elif not isinstance(notes, str):
+        return False, "Field 'notes' must be a string."
+    else:
+        notes = notes.strip()
+        if len(notes) > 2000:
+            return False, "Field 'notes' must be at most 2000 characters."
+
+    parts_input = data.get("parts")
+    if parts_input is None:
+        parts_input = []
+    elif not isinstance(parts_input, list):
+        return False, "Field 'parts' must be a list."
+    elif len(parts_input) > 12:
+        return False, "Field 'parts' cannot contain more than 12 parts."
+
+    existing_part_ids = set()
+    if existing_project and isinstance(existing_project.get("parts"), list):
+        existing_part_ids = {p.get("id") for p in existing_project["parts"] if isinstance(p, dict) and p.get("id")}
+    used_part_ids = set()
+
+    clean_parts = []
+    for p in parts_input:
+        if not isinstance(p, dict):
+            return False, "Each part in 'parts' must be an object."
+
+        role = p.get("role")
+        if not isinstance(role, str):
+            return False, "Field 'role' is required and must be a string."
+        role = role.strip()
+        if role not in PART_ROLES:
+            return False, f"Field 'role' must be one of: {', '.join(PART_ROLES)}."
+
+        label = p.get("label")
+        if label is None:
+            label = ""
+        elif not isinstance(label, str):
+            return False, "Field 'label' must be a string."
+        else:
+            label = label.strip()
+            if len(label) > 80:
+                return False, "Field 'label' must be at most 80 characters."
+
+        local_url = p.get("local_url")
+        if local_url is None:
+            local_url = ""
+        elif not isinstance(local_url, str):
+            return False, "Field 'local_url' must be a string."
+        else:
+            local_url = local_url.strip()
+            if local_url:
+                if len(local_url) > 500:
+                    return False, "Field 'local_url' must be at most 500 characters."
+                try:
+                    parsed = urlsplit(local_url)
+                except Exception:
+                    return False, "Field 'local_url' is malformed."
+                if parsed.scheme not in ("http", "https"):
+                    return False, "Field 'local_url' must use http or https scheme."
+                if parsed.username is not None or parsed.password is not None or "@" in parsed.netloc:
+                    return False, "Field 'local_url' must not contain user information."
+                try:
+                    _ = parsed.port
+                except ValueError:
+                    return False, "Field 'local_url' contains an invalid port."
+                host = (parsed.hostname or "").lower()
+                if host not in ("localhost", "127.0.0.1", "::1"):
+                    return False, "Field 'local_url' host must be localhost, 127.0.0.1, or [::1]."
+
+        local_path = p.get("local_path")
+        if local_path is None:
+            local_path = ""
+        elif not isinstance(local_path, str):
+            return False, "Field 'local_path' must be a string."
+        else:
+            local_path = local_path.strip()
+            if local_path:
+                if len(local_path) > 300:
+                    return False, "Field 'local_path' must be at most 300 characters."
+                if not os.path.isabs(local_path):
+                    return False, "Field 'local_path' must be an absolute path."
+
+        clean_web_urls = {}
+        for uf in ("live_url", "staging_url", "hosting_url"):
+            uval = p.get(uf)
+            if uval is None:
+                clean_web_urls[uf] = ""
+            elif not isinstance(uval, str):
+                return False, f"Field '{uf}' must be a string."
+            else:
+                uval = uval.strip()
+                if uval:
+                    if len(uval) > 500:
+                        return False, f"Field '{uf}' must be at most 500 characters."
+                    try:
+                        parsed = urlsplit(uval)
+                    except Exception:
+                        return False, f"Field '{uf}' is malformed."
+                    if parsed.scheme not in ("http", "https"):
+                        return False, f"Field '{uf}' must use http or https scheme."
+                    if parsed.username is not None or parsed.password is not None or "@" in parsed.netloc:
+                        return False, f"Field '{uf}' must not contain user information."
+                    if not parsed.hostname:
+                        return False, f"Field '{uf}' must include a valid hostname."
+                clean_web_urls[uf] = uval
+
+        git_url = p.get("git_url")
+        if git_url is None:
+            git_url = ""
+        elif not isinstance(git_url, str):
+            return False, "Field 'git_url' must be a string."
+        else:
+            git_url = git_url.strip()
+            if git_url:
+                if len(git_url) > 500:
+                    return False, "Field 'git_url' must be at most 500 characters."
+                if git_url.startswith("https://"):
+                    try:
+                        parsed = urlsplit(git_url)
+                    except Exception:
+                        return False, "Field 'git_url' is malformed."
+                    if parsed.username is not None or parsed.password is not None or "@" in parsed.netloc:
+                        return False, "Field 'git_url' must not contain user information."
+                    if not parsed.hostname:
+                        return False, "Field 'git_url' must include a valid hostname."
+                elif git_url.startswith("git@"):
+                    if not re.fullmatch(r"git@[A-Za-z0-9_.-]+:[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)+(?:\.git)?", git_url):
+                        return False, "Field 'git_url' must be an https:// URL or SSH git@host:owner/repo(.git)."
+                else:
+                    return False, "Field 'git_url' must be an https:// URL or SSH git@host:owner/repo(.git)."
+
+        hosting_name = p.get("hosting_name")
+        if hosting_name is None:
+            hosting_name = ""
+        elif not isinstance(hosting_name, str):
+            return False, "Field 'hosting_name' must be a string."
+        else:
+            hosting_name = hosting_name.strip()
+            if len(hosting_name) > 80:
+                return False, "Field 'hosting_name' must be at most 80 characters."
+
+        p_notes = p.get("notes")
+        if p_notes is None:
+            p_notes = ""
+        elif not isinstance(p_notes, str):
+            return False, "Field 'notes' must be a string."
+        else:
+            p_notes = p_notes.strip()
+            if len(p_notes) > 1000:
+                return False, "Field 'notes' must be at most 1000 characters."
+
+        p_id = p.get("id")
+        if existing_project and p_id in existing_part_ids and p_id not in used_part_ids:
+            clean_part_id = p_id
+        else:
+            clean_part_id = secrets.token_hex(4)
+            while clean_part_id in used_part_ids or clean_part_id in existing_part_ids:
+                clean_part_id = secrets.token_hex(4)
+        used_part_ids.add(clean_part_id)
+
+        clean_parts.append({
+            "id": clean_part_id,
+            "role": role,
+            "label": label,
+            "local_url": local_url,
+            "local_path": local_path,
+            "live_url": clean_web_urls["live_url"],
+            "staging_url": clean_web_urls["staging_url"],
+            "hosting_url": clean_web_urls["hosting_url"],
+            "git_url": git_url,
+            "hosting_name": hosting_name,
+            "notes": p_notes,
+        })
+
+    now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    if existing_project:
+        proj_id = existing_project["id"]
+        created = existing_project["created"]
+    else:
+        proj_id = secrets.token_hex(4)
+        created = now
+
+    clean_project = {
+        "id": proj_id,
+        "name": name,
+        "client": client,
+        "status": status,
+        "vault_path": vault_path,
+        "notes": notes,
+        "parts": clean_parts,
+        "created": created,
+        "updated": now,
+    }
+    return True, clean_project
+
+
+def check_loopback_running(local_url):
+    if not local_url:
+        return None
+    try:
+        parsed = urlsplit(local_url)
+        host = (parsed.hostname or "").lower()
+        if host in ("localhost", "127.0.0.1"):
+            ip = "127.0.0.1"
+            family = socket.AF_INET
+        elif host == "::1":
+            ip = "::1"
+            family = socket.AF_INET6
+        else:
+            return False
+        port = parsed.port
+        if port is None:
+            port = 443 if parsed.scheme == "https" else 80
+        with socket.socket(family, socket.SOCK_STREAM) as s:
+            s.settimeout(0.3)
+            s.connect((ip, port))
+            return True
+    except Exception:
+        return False
+
+
+def attach_local_running(projects):
+    tasks = []
+    for proj in projects:
+        for part in proj.get("parts", []):
+            url = part.get("local_url")
+            if url:
+                tasks.append((part, url))
+            else:
+                part["local_running"] = None
+
+    if tasks:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(32, len(tasks))) as executor:
+            future_to_part = {executor.submit(check_loopback_running, url): part for part, url in tasks}
+            done, not_done = concurrent.futures.wait(future_to_part.keys(), timeout=1.0)
+            for future in done:
+                part = future_to_part[future]
+                try:
+                    part["local_running"] = future.result()
+                except Exception:
+                    part["local_running"] = False
+            for future in not_done:
+                part = future_to_part[future]
+                part["local_running"] = False
 
 
 def validate_username(username):
@@ -2289,6 +2639,37 @@ class Handler(BaseHTTPRequestHandler):
                 "system": get_system_info(),
             })
 
+        elif path == "/api/projects":
+            try:
+                p_data = load_projects()
+            except ProjectsCorruptError as exc:
+                self.send_json({"success": False, "error": str(exc)}, 500)
+                return
+            projects = deepcopy(p_data.get("projects", []))
+            attach_local_running(projects)
+            self.send_json({"projects": projects})
+
+        elif path.startswith("/api/projects/"):
+            project_id = path[len("/api/projects/"):].strip()
+            if not project_id or "/" in project_id:
+                self.send_json({"success": False, "error": "Project not found"}, 404)
+                return
+            try:
+                p_data = load_projects()
+            except ProjectsCorruptError as exc:
+                self.send_json({"success": False, "error": str(exc)}, 500)
+                return
+            match = None
+            for p in p_data.get("projects", []):
+                if p.get("id") == project_id:
+                    match = deepcopy(p)
+                    break
+            if not match:
+                self.send_json({"success": False, "error": "Project not found"}, 404)
+                return
+            attach_local_running([match])
+            self.send_json({"success": True, "project": match})
+
         elif path == "/api/nginx/sites":
             self.send_json({"success": True, "sites": get_nginx_sites()})
 
@@ -2509,6 +2890,53 @@ class Handler(BaseHTTPRequestHandler):
             results = self.start_panel_services()
             time.sleep(1)
             self.send_json({"success": True, "results": results})
+
+        elif path == "/api/projects":
+            ok, result = validate_project_payload(data)
+            if not ok:
+                self.send_json({"success": False, "error": result}, 400)
+                return
+            with projects_write_lock():
+                try:
+                    p_data = load_projects()
+                except ProjectsCorruptError as exc:
+                    self.send_json({"success": False, "error": str(exc)}, 500)
+                    return
+                existing_ids = {p.get("id") for p in p_data.get("projects", [])}
+                while result["id"] in existing_ids:
+                    result["id"] = secrets.token_hex(4)
+                p_data.setdefault("projects", []).append(result)
+                save_projects(p_data)
+            resp_proj = deepcopy(result)
+            attach_local_running([resp_proj])
+            self.send_json({"success": True, "project": resp_proj})
+
+        elif path.startswith("/api/projects/"):
+            project_id = path[len("/api/projects/"):].strip()
+            if not project_id or "/" in project_id:
+                self.send_json({"success": False, "error": "Project not found"}, 404)
+                return
+            with projects_write_lock():
+                try:
+                    p_data = load_projects()
+                except ProjectsCorruptError as exc:
+                    self.send_json({"success": False, "error": str(exc)}, 500)
+                    return
+                projects = p_data.get("projects", [])
+                idx = next((i for i, p in enumerate(projects) if p.get("id") == project_id), None)
+                if idx is None:
+                    self.send_json({"success": False, "error": "Project not found"}, 404)
+                    return
+                existing_project = projects[idx]
+                ok, result = validate_project_payload(data, existing_project=existing_project)
+                if not ok:
+                    self.send_json({"success": False, "error": result}, 400)
+                    return
+                projects[idx] = result
+                save_projects(p_data)
+            resp_proj = deepcopy(result)
+            attach_local_running([resp_proj])
+            self.send_json({"success": True, "project": resp_proj})
 
         elif path == "/api/nginx/validate":
             r = run_cmd("sudo nginx -t")
@@ -2995,7 +3423,27 @@ echo 'ok';
         cfg  = load_config()
         data = self.read_body()
 
-        if path.startswith("/api/mysql/databases/"):
+        if path.startswith("/api/projects/"):
+            project_id = path[len("/api/projects/"):].strip()
+            if not project_id or "/" in project_id:
+                self.send_json({"success": False, "error": "Project not found"}, 404)
+                return
+            with projects_write_lock():
+                try:
+                    p_data = load_projects()
+                except ProjectsCorruptError as exc:
+                    self.send_json({"success": False, "error": str(exc)}, 500)
+                    return
+                projects = p_data.get("projects", [])
+                idx = next((i for i, p in enumerate(projects) if p.get("id") == project_id), None)
+                if idx is None:
+                    self.send_json({"success": False, "error": "Project not found"}, 404)
+                    return
+                projects.pop(idx)
+                save_projects(p_data)
+            self.send_json({"success": True})
+
+        elif path.startswith("/api/mysql/databases/"):
             name = path.split("/")[-1]
             if not re.fullmatch(r'[\w\-]+', name):
                 self.send_json({"success": False, "error": "Invalid name"}); return
